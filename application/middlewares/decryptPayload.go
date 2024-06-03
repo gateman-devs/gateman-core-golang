@@ -2,7 +2,6 @@ package middlewares
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 
 	apperrors "authone.usepolymer.co/application/appErrors"
@@ -13,17 +12,17 @@ import (
 	"authone.usepolymer.co/infrastructure/logger"
 )
 
-func DecryptPayloadMiddleware(ctx *interfaces.ApplicationContext[string]) *string {
-	if ctx.Body == nil {
+func DecryptPayloadMiddleware(ctx *interfaces.ApplicationContext[string]) []byte {
+	if ctx.Body == nil || *ctx.Body == "" {
 		return nil
 	}
 	sharedKey := cache.Cache.FindOne(fmt.Sprintf("%s-key", *ctx.DeviceID))
 	if sharedKey == nil {
-		apperrors.ClientError(ctx.Ctx, "expired encryption key", nil, nil, nil, nil)
+		apperrors.ClientError(ctx.Ctx, "expired encryption key", nil, nil, nil)
 		return nil
 	}
 
-	decryptedKey, err := cryptography.DecryptData(*sharedKey, nil, nil)
+	decryptedKey, err := cryptography.DecryptData(*sharedKey, nil)
 	if err != nil {
 		logger.Error("an error occured while decrypting user payload", logger.LoggerOptions{
 			Key:  "error",
@@ -31,7 +30,7 @@ func DecryptPayloadMiddleware(ctx *interfaces.ApplicationContext[string]) *strin
 		})
 		return nil
 	}
-	result, err := cryptography.DecryptData(*ctx.Body, utils.GetStringPointer(hex.EncodeToString(decryptedKey)), ctx.Nonce)
+	result, err := cryptography.DecryptData(*ctx.Body, utils.GetStringPointer(hex.EncodeToString(decryptedKey)))
 	if err != nil {
 		logger.Error("an error occured while decrypting user payload", logger.LoggerOptions{
 			Key:  "error",
@@ -39,11 +38,5 @@ func DecryptPayloadMiddleware(ctx *interfaces.ApplicationContext[string]) *strin
 		})
 		return nil
 	}
-
-	fmt.Println("stop")
-	var b any
-	err = json.Unmarshal(result, &b)
-	fmt.Println(err)
-	fmt.Println(b)
-	return utils.GetStringPointer(string(result))
+	return result
 }

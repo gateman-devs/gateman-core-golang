@@ -12,8 +12,9 @@ import (
 )
 
 var (
-	OrgModel       *mongo.Collection
-	OrgMemberModel *mongo.Collection
+	OrgModel         *mongo.Collection
+	OrgMemberModel   *mongo.Collection
+	ApplicationModel *mongo.Collection
 )
 
 func connectMongo() *context.CancelFunc {
@@ -46,11 +47,23 @@ func connectMongo() *context.CancelFunc {
 
 // Set up the indexes for the database
 func setUpIndexes(ctx context.Context, db *mongo.Database) {
-	OrgModel = db.Collection("Organisation")
+	OrgModel = db.Collection("Organisations")
 
-	OrgMemberModel = db.Collection("OrgModel")
+	OrgMemberModel = db.Collection("OrgMembers")
 	OrgMemberModel.Indexes().CreateMany(ctx, []mongo.IndexModel{{
 		Keys:    bson.D{{Key: "email", Value: 1}},
+		Options: options.Index(),
+	}, {
+		Keys:    bson.D{{Key: "orgID", Value: 1}},
+		Options: options.Index(),
+	}})
+
+	ApplicationModel = db.Collection("Applications")
+	ApplicationModel.Indexes().CreateMany(ctx, []mongo.IndexModel{{
+		Keys:    bson.D{{Key: "orgID", Value: 1}},
+		Options: options.Index(),
+	}, {
+		Keys:    bson.D{{Key: "appID", Value: 1}},
 		Options: options.Index(),
 	}})
 

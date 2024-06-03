@@ -68,6 +68,7 @@ func GenerateAuthToken(claimsData ClaimsData) (*string, error) {
 	tokenString, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"iss":       os.Getenv("JWT_ISSUER"),
 		"userID":    claimsData.UserID,
+		"orgID":     claimsData.OrgID,
 		"exp":       claimsData.ExpiresAt,
 		"email":     claimsData.Email,
 		"firstName": claimsData.FirstName,
@@ -77,6 +78,19 @@ func GenerateAuthToken(claimsData ClaimsData) (*string, error) {
 		"userAgent": claimsData.UserAgent,
 		"otpIntent": claimsData.OTPIntent,
 	}).SignedString([]byte(os.Getenv("JWT_SIGNING_KEY")))
+	if err != nil {
+		return nil, err
+	}
+	return &tokenString, nil
+}
+
+func GenerateInterserviceAuthToken(claimsData InterserviceClaimsData) (*string, error) {
+	tokenString, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"iss":    os.Getenv("INTERSERVICE_JWT_ISSUER"),
+		"exp":    claimsData.ExpiresAt,
+		"origin": claimsData.Origination,
+		"iat":    claimsData.IssuedAt,
+	}).SignedString([]byte(os.Getenv("INTERSERVICE_JWT_SIGNING_KEY")))
 	if err != nil {
 		return nil, err
 	}

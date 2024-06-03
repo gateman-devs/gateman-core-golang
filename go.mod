@@ -7,7 +7,7 @@ require (
 	github.com/didip/tollbooth_gin v0.0.0-20170928041415-5752492be505
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang-jwt/jwt/v4 v4.5.0
-	github.com/resend/resend-go/v2 v2.6.0
+	github.com/mileusna/useragent v1.3.4
 )
 
 require (
@@ -15,7 +15,6 @@ require (
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/mileusna/useragent v1.3.4 // indirect
 	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect

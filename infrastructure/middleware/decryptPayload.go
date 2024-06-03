@@ -1,8 +1,8 @@
 package middlewares
 
 import (
+	"encoding/hex"
 	"io"
-	"strings"
 
 	"authone.usepolymer.co/application/interfaces"
 	"authone.usepolymer.co/application/middlewares"
@@ -20,16 +20,12 @@ func DecryptPayloadMiddleware() gin.HandlerFunc {
 			})
 			return
 		}
-		bodyString := strings.Split(string(body), ".")
-		payload := bodyString[0]
-		nonce := bodyString[1]
 		decryptedBody := middlewares.DecryptPayloadMiddleware(&interfaces.ApplicationContext[string]{
 			Ctx:      ctx,
-			Body:     utils.GetStringPointer(payload),
-			Nonce:    utils.GetStringPointer(nonce),
+			Body:     utils.GetStringPointer(string(body)),
 			DeviceID: utils.GetStringPointer(ctx.GetHeader("X-Device-Id")),
 		})
-		ctx.Set("DecryptedBody", *decryptedBody)
+		ctx.Set("DecryptedBody", utils.GetStringPointer(hex.EncodeToString(decryptedBody)))
 		ctx.Next()
 	}
 }

@@ -41,7 +41,7 @@ func GeneratePublicKey(sessionID string, clientPubKey *ecdh.PublicKey) *ecdh.Pub
 	return serverPubKey
 }
 
-func DecryptData(stringToDecrypt string, keyString *string, ivText *string) ([]byte, error) {
+func DecryptData(stringToDecrypt string, keyString *string) ([]byte, error) {
 	if keyString == nil {
 		keyString = utils.GetStringPointer(os.Getenv("ENC_KEY"))
 	}
@@ -56,12 +56,7 @@ func DecryptData(stringToDecrypt string, keyString *string, ivText *string) ([]b
 	if len(ciphertext) < aes.BlockSize {
 		panic("ciphertext too short")
 	}
-	var iv []byte
-	if ivText == nil {
-		iv = ciphertext[:aes.BlockSize]
-	} else {
-		iv, _ = base64.URLEncoding.DecodeString(*ivText)
-	}
+	iv := ciphertext[:aes.BlockSize]
 
 	ciphertext = ciphertext[aes.BlockSize:]
 

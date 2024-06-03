@@ -31,6 +31,7 @@ func (ah argonHasher) VerifyHashData(hash string, data string) bool {
 			Key:  "data",
 			Data: hash,
 		})
+		return false
 	}
 	ok, err := raw.Verify([]byte(data))
 	if err != nil {
@@ -44,6 +45,7 @@ func (ah argonHasher) VerifyHashData(hash string, data string) bool {
 			Key:  "hash",
 			Data: hash,
 		})
+		ok = false
 	}
 
 	return ok

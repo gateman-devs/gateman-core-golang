@@ -13,7 +13,7 @@ import (
 	"authone.usepolymer.co/application/interfaces"
 	"authone.usepolymer.co/infrastructure/logger"
 	middlewares "authone.usepolymer.co/infrastructure/middleware"
-	"authone.usepolymer.co/infrastructure/ratelimiter"
+	ratelimit "authone.usepolymer.co/infrastructure/ratelimit"
 	webRoutev1 "authone.usepolymer.co/infrastructure/routes/ginRouter/web/v1"
 	server_response "authone.usepolymer.co/infrastructure/serverResponse"
 	startup "authone.usepolymer.co/infrastructure/startUp"
@@ -50,7 +50,7 @@ func (s *ginServer) Start() {
 		MaxAge:           12 * time.Hour,
 	}
 	server.Use(cors.New(corsConfig))
-	server.Use(ratelimiter.TokenBucketPerIP())
+	server.Use(ratelimit.TokenBucketPerIP())
 	server.MaxMultipartMemory = 15 << 20 // 8 MiB
 
 	// server.Use(logger.MetricMonitor.MetricMiddleware().(gin.HandlerFunc))
@@ -58,12 +58,6 @@ func (s *ginServer) Start() {
 
 	v1 := server.Group("/api")
 	v1.Use(middlewares.UserAgentMiddleware())
-
-	routerV1 := v1.Group("/v1")
-	routerV1.Use(middlewares.DecryptPayloadMiddleware())
-	{
-		webRoutev1.AuthRouter(routerV1)
-	}
 
 	// initiate key exchange for encryption
 	v1.POST("/v1/auth/handshake", func(ctx *gin.Context) {
@@ -78,12 +72,20 @@ func (s *ginServer) Start() {
 			DeviceID: appContext.DeviceID,
 		})
 	})
+
+	routerV1 := v1.Group("/v1")
+	// routerV1.Use(middlewares.DecryptPayloadMiddleware())
+	{
+		webRoutev1.AuthRouter(routerV1)
+		webRoutev1.AppRouter(routerV1)
+	}
+
 	server.GET("/ping", func(ctx *gin.Context) {
 		server_response.Responder.UnEncryptedRespond(ctx, http.StatusOK, "pong!", nil, nil, nil)
 	})
 
 	server.NoRoute(func(ctx *gin.Context) {
-		apperrors.NotFoundError(ctx, fmt.Sprintf("%s %s does not exist", ctx.Request.Method, ctx.Request.URL), nil, nil)
+		apperrors.NotFoundError(ctx, fmt.Sprintf("%s %s does not exist", ctx.Request.Method, ctx.Request.URL), nil)
 	})
 
 	gin_mode := os.Getenv("GIN_MODE")

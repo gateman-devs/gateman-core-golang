@@ -43,3 +43,12 @@ func ExtractAppVersionFromUserAgentHeader(userAgent string) *string {
 	}
 	return nil
 }
+
+func HasItemString(arr *[]string, target string) bool {
+	for _, v := range *arr {
+		if v == target {
+			return true
+		}
+	}
+	return false
+}

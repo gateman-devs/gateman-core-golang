@@ -12,6 +12,7 @@ type Organisation struct {
 	SuperMember string `bson:"superMember" json:"superMember"`
 	Country     string `bson:"country" json:"country"`
 	Sector      string `bson:"sector" json:"sector"`
+	Verified    bool   `bson:"verified" json:"verified"`
 
 	ID        string    `bson:"_id" json:"id"`
 	CreatedAt time.Time `bson:"createdAt" json:"createdAt"`

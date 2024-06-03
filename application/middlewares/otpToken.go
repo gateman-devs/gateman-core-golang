@@ -13,30 +13,29 @@ import (
 )
 
 func OTPTokenMiddleware(ctx *interfaces.ApplicationContext[any], ipAddress string, intent string) (*interfaces.ApplicationContext[any], bool) {
-	otpTokenPointer := ctx.GetHeader("Otp-Token")
+	otpTokenPointer := ctx.GetHeader("X-Otp-Token")
 	if otpTokenPointer == nil {
-		apperrors.AuthenticationError(ctx.Ctx, "missing otp token", ctx.DeviceID, ctx.Nonce)
+		apperrors.AuthenticationError(ctx.Ctx, "missing otp token", ctx.DeviceID)
 		return nil, false
 	}
 	otpToken := *otpTokenPointer
 	validAccessToken, err := auth.DecodeAuthToken(otpToken)
 	if err != nil {
-		apperrors.AuthenticationError(ctx.Ctx, err.Error(), ctx.DeviceID, ctx.Nonce)
+		apperrors.AuthenticationError(ctx.Ctx, err.Error(), ctx.DeviceID)
 		return nil, false
 	}
 	if !validAccessToken.Valid {
-		apperrors.AuthenticationError(ctx.Ctx, "invalid access token used", ctx.DeviceID, ctx.Nonce)
+		apperrors.AuthenticationError(ctx.Ctx, "invalid access token used", ctx.DeviceID)
 		return nil, false
 	}
 	invalidToken := cache.Cache.FindOne(otpToken)
 	if invalidToken != nil {
-		apperrors.AuthenticationError(ctx.Ctx, "expired access token used", ctx.DeviceID, ctx.Nonce)
+		apperrors.AuthenticationError(ctx.Ctx, "expired access token used", ctx.DeviceID)
 		return nil, false
 	}
 	auth_token_claims := validAccessToken.Claims.(jwt.MapClaims)
 	if auth_token_claims["iss"] != os.Getenv("JWT_ISSUER") {
-		logger.Warning("this should trigger a wallet lock")
-		apperrors.AuthenticationError(ctx.Ctx, "this is not an authorized access token", ctx.DeviceID, ctx.Nonce)
+		apperrors.AuthenticationError(ctx.Ctx, "this is not an authorized access token", ctx.DeviceID)
 		return nil, false
 	}
 	var channel string
@@ -48,13 +47,12 @@ func OTPTokenMiddleware(ctx *interfaces.ApplicationContext[any], ipAddress strin
 	otpIntent := cache.Cache.FindOne(fmt.Sprintf("%s-otp-intent", channel))
 	if otpIntent == nil {
 		logger.Error("otp intent missing")
-		apperrors.ClientError(ctx.Ctx, "otp expired", nil, nil, ctx.DeviceID, ctx.Nonce)
+		apperrors.ClientError(ctx.Ctx, "otp expired", nil, nil, ctx.DeviceID)
 		return nil, false
 	}
 	if *otpIntent != auth_token_claims["otpIntent"].(string) || auth_token_claims["otpIntent"].(string) != intent {
-		logger.Warning("this should trigger a wallet lock")
 		logger.Error("wrong otp intent in token")
-		apperrors.ClientError(ctx.Ctx, "incorrect intent", nil, nil, ctx.DeviceID, ctx.Nonce)
+		apperrors.ClientError(ctx.Ctx, "incorrect intent", nil, nil, ctx.DeviceID)
 		return nil, false
 	}
 	ctx.SetContextData("OTPToken", otpToken)

@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"authone.usepolymer.co/application/constants"
 	"authone.usepolymer.co/application/utils"
@@ -18,7 +19,7 @@ import (
 type ginResponder struct{}
 
 // Sends an encrypted payload to the client
-func (gr ginResponder) Respond(ctx interface{}, code int, message string, payload interface{}, errs []error, response_code *uint, nonce *string, device_id *string) {
+func (gr ginResponder) Respond(ctx interface{}, code int, message string, payload interface{}, errs []error, response_code *uint, device_id *string) {
 	ginCtx, ok := (ctx).(*gin.Context)
 	if !ok {
 		logger.Error("could not transform *interface{} to gin.Context in serverResponse package", logger.LoggerOptions{
@@ -35,8 +36,15 @@ func (gr ginResponder) Respond(ctx interface{}, code int, message string, payloa
 	if response_code != nil {
 		response["response_code"] = response_code
 	}
-	fmt.Println(message)
-	fmt.Println(errs)
+	if os.Getenv("ENV") != "prod" {
+		logger.Info("response", logger.LoggerOptions{
+			Key:  "message",
+			Data: message,
+		}, logger.LoggerOptions{
+			Key:  "error",
+			Data: errs,
+		})
+	}
 	if errs != nil {
 		errMsgs := []string{}
 		for _, err := range errs {
@@ -44,6 +52,7 @@ func (gr ginResponder) Respond(ctx interface{}, code int, message string, payloa
 		}
 		response["errors"] = errMsgs
 	}
+	device_id = nil
 	if device_id == nil {
 		ginCtx.JSON(code, response)
 		return
@@ -57,7 +66,7 @@ func (gr ginResponder) Respond(ctx interface{}, code int, message string, payloa
 		})
 		return
 	}
-	decryptedKey, _ := cryptography.DecryptData(*enc_key, nil, nil)
+	decryptedKey, _ := cryptography.DecryptData(*enc_key, nil)
 	encryptedResponse, err := cryptography.EncryptData(jsonResponse, utils.GetStringPointer(hex.EncodeToString(decryptedKey)))
 	if err != nil {
 		logger.Error("error encrypting data", logger.LoggerOptions{

@@ -6,40 +6,42 @@ import (
 	"authone.usepolymer.co/application/utils"
 )
 
-type MemberAccess string
+type MemberPermissions string
 
 const (
 	// org users
-	USER_RESTRICT MemberAccess = "user_restrict"
-	USER_BLOCK    MemberAccess = "user_block"
-	USER_DELETE   MemberAccess = "user_delete"
+	USER_RESTRICT MemberPermissions = "user_restrict"
+	USER_BLOCK    MemberPermissions = "user_block"
+	USER_DELETE   MemberPermissions = "user_delete"
 
 	// org members
-	MEMBER_INVITE      MemberAccess = "member_invite"
-	MEMBER_BLOCK       MemberAccess = "member_block"
-	MEMBER_REMOVE      MemberAccess = "member_remove"
-	MEMBER_EDIT_ACCESS MemberAccess = "member_edit_access"
+	MEMBER_INVITE      MemberPermissions = "member_invite"
+	MEMBER_BLOCK       MemberPermissions = "member_block"
+	MEMBER_REMOVE      MemberPermissions = "member_remove"
+	MEMBER_EDIT_ACCESS MemberPermissions = "member_edit_access"
 
 	// organisation
-	ORG_EDIT_INFO             MemberAccess = "org_edit_info"
-	ORG_EDIT_DEFAULT_TEMPLATE MemberAccess = "org_edit_default_template"
-	ORG_EDIT_TEMPLATE_INFO    MemberAccess = "org_edit_template_info"
-	ORG_BILLING               MemberAccess = "org_billing"
+	ORG_EDIT_INFO             MemberPermissions = "org_edit_info"
+	ORG_EDIT_DEFAULT_TEMPLATE MemberPermissions = "org_edit_default_template"
+	ORG_EDIT_TEMPLATE_INFO    MemberPermissions = "org_edit_template_info"
+	ORG_BILLING               MemberPermissions = "org_billing"
+	ORG_CREATE_APPLICATIONS   MemberPermissions = "create_apps"
 
 	// all
-	SUPER_ACCESS MemberAccess = "*"
+	SUPER_ACCESS MemberPermissions = "*"
 )
 
 type OrgMember struct {
-	FirstName     string         `bson:"firstName" json:"firstName"`
-	LastName      string         `bson:"lastName" json:"lastName"`
-	Email         string         `bson:"email" json:"email"`
-	Password      string         `bson:"password" json:"password"`
-	AppVersion    string         `bson:"appVersion" json:"appVersion"`
-	DeviceID      string         `bson:"deviceID" json:"deviceID"`
-	Deactivated   bool           `bson:"deactivated" json:"deactivated"`
-	VerifiedEmail bool           `bson:"verifiedEmail" json:"verifiedEmail"`
-	Access        []MemberAccess `bson:"access" json:"access"`
+	FirstName     string              `bson:"firstName" json:"firstName"`
+	LastName      string              `bson:"lastName" json:"lastName"`
+	Email         string              `bson:"email" json:"email"`
+	Password      string              `bson:"password" json:"password"`
+	UserAgent     string              `bson:"appVersion" json:"appVersion"`
+	DeviceID      string              `bson:"deviceID" json:"deviceID"`
+	OrgID         string              `bson:"orgID" json:"orgID"`
+	Deactivated   bool                `bson:"deactivated" json:"deactivated"`
+	VerifiedEmail bool                `bson:"verifiedEmail" json:"verifiedEmail"`
+	Permissions   []MemberPermissions `bson:"permissions" json:"permissions"`
 
 	ID        string    `bson:"_id" json:"id"`
 	CreatedAt time.Time `bson:"createdAt" json:"createdAt"`

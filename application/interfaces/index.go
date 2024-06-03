@@ -8,16 +8,15 @@ import (
 )
 
 type ApplicationContext[T interface{}] struct {
-	Body       *T
-	Nonce      *string
-	Keys       map[string]any
-	Query      map[string]any
-	Param      map[string]any
-	Header     map[string][]string
-	DeviceID   *string
-	UserAgent  *string
-	AppVersion *string
-	Ctx        any
+	Body      *T
+	Nonce     *string
+	Keys      map[string]any
+	Query     map[string]any
+	Param     map[string]any
+	Header    map[string][]string
+	DeviceID  *string
+	UserAgent *string
+	Ctx       any
 }
 
 func (ac *ApplicationContext[T]) GetContextData(key string) (value any, exists bool) {

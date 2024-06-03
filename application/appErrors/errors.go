@@ -8,23 +8,23 @@ import (
 	server_response "authone.usepolymer.co/infrastructure/serverResponse"
 )
 
-func NotFoundError(ctx interface{}, message string, device_id *string, nonce *string) {
-	server_response.Responder.Respond(ctx, http.StatusNotFound, message, nil, nil, nil, nonce, device_id)
+func NotFoundError(ctx interface{}, message string, device_id *string) {
+	server_response.Responder.Respond(ctx, http.StatusNotFound, message, nil, nil, nil, device_id)
 }
 
-func ValidationFailedError(ctx interface{}, errMessages *[]error, device_id *string, nonce *string) {
-	server_response.Responder.Respond(ctx, http.StatusUnprocessableEntity, "Payload validation failed 🙄", nil, *errMessages, nil, nonce, device_id)
+func ValidationFailedError(ctx interface{}, errMessages *[]error, device_id *string) {
+	server_response.Responder.Respond(ctx, http.StatusUnprocessableEntity, "Payload validation failed 🙄", nil, *errMessages, nil, device_id)
 }
 
-func EntityAlreadyExistsError(ctx interface{}, message string, device_id *string, nonce *string) {
-	server_response.Responder.Respond(ctx, http.StatusConflict, message, nil, nil, nil, nonce, device_id)
+func EntityAlreadyExistsError(ctx interface{}, message string, device_id *string) {
+	server_response.Responder.Respond(ctx, http.StatusConflict, message, nil, nil, nil, device_id)
 }
 
-func AuthenticationError(ctx interface{}, message string, device_id *string, nonce *string) {
-	server_response.Responder.Respond(ctx, http.StatusUnauthorized, message, nil, nil, nil, nonce, device_id)
+func AuthenticationError(ctx interface{}, message string, device_id *string) {
+	server_response.Responder.Respond(ctx, http.StatusUnauthorized, message, nil, nil, nil, device_id)
 }
 
-func ExternalDependencyError(ctx interface{}, serviceName string, statusCode string, err error, device_id *string, nonce *string) {
+func ExternalDependencyError(ctx interface{}, serviceName string, statusCode string, err error, device_id *string) {
 	logger.Error(err.Error(), logger.LoggerOptions{
 		Key: fmt.Sprintf("error with %s. status code %s", serviceName, statusCode),
 	})
@@ -36,52 +36,52 @@ func ExternalDependencyError(ctx interface{}, serviceName string, statusCode str
 	// })
 	// logger.MetricMonitor.ReportError(err, nil)
 	server_response.Responder.Respond(ctx, http.StatusServiceUnavailable,
-		"Omo! Our service is temporarily down 😢. Our team is working to fix it. Please check back later.", nil, nil, nil, nonce, device_id)
+		"Omo! Our service is temporarily down 😢. Our team is working to fix it. Please check back later.", nil, nil, nil, device_id)
 }
 
-func ErrorProcessingPayload(ctx interface{}, device_id *string, nonce *string) {
-	server_response.Responder.Respond(ctx, http.StatusBadRequest, "Abnormal payload passed 🤨", nil, nil, nil, nonce, device_id)
+func ErrorProcessingPayload(ctx interface{}, device_id *string) {
+	server_response.Responder.Respond(ctx, http.StatusBadRequest, "Abnormal payload passed 🤨", nil, nil, nil, device_id)
 }
 
-func FatalServerError(ctx interface{}, err error, device_id *string, nonce *string) {
+func FatalServerError(ctx interface{}, err error, device_id *string) {
 	// logger.MetricMonitor.ReportError(err, nil)
 	server_response.Responder.Respond(ctx, http.StatusInternalServerError,
-		"Omo! Our service is temporarily down 😢. Our team is working to fix it. Please check back later.", nil, nil, nil, nonce, device_id)
+		"Omo! Our service is temporarily down 😢. Our team is working to fix it. Please check back later.", nil, nil, nil, device_id)
 }
 
-func UnknownError(ctx interface{}, err error, device_id *string, nonce *string) {
+func UnknownError(ctx interface{}, err error, device_id *string) {
 	// logger.MetricMonitor.ReportError(err, nil)
 	server_response.Responder.Respond(ctx, http.StatusBadRequest,
-		"Omo! Something went wrong somewhere 😭. Please check back later.", nil, nil, nil, nonce, device_id)
+		"Omo! Something went wrong somewhere 😭. Please check back later.", nil, nil, nil, device_id)
 }
 
-func CustomError(ctx interface{}, msg string, device_id *string, nonce *string) {
-	server_response.Responder.Respond(ctx, http.StatusBadRequest, msg, nil, nil, nil, nonce, device_id)
+func CustomError(ctx interface{}, msg string, device_id *string) {
+	server_response.Responder.Respond(ctx, http.StatusBadRequest, msg, nil, nil, nil, device_id)
 }
 
-func UnsupportedAppVersion(ctx interface{}, device_id *string, nonce *string) {
+func UnsupportedAppVersion(ctx interface{}, device_id *string) {
 	server_response.Responder.Respond(ctx, http.StatusBadRequest,
-		"Uh oh! Seems you're using an old version of the app. 🤦🏻‍♂️\n Upgrade to the latest version to continue enjoying our blazing fast services! 🚀", nil, nil, nil, nonce, device_id)
+		"Uh oh! Seems you're using an old version of the app. 🤦🏻‍♂️\n Upgrade to the latest version to continue enjoying our blazing fast services! 🚀", nil, nil, nil, device_id)
 }
 
-func UnsupportedUserAgent(ctx interface{}, device_id *string, nonce *string) {
+func UnsupportedUserAgent(ctx interface{}, device_id *string) {
 	// logger.MetricMonitor.ReportError(errors.New("unspported user agent"), []logger.LoggerOptions{
 	// 	{Key: "ctx",
 	// 	Data: ctx,},
 	// })
 	server_response.Responder.Respond(ctx, http.StatusBadRequest,
-		"unsupported user agent 👮🏻‍♂️", nil, nil, nil, nonce, device_id)
+		"unsupported user agent 👮🏻‍♂️", nil, nil, nil, device_id)
 }
 
-func MalformedHeader(ctx interface{}, device_id *string, nonce *string) {
+func MalformedHeader(ctx interface{}, device_id *string) {
 	// logger.MetricMonitor.ReportError(errors.New("unspported user agent"), []logger.LoggerOptions{
 	// 	{Key: "ctx",
 	// 	Data: ctx,},
 	// })
 	server_response.Responder.Respond(ctx, http.StatusBadRequest,
-		"malformed header information 👮🏻‍♂️", nil, nil, nil, nonce, device_id)
+		"malformed header information 👮🏻‍♂️", nil, nil, nil, device_id)
 }
 
-func ClientError(ctx interface{}, msg string, errs []error, response_code *uint, device_id *string, nonce *string) {
-	server_response.Responder.Respond(ctx, http.StatusBadRequest, msg, nil, errs, response_code, device_id, nonce)
+func ClientError(ctx interface{}, msg string, errs []error, response_code *uint, device_id *string) {
+	server_response.Responder.Respond(ctx, http.StatusBadRequest, msg, nil, errs, response_code, device_id)
 }
