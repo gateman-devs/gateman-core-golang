@@ -50,16 +50,16 @@ func UserAgentMiddleware(ctx *interfaces.ApplicationContext[any], minAppVersion 
 	ipLookupRes, err := ipresolver.IPResolverInstance.LookUp(clientIP)
 	if err != nil {
 		logger.Error("error looking up ip", logger.LoggerOptions{
-			Key: "error",
+			Key:  "error",
 			Data: err,
 		},
-		 logger.LoggerOptions{
-			Key:  "ip",
-			Data: clientIP,
-		}, logger.LoggerOptions{
-			Key:  "user agent",
-			Data: agent,
-		})
+			logger.LoggerOptions{
+				Key:  "ip",
+				Data: clientIP,
+			}, logger.LoggerOptions{
+				Key:  "user agent",
+				Data: agent,
+			})
 		return nil, false
 	}
 	logger.Info("request-ip-lookup", logger.LoggerOptions{

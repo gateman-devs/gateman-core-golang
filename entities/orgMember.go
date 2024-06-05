@@ -36,7 +36,7 @@ type OrgMember struct {
 	LastName      string              `bson:"lastName" json:"lastName"`
 	Email         string              `bson:"email" json:"email"`
 	Password      string              `bson:"password" json:"password"`
-	UserAgent     string              `bson:"appVersion" json:"appVersion"`
+	UserAgent     string              `bson:"userAgent" json:"userAgent"`
 	DeviceID      string              `bson:"deviceID" json:"deviceID"`
 	OrgID         string              `bson:"orgID" json:"orgID"`
 	Deactivated   bool                `bson:"deactivated" json:"deactivated"`

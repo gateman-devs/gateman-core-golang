@@ -1,10 +1,12 @@
 package polymercore
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"time"
 
+	"authone.usepolymer.co/application/utils"
 	"authone.usepolymer.co/infrastructure/auth"
 	"authone.usepolymer.co/infrastructure/logger"
 	"authone.usepolymer.co/infrastructure/network"
@@ -24,12 +26,12 @@ func (pc *PolymerCore) Initialise() {
 	}
 }
 
-func (pc *PolymerCore) GenerateAuthToken() (*string, error) {
+func (pc *PolymerCore) generateAuthToken() (*string, error) {
 	now := time.Now()
 	token, err := auth.GenerateInterserviceAuthToken(auth.InterserviceClaimsData{
 		Origination: os.Getenv("SERVICE_NAME"),
 		IssuedAt:    now.Unix(),
-		ExpiresAt:   now.Local().Add(time.Second * time.Duration(30)).Unix(), //lasts for 30 sec
+		ExpiresAt:   now.Local().Add(time.Second * 30).Unix(), //lasts for 30 sec
 	})
 	if err != nil {
 		logger.Error("an error occured while generating interservice auth token", logger.LoggerOptions{
@@ -42,7 +44,7 @@ func (pc *PolymerCore) GenerateAuthToken() (*string, error) {
 }
 
 func (pc *PolymerCore) SendEmail(template string, email string, subject string, opts map[string]any) error {
-	token, err := pc.GenerateAuthToken()
+	token, err := pc.generateAuthToken()
 	if err != nil {
 		return err
 	}
@@ -73,7 +75,7 @@ func (pc *PolymerCore) SendEmail(template string, email string, subject string, 
 }
 
 func (pc *PolymerCore) EmailStatus(email string) (bool, error) {
-	token, err := pc.GenerateAuthToken()
+	token, err := pc.generateAuthToken()
 	if err != nil {
 		return false, err
 	}
@@ -99,4 +101,90 @@ func (pc *PolymerCore) EmailStatus(email string) (bool, error) {
 		return false, nil
 	}
 	return (*response)[0] != 0, nil
+}
+
+func (pc *PolymerCore) GetPolymerID(email string) (*string, error) {
+	token, err := pc.generateAuthToken()
+	if err != nil {
+		return nil, err
+	}
+	response, statusCode, err := pc.Network.Get("/api/v1/web/authone/user/"+email, &map[string]string{
+		"x-is-token": *token,
+	}, nil)
+	if err != nil {
+		logger.Error("could not complete request to polymer main to fetch users polymer id", logger.LoggerOptions{
+			Key:  "error",
+			Data: err,
+		}, logger.LoggerOptions{
+			Key:  "email",
+			Data: email,
+		})
+		return nil, err
+	}
+	if *statusCode != 200 && *statusCode != 404 {
+		err = errors.New("could not complete request to polymer main to fetch polymer id")
+		logger.Error(err.Error(), logger.LoggerOptions{
+			Key:  "status code",
+			Data: *statusCode,
+		}, logger.LoggerOptions{
+			Key:  "email",
+			Data: email,
+		})
+		return nil, err
+	}
+	if *statusCode == 404 {
+		logger.Info("user not found on Polymer main db")
+		return nil, errors.New("")
+	}
+	var exists PolymerAccountExists
+	err = json.Unmarshal(*response, &exists)
+	if err != nil {
+		err = errors.New("could not unmarshal response from polymer main to fetch polymer id")
+		logger.Error(err.Error(), logger.LoggerOptions{
+			Key:  "status code",
+			Data: *statusCode,
+		}, logger.LoggerOptions{
+			Key:  "email",
+			Data: email,
+		})
+		return nil, err
+	}
+
+	return utils.GetStringPointer(exists.Body["_id"]), nil
+}
+
+func (pc *PolymerCore) CreateAccount(email string, password string) bool {
+	token, err := pc.generateAuthToken()
+	if err != nil {
+		return false
+	}
+	_, statusCode, err := pc.Network.Post("/api/v1/web/authone/account/create", &map[string]string{
+		"x-is-token": *token,
+	}, map[string]any{
+		"email":    email,
+		"password": password,
+	}, nil, false, nil)
+	if err != nil {
+		logger.Error("could not complete request to polymer main to create user polymer account", logger.LoggerOptions{
+			Key:  "error",
+			Data: err,
+		}, logger.LoggerOptions{
+			Key:  "email",
+			Data: email,
+		})
+		return false
+	}
+	if *statusCode != 201 {
+		err = errors.New("could not complete request to polymer main to  create user polymer account")
+		logger.Error(err.Error(), logger.LoggerOptions{
+			Key:  "status code",
+			Data: *statusCode,
+		}, logger.LoggerOptions{
+			Key:  "email",
+			Data: email,
+		})
+		return false
+	}
+
+	return true
 }

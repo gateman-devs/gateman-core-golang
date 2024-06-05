@@ -8,8 +8,14 @@ import (
 
 // This represents a user signed up to authone
 type User struct {
-	PolymerID   string   `bson:"polymerID" json:"polymerID"`
-	AllowedOrgs []string `bson:"allowedOrgs" json:"allowedOrgs"`
+	PolymerID     string   `bson:"polymerID" json:"polymerID"`
+	AllowedOrgs   []string `bson:"allowedOrgs" json:"allowedOrgs"`
+	Email         string   `bson:"email" json:"email"`
+	Password      string   `bson:"password" json:"password"`
+	UserAgent     string   `bson:"userAgent" json:"userAgent"`
+	DeviceID      string   `bson:"deviceID" json:"deviceID"`
+	Deactivated   bool     `bson:"deactivated" json:"deactivated"`
+	VerifiedEmail bool     `bson:"verifiedEmail" json:"verifiedEmail"`
 
 	ID        string    `bson:"_id" json:"id"`
 	CreatedAt time.Time `bson:"createdAt" json:"createdAt"`

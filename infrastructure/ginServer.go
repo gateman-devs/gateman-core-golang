@@ -78,6 +78,7 @@ func (s *ginServer) Start() {
 	{
 		webRoutev1.AuthRouter(routerV1)
 		webRoutev1.AppRouter(routerV1)
+		webRoutev1.UserRouter(routerV1)
 	}
 
 	server.GET("/ping", func(ctx *gin.Context) {

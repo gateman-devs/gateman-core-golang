@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -22,14 +23,22 @@ import (
 
 func CreateOrgUseCase(ctx any, payload *dto.CreateOrgDTO, deviceID *string, userAgent *string) error {
 	payload.Email = strings.ToLower(payload.Email)
-	result, err := polymercore.PolymerService.EmailStatus(payload.Email)
-	if err != nil {
-		apperrors.ExternalDependencyError(ctx, "polymer-core", "500", err, deviceID)
-		return err
-	}
-	if !result {
-		apperrors.ClientError(ctx, fmt.Sprintf("email address %s has been flagged as unacceptable on our system", payload.Email), nil, nil, deviceID)
-		return errors.New("")
+	if os.Getenv("ENV") == "prod" {
+		found := cache.Cache.FindOne(fmt.Sprintf("%s-email-blacklist", payload.Email))
+		if found != nil {
+			apperrors.ClientError(ctx, fmt.Sprintf(`email address "%s" has been flagged as unacceptable on our system`, payload.Email), nil, nil, deviceID)
+			return errors.New("")
+		}
+		result, err := polymercore.PolymerService.EmailStatus(payload.Email)
+		if err != nil {
+			apperrors.ExternalDependencyError(ctx, "polymer-core", "500", err, deviceID)
+			return err
+		}
+		if !result {
+			apperrors.ClientError(ctx, fmt.Sprintf(`email address "%s" has been flagged as unacceptable on our system`, payload.Email), nil, nil, deviceID)
+			cache.Cache.CreateEntry(fmt.Sprintf("%s-email-blacklist", payload.Email), payload.Email, time.Minute*0)
+			return errors.New("")
+		}
 	}
 	orgMemberRepo := repository.OrgMemberRepo()
 	exists, err := orgMemberRepo.CountDocs(map[string]interface{}{

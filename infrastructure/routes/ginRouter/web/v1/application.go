@@ -45,7 +45,7 @@ func AppRouter(router *gin.RouterGroup) {
 				},
 			})
 		})
-		appRouter.GET("/config/fetch", func(ctx *gin.Context) {
+		appRouter.GET("/config/fetch", middlewares.AuthenticationMiddleware(true, &[]entities.MemberPermissions{entities.ORG_CREATE_APPLICATIONS}), func(ctx *gin.Context) {
 			controller.FetchAppCreationConfigInfo(&interfaces.ApplicationContext[any]{
 				Ctx: ctx,
 			},
