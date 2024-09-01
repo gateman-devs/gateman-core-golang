@@ -158,7 +158,7 @@ func (pc *PolymerCore) CreateAccount(email string, password string) bool {
 	if err != nil {
 		return false
 	}
-	_, statusCode, err := pc.Network.Post("/api/v1/web/authone/account/create", &map[string]string{
+	response, statusCode, err := pc.Network.Post("/api/v1/web/authone/account/create", &map[string]string{
 		"x-is-token": *token,
 	}, map[string]any{
 		"email":    email,
@@ -174,11 +174,82 @@ func (pc *PolymerCore) CreateAccount(email string, password string) bool {
 		})
 		return false
 	}
+	var res any
+	err = json.Unmarshal(*response, &res)
+	if err != nil {
+		logger.Error(err.Error(), logger.LoggerOptions{
+			Key:  "status code",
+			Data: *statusCode,
+		}, logger.LoggerOptions{
+			Key:  "body",
+			Data: res,
+		}, logger.LoggerOptions{
+			Key:  "email",
+			Data: email,
+		})
+		return false
+	}
 	if *statusCode != 201 {
 		err = errors.New("could not complete request to polymer main to  create user polymer account")
 		logger.Error(err.Error(), logger.LoggerOptions{
 			Key:  "status code",
 			Data: *statusCode,
+		}, logger.LoggerOptions{
+			Key:  "body",
+			Data: res,
+		}, logger.LoggerOptions{
+			Key:  "email",
+			Data: email,
+		})
+		return false
+	}
+
+	return true
+}
+
+func (pc *PolymerCore) VerifyAccount(email string) bool {
+	token, err := pc.generateAuthToken()
+	if err != nil {
+		return false
+	}
+	response, statusCode, err := pc.Network.Post("/api/v1/web/authone/account/verify", &map[string]string{
+		"x-is-token": *token,
+	}, map[string]any{
+		"email":    email,
+	}, nil, false, nil)
+	if err != nil {
+		logger.Error("could not complete request to polymer main to verify user polymer account", logger.LoggerOptions{
+			Key:  "error",
+			Data: err,
+		}, logger.LoggerOptions{
+			Key:  "email",
+			Data: email,
+		})
+		return false
+	}
+	var res any
+	err = json.Unmarshal(*response, &res)
+	if err != nil {
+		logger.Error(err.Error(), logger.LoggerOptions{
+			Key:  "status code",
+			Data: *statusCode,
+		}, logger.LoggerOptions{
+			Key:  "body",
+			Data: res,
+		}, logger.LoggerOptions{
+			Key:  "email",
+			Data: email,
+		})
+		return false
+	}
+	if *statusCode != 201 {
+		err = errors.New("could not complete request to polymer main to verify user polymer account")
+		logger.Error(err.Error(), logger.LoggerOptions{
+			Key:  "status code",
+			Data: *statusCode,
+		}, logger.LoggerOptions{
+			Key:  "body",
+			Data: res,
 		}, logger.LoggerOptions{
 			Key:  "email",
 			Data: email,

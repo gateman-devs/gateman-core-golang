@@ -16,12 +16,13 @@ import (
 func CreateApplicationUseCase(ctx any, payload *dto.ApplicationDTO, deviceID *string, userID string, orgID string, email string) (*entities.Application, *string) {
 	appID := utils.GenerateUULDString()
 	apiKey, _ := cryptography.EncryptData([]byte(utils.GenerateUULDString()), nil)
-	hashedAPIKey, _ := cryptography.CryptoHahser.HashString(string(*apiKey))
+	hashedAPIKey, _ := cryptography.CryptoHahser.HashString(string(*apiKey), nil)
 	appRepo := repository.ApplicationRepo()
 	app, err := appRepo.CreateOne(context.TODO(), entities.Application{
 		Name:                  payload.Name,
 		CreatorID:             userID,
 		OrgID:                 orgID,
+		Description:           payload.Description,
 		LocaleRestriction:     payload.LocaleRestriction,
 		RequiredVerifications: payload.RequiredVerifications,
 		RequestedFields:       payload.RequestedFields,

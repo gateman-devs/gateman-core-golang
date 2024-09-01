@@ -33,16 +33,16 @@ func OTPTokenMiddleware(ctx *interfaces.ApplicationContext[any], ipAddress strin
 		apperrors.AuthenticationError(ctx.Ctx, "expired access token used", ctx.DeviceID)
 		return nil, false
 	}
-	auth_token_claims := validAccessToken.Claims.(jwt.MapClaims)
-	if auth_token_claims["iss"] != os.Getenv("JWT_ISSUER") {
+	authTokenClaims := validAccessToken.Claims.(jwt.MapClaims)
+	if authTokenClaims["iss"] != os.Getenv("JWT_ISSUER") {
 		apperrors.AuthenticationError(ctx.Ctx, "this is not an authorized access token", ctx.DeviceID)
 		return nil, false
 	}
 	var channel string
-	if auth_token_claims["email"] != nil {
-		channel = auth_token_claims["email"].(string)
+	if authTokenClaims["email"] != nil {
+		channel = authTokenClaims["email"].(string)
 	} else {
-		channel = auth_token_claims["phoneNum"].(string)
+		channel = authTokenClaims["phoneNum"].(string)
 	}
 	otpIntent := cache.Cache.FindOne(fmt.Sprintf("%s-otp-intent", channel))
 	if otpIntent == nil {
@@ -50,13 +50,14 @@ func OTPTokenMiddleware(ctx *interfaces.ApplicationContext[any], ipAddress strin
 		apperrors.ClientError(ctx.Ctx, "otp expired", nil, nil, ctx.DeviceID)
 		return nil, false
 	}
-	if *otpIntent != auth_token_claims["otpIntent"].(string) || auth_token_claims["otpIntent"].(string) != intent {
+
+	if *otpIntent != authTokenClaims["intent"].(string) || authTokenClaims["intent"].(string) != intent {
 		logger.Error("wrong otp intent in token")
 		apperrors.ClientError(ctx.Ctx, "incorrect intent", nil, nil, ctx.DeviceID)
 		return nil, false
 	}
 	ctx.SetContextData("OTPToken", otpToken)
-	ctx.SetContextData("OTPEmail", auth_token_claims["email"])
-	ctx.SetContextData("OTPPhone", auth_token_claims["phoneNum"])
+	ctx.SetContextData("OTPEmail", authTokenClaims["email"])
+	ctx.SetContextData("OTPPhone", authTokenClaims["phoneNum"])
 	return ctx, true
 }

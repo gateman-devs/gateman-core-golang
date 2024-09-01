@@ -74,6 +74,7 @@ func UserAgentMiddleware(ctx *interfaces.ApplicationContext[any], minAppVersion 
 	ctx.SetContextData("Longitude", ipLookupRes.Longitude)
 
 	ctx.UserAgent = agent
+	ctx.DeviceName = &agentDetails.Name
 	ctx.DeviceID = ctx.GetHeader("X-Device-Id")
 	if ctx.DeviceID == nil || *ctx.DeviceID == "" {
 		apperrors.MalformedHeader(ctx.Ctx, nil)

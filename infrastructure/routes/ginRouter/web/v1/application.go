@@ -28,7 +28,7 @@ func AppRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		appRouter.GET("/user/details/:id", func(ctx *gin.Context) {
+		appRouter.GET("/details/:id", func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			id, found := ctx.Params.Get("id")
 			if !found {
@@ -45,6 +45,7 @@ func AppRouter(router *gin.RouterGroup) {
 				},
 			})
 		})
+
 		appRouter.GET("/config/fetch", middlewares.AuthenticationMiddleware(true, &[]entities.MemberPermissions{entities.ORG_CREATE_APPLICATIONS}), func(ctx *gin.Context) {
 			controller.FetchAppCreationConfigInfo(&interfaces.ApplicationContext[any]{
 				Ctx: ctx,

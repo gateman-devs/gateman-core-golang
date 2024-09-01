@@ -7,12 +7,12 @@ type ClaimsData struct {
 	LastName  string
 	Email     *string
 	PhoneNum  *string
-	OrgID       *string
+	OrgID     *string
 	ExpiresAt int64
 	IssuedAt  int64
 	UserAgent string
 	DeviceID  string
-	OTPIntent string
+	Intent    string
 }
 
 type InterserviceClaimsData struct {

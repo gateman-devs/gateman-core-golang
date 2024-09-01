@@ -39,7 +39,7 @@ func GenerateOTP(length int, channel string) (*string, error) {
 }
 
 func saveOTP(channel string, otp string) bool {
-	hashedOTP, err := cryptography.CryptoHahser.HashString(otp)
+	hashedOTP, err := cryptography.CryptoHahser.HashString(otp, nil)
 	if err != nil {
 		logger.Error("auth module error - error while saving otp", logger.LoggerOptions{
 			Key:  "error",
@@ -47,7 +47,7 @@ func saveOTP(channel string, otp string) bool {
 		})
 		return false
 	}
-	return cache.Cache.CreateEntry(fmt.Sprintf("%s-otp", channel), string(hashedOTP), 5*time.Minute) // otp is valid for 5 mins
+	return cache.Cache.CreateEntry(fmt.Sprintf("%s-otp", channel), string(hashedOTP), 10*time.Minute) // otp is valid for 10 mins
 }
 
 func VerifyOTP(key string, otp string) (string, bool) {
@@ -76,7 +76,8 @@ func GenerateAuthToken(claimsData ClaimsData) (*string, error) {
 		"iat":       claimsData.IssuedAt,
 		"deviceID":  claimsData.DeviceID,
 		"userAgent": claimsData.UserAgent,
-		"otpIntent": claimsData.OTPIntent,
+		"intent":    claimsData.Intent,
+		"phone":     claimsData.PhoneNum,
 	}).SignedString([]byte(os.Getenv("JWT_SIGNING_KEY")))
 	if err != nil {
 		return nil, err
@@ -103,7 +104,6 @@ func DecodeAuthToken(tokenString string) (*jwt.Token, error) {
 	})
 	if err != nil {
 		if err == jwt.ErrSignatureInvalid {
-			logger.Warning("this will trigger a wallet lock")
 			err = errors.New("invalid token signature used")
 			return nil, err
 		}

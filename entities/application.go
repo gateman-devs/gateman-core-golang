@@ -13,6 +13,7 @@ type LocaleRestriction struct {
 
 type Application struct {
 	Name                  string               `bson:"name" json:"name"`
+	Description           string               `bson:"description" json:"description"`
 	OrgID                 string               `bson:"orgID" json:"-"`
 	CreatorID             string               `bson:"creatorID" json:"-"`
 	AppID                 string               `bson:"appID" json:"appID"`

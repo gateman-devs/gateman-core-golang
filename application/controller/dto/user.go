@@ -1,6 +1,5 @@
 package dto
 
-type CreateUserDTO struct {
-	Email    string `bson:"email" json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=6"`
+type SetFaceDTO struct {
+	ImagePath string `json:"imagePath" validate:"required"`
 }

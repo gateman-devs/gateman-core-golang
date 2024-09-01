@@ -35,7 +35,7 @@ type OrgMember struct {
 	FirstName     string              `bson:"firstName" json:"firstName"`
 	LastName      string              `bson:"lastName" json:"lastName"`
 	Email         string              `bson:"email" json:"email"`
-	Password      string              `bson:"password" json:"password"`
+	Password      string              `bson:"password" json:"-"`
 	UserAgent     string              `bson:"userAgent" json:"userAgent"`
 	DeviceID      string              `bson:"deviceID" json:"deviceID"`
 	OrgID         string              `bson:"orgID" json:"orgID"`

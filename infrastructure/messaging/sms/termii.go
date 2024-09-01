@@ -44,7 +44,7 @@ func (ts *TermiiService) SendOTP(phone string, whatsapp bool, otp *string) *stri
 	var termiiResponse TermiiOTPResponse
 	json.Unmarshal(*response, &termiiResponse)
 	if err != nil {
-		logger.Error("error retireving bvn data from dojah", logger.LoggerOptions{
+		logger.Error("error sending sms", logger.LoggerOptions{
 			Key:  "error",
 			Data: err,
 		})

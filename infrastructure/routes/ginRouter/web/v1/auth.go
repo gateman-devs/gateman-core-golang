@@ -64,5 +64,58 @@ func AuthRouter(router *gin.RouterGroup) {
 				Keys:     appContext.Keys,
 			})
 		})
+
+		authRouter.PATCH("/user/account/verify", middlewares.OTPTokenMiddleware("verify_account"), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			controller.VerifyUserAccount(&interfaces.ApplicationContext[any]{
+				Ctx:      ctx,
+				DeviceID: appContext.DeviceID,
+				Keys:     appContext.Keys,
+			})
+		})
+
+		authRouter.POST("/verify-device", func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			var body dto.VerifyDevice
+			if err := ctx.ShouldBindJSON(&body); err != nil {
+				apperrors.ErrorProcessingPayload(ctx, utils.GetStringPointer(*appContext.DeviceID))
+				return
+			}
+
+		})
+
+		authRouter.POST("/user/authenticate", func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			var body dto.CreateUserDTO
+			if err := ctx.ShouldBindJSON(&body); err != nil {
+				apperrors.ErrorProcessingPayload(ctx, utils.GetStringPointer(*appContext.DeviceID))
+				return
+			}
+			body.UserAgent = *appContext.UserAgent
+			body.DeviceID = *appContext.DeviceID
+			body.DeviceName = *appContext.DeviceName
+			controller.AuthenticateUser(&interfaces.ApplicationContext[dto.CreateUserDTO]{
+				Ctx:        ctx,
+				Body:       &body,
+				Keys:       appContext.Keys,
+				DeviceID:   appContext.DeviceID,
+				DeviceName: appContext.DeviceName,
+				UserAgent:  appContext.UserAgent,
+			})
+		})
+
+		authRouter.POST("/otp/resend", func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			var body dto.ResendOTPDTO
+			if err := ctx.ShouldBindJSON(&body); err != nil {
+				apperrors.ErrorProcessingPayload(ctx, utils.GetStringPointer(*appContext.DeviceID))
+				return
+			}
+			controller.ResendOTP(&interfaces.ApplicationContext[dto.ResendOTPDTO]{
+				Ctx:  ctx,
+				Body: &body,
+				Keys: appContext.Keys,
+			})
+		})
 	}
 }

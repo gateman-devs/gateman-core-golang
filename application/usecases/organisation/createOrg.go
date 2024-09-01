@@ -54,7 +54,7 @@ func CreateOrgUseCase(ctx any, payload *dto.CreateOrgDTO, deviceID *string, user
 	}
 	orgRepo := repository.OrgRepo()
 	err = orgRepo.StartTransaction(func(sc mongo.Session, c context.Context) error {
-		hashedPassword, err := cryptography.CryptoHahser.HashString(payload.Password)
+		hashedPassword, err := cryptography.CryptoHahser.HashString(payload.Password, []byte("somefixedsaltvalue"))
 		if err != nil {
 			logger.Error("an error occured while hashing org member password", logger.LoggerOptions{
 				Key:  "error",
