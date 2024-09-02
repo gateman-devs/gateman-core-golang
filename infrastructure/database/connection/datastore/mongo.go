@@ -16,6 +16,7 @@ var (
 	OrgMemberModel   *mongo.Collection
 	ApplicationModel *mongo.Collection
 	UserModel        *mongo.Collection
+	SubscriptionPlan *mongo.Collection
 )
 
 func connectMongo() *context.CancelFunc {
@@ -73,6 +74,8 @@ func setUpIndexes(ctx context.Context, db *mongo.Database) {
 		Keys:    bson.D{{Key: "appID", Value: 1}},
 		Options: options.Index(),
 	}})
+
+	SubscriptionPlan = db.Collection("SubscriptionPlans")
 
 	logger.Info("mongodb indexes set up successfully")
 }

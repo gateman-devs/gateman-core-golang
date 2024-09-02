@@ -11,6 +11,7 @@ import (
 	"authone.usepolymer.co/application/controller"
 	"authone.usepolymer.co/application/controller/dto"
 	"authone.usepolymer.co/application/interfaces"
+	"authone.usepolymer.co/application/subscription"
 	"authone.usepolymer.co/infrastructure/logger"
 	middlewares "authone.usepolymer.co/infrastructure/middleware"
 	ratelimit "authone.usepolymer.co/infrastructure/ratelimit"
@@ -52,6 +53,7 @@ func (s *ginServer) Start() {
 	server.Use(cors.New(corsConfig))
 	server.Use(ratelimit.TokenBucketPerIP())
 	server.MaxMultipartMemory = 15 << 20 // 8 MiB
+	subscription.SeedSubscriptionData()
 
 	// server.Use(logger.MetricMonitor.MetricMiddleware().(gin.HandlerFunc))
 	server.Use(logger.RequestMetricMonitor.RequestMetricMiddleware().(func(*gin.Context)))
