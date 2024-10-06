@@ -2,7 +2,6 @@ package user_usecases
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
@@ -161,11 +160,13 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID *string, us
 		}
 	}
 
+	hashedPassword, _ := cryptography.CryptoHahser.HashString(*payload.Password, []byte("somefixedsaltvalue"))
 	id := utils.GenerateUULDString()
 	_, err = userRepo.CreateOne(context.TODO(), entities.User{
-		ID:    id,
-		Email: payload.Email,
-		Phone: payload.Phone,
+		ID:       id,
+		Email:    payload.Email,
+		Password: string(hashedPassword),
+		Phone:    payload.Phone,
 		Devices: []entities.Device{{
 			ID:     *deviceID,
 			Secret: *encryptedSecret,
@@ -175,15 +176,7 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID *string, us
 		// Image:     fmt.Sprintf("%s/%s", id, "accountimage"),
 	})
 	hashedDeviceID, _ := cryptography.CryptoHahser.HashString(*deviceID, []byte("somefixedsaltvalue"))
-	fmt.Println(*deviceID)
-	fmt.Println(*deviceID)
-	fmt.Println(string(hashedDeviceID))
-	fmt.Println(hex.EncodeToString(hashedDeviceID))
 	cache.Cache.CreateEntry(string(hashedDeviceID), *encryptedSecret, time.Minute*0)
-	fmt.Println("omo")
-	fmt.Println(*deviceID)
-	fmt.Println(string(hashedDeviceID))
-	fmt.Println(hex.EncodeToString(hashedDeviceID))
 	if err != nil {
 		logger.Error("could not create user", logger.LoggerOptions{
 			Key:  "error",

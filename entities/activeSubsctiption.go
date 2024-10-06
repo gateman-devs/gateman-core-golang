@@ -12,7 +12,7 @@ type ActiveSubscription struct {
 	ApplicationID string `bson:"applicationID" json:"applicationID"`
 	Name          string `bson:"name" json:"name"`
 	RenewalDate   string `bson:"renewalDate" json:"renewalDate"`
-	Payme   string `bson:"renewalDate" json:"renewalDate"`
+	Payment       string `bson:"payment" json:"payment"`
 
 	ID        string    `bson:"_id" json:"id"`
 	CreatedAt time.Time `bson:"createdAt" json:"createdAt"`

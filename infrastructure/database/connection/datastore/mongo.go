@@ -50,6 +50,10 @@ func connectMongo() *context.CancelFunc {
 // Set up the indexes for the database
 func setUpIndexes(ctx context.Context, db *mongo.Database) {
 	OrgModel = db.Collection("Organisations")
+	OrgModel.Indexes().CreateMany(ctx, []mongo.IndexModel{{
+		Keys:    bson.D{{Key: "createdBy", Value: 1}},
+		Options: options.Index(),
+	}})
 
 	OrgMemberModel = db.Collection("OrgMembers")
 	OrgMemberModel.Indexes().CreateMany(ctx, []mongo.IndexModel{{
@@ -57,6 +61,9 @@ func setUpIndexes(ctx context.Context, db *mongo.Database) {
 		Options: options.Index(),
 	}, {
 		Keys:    bson.D{{Key: "orgID", Value: 1}},
+		Options: options.Index(),
+	}, {
+		Keys:    bson.D{{Key: "userID", Value: 1}},
 		Options: options.Index(),
 	}})
 

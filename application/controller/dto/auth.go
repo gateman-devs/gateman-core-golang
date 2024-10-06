@@ -18,6 +18,7 @@ type VerifyOTPDTO struct {
 
 type CreateUserDTO struct {
 	Email           *string               `json:"email,omitempty" validate:"omitempty,email,max=100"`
+	Password        *string               `json:"password" validate:"omitempty,min=8"`
 	Phone           *entities.PhoneNumber `json:"phone,omitempty"`
 	DeviceID        string                `json:"deviceID" validate:"required,max=50"`
 	DeviceName      string                `json:"deviceName" validate:"required,max=30"`

@@ -3,6 +3,7 @@ package prembly_idpass
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 
 	"authone.usepolymer.co/application/utils"
@@ -19,6 +20,7 @@ type PremblyBiometricService struct {
 
 // can either be a url or base64 string
 func (piv *PremblyBiometricService) LivenessCheck(img *string) (bool, error) {
+	fmt.Println(piv.Network.BaseUrl)
 	if os.Getenv("ENV") != "prod" {
 		img = utils.GetStringPointer("https://res.cloudinary.com/dh3i1wodq/image/upload/v1675417496/cbimage_3_drqdoc.jpg")
 	}
@@ -49,6 +51,7 @@ func (piv *PremblyBiometricService) LivenessCheck(img *string) (bool, error) {
 		Key:  "message",
 		Data: premblyResponse.Message,
 	})
+	fmt.Println(premblyResponse)
 	return premblyResponse.Result > 75.0, nil
 }
 

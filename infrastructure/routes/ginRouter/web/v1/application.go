@@ -14,7 +14,7 @@ import (
 func AppRouter(router *gin.RouterGroup) {
 	appRouter := router.Group("/app")
 	{
-		appRouter.POST("/create", middlewares.AuthenticationMiddleware(true, &[]entities.MemberPermissions{entities.ORG_CREATE_APPLICATIONS}), func(ctx *gin.Context) {
+		appRouter.POST("/create", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.ORG_CREATE_APPLICATIONS}), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.ApplicationDTO
 			if err := ctx.ShouldBindJSON(&body); err != nil {
@@ -46,7 +46,7 @@ func AppRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		appRouter.GET("/config/fetch", middlewares.AuthenticationMiddleware(true, &[]entities.MemberPermissions{entities.ORG_CREATE_APPLICATIONS}), func(ctx *gin.Context) {
+		appRouter.GET("/config/fetch", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.ORG_CREATE_APPLICATIONS}), func(ctx *gin.Context) {
 			controller.FetchAppCreationConfigInfo(&interfaces.ApplicationContext[any]{
 				Ctx: ctx,
 			},

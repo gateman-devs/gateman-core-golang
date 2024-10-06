@@ -10,6 +10,7 @@ type Organisation struct {
 	Name        string `bson:"name" json:"name"`
 	Email       string `bson:"email" json:"email"`
 	SuperMember string `bson:"superMember" json:"superMember"`
+	CreatedBy   string `bson:"createdBy" json:"createdBy"`
 	Country     string `bson:"country" json:"country"`
 	Sector      string `bson:"sector" json:"sector"`
 	Verified    bool   `bson:"verified" json:"verified"`

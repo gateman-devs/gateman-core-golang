@@ -32,16 +32,13 @@ const (
 )
 
 type OrgMember struct {
-	FirstName     string              `bson:"firstName" json:"firstName"`
-	LastName      string              `bson:"lastName" json:"lastName"`
-	Email         string              `bson:"email" json:"email"`
-	Password      string              `bson:"password" json:"-"`
-	UserAgent     string              `bson:"userAgent" json:"userAgent"`
-	DeviceID      string              `bson:"deviceID" json:"deviceID"`
-	OrgID         string              `bson:"orgID" json:"orgID"`
-	Deactivated   bool                `bson:"deactivated" json:"deactivated"`
-	VerifiedEmail bool                `bson:"verifiedEmail" json:"verifiedEmail"`
-	Permissions   []MemberPermissions `bson:"permissions" json:"permissions"`
+	Email       string              `bson:"email" json:"email"`
+	UserAgent   string              `bson:"userAgent" json:"userAgent"`
+	UserID      string              `bson:"userID" json:"userID"`
+	DeviceID    string              `bson:"deviceID" json:"deviceID"`
+	OrgID       string              `bson:"orgID" json:"orgID"`
+	Deactivated bool                `bson:"deactivated" json:"deactivated"`
+	Permissions []MemberPermissions `bson:"permissions" json:"permissions"`
 
 	ID        string    `bson:"_id" json:"id"`
 	CreatedAt time.Time `bson:"createdAt" json:"createdAt"`

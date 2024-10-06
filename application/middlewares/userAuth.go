@@ -7,6 +7,7 @@ import (
 	apperrors "authone.usepolymer.co/application/appErrors"
 	"authone.usepolymer.co/application/interfaces"
 	"authone.usepolymer.co/application/repository"
+	"authone.usepolymer.co/entities"
 	"authone.usepolymer.co/infrastructure/auth"
 	"authone.usepolymer.co/infrastructure/cryptography"
 	"authone.usepolymer.co/infrastructure/database/repository/cache"
@@ -15,7 +16,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func UserAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], intent string) (*interfaces.ApplicationContext[any], bool) {
+func UserAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], intent string, requiredPermissions *[]entities.MemberPermissions) (*interfaces.ApplicationContext[any], bool) {
 	authTokenHeaderPointer := ctx.GetHeader("Authorization")
 	if authTokenHeaderPointer == nil {
 		apperrors.AuthenticationError(ctx.Ctx, "provide an auth token", ctx.DeviceID)
@@ -102,6 +103,45 @@ func UserAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], inten
 		auth.SignOutUser(ctx.Ctx, account.ID, "client made request using device id different from that in access token")
 		apperrors.AuthenticationError(ctx.Ctx, "unauthorized access", ctx.DeviceID)
 		return nil, false
+	}
+
+	if ctx.Param["orgID"] != "" {
+		orgMemberRepo := repository.OrgMemberRepo()
+		orgID := ctx.Param["orgID"]
+		orgMember, err := orgMemberRepo.FindOneByFilter(map[string]interface{}{
+			"orgID":  orgID,
+			"userID": authTokenClaims["userID"],
+		})
+		if err != nil {
+			apperrors.AuthenticationError(ctx.Ctx, "unauthorized access", ctx.DeviceID)
+			return nil, false
+		}
+		if orgMember == nil {
+			apperrors.AuthenticationError(ctx.Ctx, "unauthorized access", ctx.DeviceID)
+			return nil, false
+		}
+		if orgMember.Deactivated {
+			apperrors.AuthenticationError(ctx.Ctx, "unauthorized access", ctx.DeviceID)
+			return nil, false
+		}
+		hasAccess := false
+		for _, rPermission := range *requiredPermissions {
+			hasPermission := false
+			for _, uPermission := range orgMember.Permissions {
+				if uPermission == entities.SUPER_ACCESS || uPermission == rPermission {
+					hasPermission = true
+					break
+				}
+			}
+			if hasPermission {
+				hasAccess = true
+				break
+			}
+		}
+		if !hasAccess {
+			apperrors.AuthenticationError(ctx.Ctx, "unauthorized access", ctx.DeviceID)
+			return nil, false
+		}
 	}
 
 	ctx.SetContextData("UserID", authTokenClaims["userID"])

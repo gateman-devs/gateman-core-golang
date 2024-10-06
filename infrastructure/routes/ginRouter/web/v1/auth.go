@@ -42,29 +42,6 @@ func AuthRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		authRouter.POST("/org/login", func(ctx *gin.Context) {
-			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
-			var body dto.LoginDTO
-			if err := ctx.ShouldBindJSON(&body); err != nil {
-				apperrors.ErrorProcessingPayload(ctx, utils.GetStringPointer(ctx.GetHeader("Polymer-Device-Id")))
-				return
-			}
-			controller.LoginOrgMember(&interfaces.ApplicationContext[dto.LoginDTO]{
-				Ctx:      ctx,
-				Body:     &body,
-				DeviceID: appContext.DeviceID,
-			})
-		})
-
-		authRouter.PATCH("/org/email/verify", middlewares.OTPTokenMiddleware("org_verification"), func(ctx *gin.Context) {
-			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
-			controller.VerifyOrg(&interfaces.ApplicationContext[any]{
-				Ctx:      ctx,
-				DeviceID: appContext.DeviceID,
-				Keys:     appContext.Keys,
-			})
-		})
-
 		authRouter.PATCH("/user/account/verify", middlewares.OTPTokenMiddleware("verify_account"), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			controller.VerifyUserAccount(&interfaces.ApplicationContext[any]{
