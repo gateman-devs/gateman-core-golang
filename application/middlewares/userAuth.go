@@ -16,7 +16,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func UserAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], intent string, requiredPermissions *[]entities.MemberPermissions) (*interfaces.ApplicationContext[any], bool) {
+func UserAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], intent string, requiredPermissions *[]entities.MemberPermissions, workspaceSpecific bool) (*interfaces.ApplicationContext[any], bool) {
 	authTokenHeaderPointer := ctx.GetHeader("Authorization")
 	if authTokenHeaderPointer == nil {
 		apperrors.AuthenticationError(ctx.Ctx, "provide an auth token", ctx.DeviceID)
@@ -105,47 +105,55 @@ func UserAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], inten
 		return nil, false
 	}
 
-	if ctx.Param["orgID"] != "" {
-		orgMemberRepo := repository.OrgMemberRepo()
-		orgID := ctx.Param["orgID"]
-		orgMember, err := orgMemberRepo.FindOneByFilter(map[string]interface{}{
-			"orgID":  orgID,
-			"userID": authTokenClaims["userID"],
-		})
-		if err != nil {
+	var workspaceName string
+	if workspaceSpecific {
+		if ctx.GetHeader("WorkspaceID") == nil {
 			apperrors.AuthenticationError(ctx.Ctx, "unauthorized access", ctx.DeviceID)
 			return nil, false
-		}
-		if orgMember == nil {
-			apperrors.AuthenticationError(ctx.Ctx, "unauthorized access", ctx.DeviceID)
-			return nil, false
-		}
-		if orgMember.Deactivated {
-			apperrors.AuthenticationError(ctx.Ctx, "unauthorized access", ctx.DeviceID)
-			return nil, false
-		}
-		hasAccess := false
-		for _, rPermission := range *requiredPermissions {
-			hasPermission := false
-			for _, uPermission := range orgMember.Permissions {
-				if uPermission == entities.SUPER_ACCESS || uPermission == rPermission {
-					hasPermission = true
+		} else {
+			WorkspaceMemberRepo := repository.WorkspaceMemberRepo()
+			workspaceID := ctx.Param["workspaceID"]
+			orgMember, err := WorkspaceMemberRepo.FindOneByFilter(map[string]interface{}{
+				"workspaceID": workspaceID,
+				"userID":      authTokenClaims["userID"],
+			})
+			if err != nil {
+				apperrors.AuthenticationError(ctx.Ctx, "unauthorized access", ctx.DeviceID)
+				return nil, false
+			}
+			if orgMember == nil {
+				apperrors.AuthenticationError(ctx.Ctx, "unauthorized access", ctx.DeviceID)
+				return nil, false
+			}
+			if orgMember.Deactivated {
+				apperrors.AuthenticationError(ctx.Ctx, "unauthorized access", ctx.DeviceID)
+				return nil, false
+			}
+			hasAccess := false
+			for _, rPermission := range *requiredPermissions {
+				hasPermission := false
+				for _, uPermission := range orgMember.Permissions {
+					if uPermission == entities.SUPER_ACCESS || uPermission == rPermission {
+						hasPermission = true
+						break
+					}
+				}
+				if hasPermission {
+					hasAccess = true
 					break
 				}
 			}
-			if hasPermission {
-				hasAccess = true
-				break
+			if !hasAccess {
+				apperrors.AuthenticationError(ctx.Ctx, "unauthorized access", ctx.DeviceID)
+				return nil, false
 			}
-		}
-		if !hasAccess {
-			apperrors.AuthenticationError(ctx.Ctx, "unauthorized access", ctx.DeviceID)
-			return nil, false
+			workspaceName = orgMember.WorkspaceName
 		}
 	}
 
 	ctx.SetContextData("UserID", authTokenClaims["userID"])
-	ctx.SetContextData("OrgID", authTokenClaims["orgID"])
+	ctx.SetContextData("WorkspaceID", authTokenClaims["workspaceID"])
+	ctx.SetContextData("workspaceName", workspaceName)
 	ctx.SetContextData("Email", authTokenClaims["email"])
 	ctx.SetContextData("Phone", authTokenClaims["phone"])
 	ctx.SetContextData("UserAgent", authTokenClaims["userAgent"])

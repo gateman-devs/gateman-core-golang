@@ -6,11 +6,12 @@ import (
 	"authone.usepolymer.co/application/utils"
 )
 
-type SubscriptionPlan struct {
-	Features     []string `bson:"features" json:"plfeaturesan"`
-	MonthlyPrice string   `bson:"monthlyPrice" json:"monthlyPrice"`
-	AnnualPrice  string   `bson:"annualPrice" json:"annualPrice"`
-	Name         string   `bson:"name" json:"name"`
+// This represents a user signed up to an app
+type AppUser struct {
+	AppID         string     `bson:"appID" json:"appID"`
+	UserID        string     `bson:"userID" json:"userID"`
+	Blocked       bool       `bson:"blocked" json:"blocked"`
+	DeletedUserAt *time.Time `bson:"deletedUserAt" json:"deletedUserAt"`
 
 	ID            string     `bson:"_id" json:"id"`
 	CreatedAt     time.Time  `bson:"createdAt" json:"createdAt"`
@@ -19,7 +20,7 @@ type SubscriptionPlan struct {
 	DeletedReason *string    `bson:"deletedReason" json:"deletedReason"`
 }
 
-func (model SubscriptionPlan) ParseModel() any {
+func (model AppUser) ParseModel() any {
 	now := time.Now()
 	if model.ID == "" {
 		model.CreatedAt = now

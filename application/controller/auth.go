@@ -84,7 +84,6 @@ func VerifyUserAccount(ctx *interfaces.ApplicationContext[any]) {
 		"firstName": 1,
 		"lastName":  1,
 		"deviceID":  1,
-		"orgID":     1,
 	}))
 	if err != nil {
 		logger.Error("an error occured while fetching user profile for verification", logger.LoggerOptions{

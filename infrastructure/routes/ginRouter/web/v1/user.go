@@ -10,7 +10,7 @@ import (
 func UserRouter(router *gin.RouterGroup) {
 	userRouter := router.Group("/user")
 	{
-		userRouter.POST("/set-image", middlewares.UserAuthenticationMiddleware("face_verification", nil), func(ctx *gin.Context) {
+		userRouter.POST("/set-image", middlewares.UserAuthenticationMiddleware("face_verification", nil, false), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			controller.SetAccountImage(&interfaces.ApplicationContext[any]{
 				Ctx:      ctx,

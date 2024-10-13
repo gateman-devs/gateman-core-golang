@@ -12,11 +12,12 @@ import (
 )
 
 var (
-	OrgModel         *mongo.Collection
-	OrgMemberModel   *mongo.Collection
-	ApplicationModel *mongo.Collection
-	UserModel        *mongo.Collection
-	SubscriptionPlan *mongo.Collection
+	WorkspaceModel        *mongo.Collection
+	WorkspaceMemberModel  *mongo.Collection
+	ApplicationModel      *mongo.Collection
+	UserModel             *mongo.Collection
+	SubscriptionPlanModel *mongo.Collection
+	WorkspaceInviteModel  *mongo.Collection
 )
 
 func connectMongo() *context.CancelFunc {
@@ -49,18 +50,18 @@ func connectMongo() *context.CancelFunc {
 
 // Set up the indexes for the database
 func setUpIndexes(ctx context.Context, db *mongo.Database) {
-	OrgModel = db.Collection("Organisations")
-	OrgModel.Indexes().CreateMany(ctx, []mongo.IndexModel{{
+	WorkspaceModel = db.Collection("Workspaces")
+	WorkspaceModel.Indexes().CreateMany(ctx, []mongo.IndexModel{{
 		Keys:    bson.D{{Key: "createdBy", Value: 1}},
 		Options: options.Index(),
 	}})
 
-	OrgMemberModel = db.Collection("OrgMembers")
-	OrgMemberModel.Indexes().CreateMany(ctx, []mongo.IndexModel{{
+	WorkspaceMemberModel = db.Collection("WorkspaceMembers")
+	WorkspaceMemberModel.Indexes().CreateMany(ctx, []mongo.IndexModel{{
 		Keys:    bson.D{{Key: "email", Value: 1}},
 		Options: options.Index(),
 	}, {
-		Keys:    bson.D{{Key: "orgID", Value: 1}},
+		Keys:    bson.D{{Key: "workspaceID", Value: 1}},
 		Options: options.Index(),
 	}, {
 		Keys:    bson.D{{Key: "userID", Value: 1}},
@@ -75,14 +76,20 @@ func setUpIndexes(ctx context.Context, db *mongo.Database) {
 
 	ApplicationModel = db.Collection("Applications")
 	ApplicationModel.Indexes().CreateMany(ctx, []mongo.IndexModel{{
-		Keys:    bson.D{{Key: "orgID", Value: 1}},
+		Keys:    bson.D{{Key: "workspaceID", Value: 1}},
 		Options: options.Index(),
 	}, {
 		Keys:    bson.D{{Key: "appID", Value: 1}},
 		Options: options.Index(),
 	}})
 
-	SubscriptionPlan = db.Collection("SubscriptionPlans")
+	WorkspaceInviteModel = db.Collection("WorkspaceInvites")
+	WorkspaceInviteModel.Indexes().CreateMany(ctx, []mongo.IndexModel{{
+		Keys:    bson.D{{Key: "workspaceID", Value: 1}},
+		Options: options.Index(),
+	}})
+
+	SubscriptionPlanModel = db.Collection("SubscriptionPlans")
 
 	logger.Info("mongodb indexes set up successfully")
 }

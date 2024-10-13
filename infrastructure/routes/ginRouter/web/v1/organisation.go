@@ -13,7 +13,7 @@ import (
 func OrgRouter(router *gin.RouterGroup) {
 	orgRouter := router.Group("/org")
 	{
-		orgRouter.POST("/create", middlewares.UserAuthenticationMiddleware("", nil), func(ctx *gin.Context) {
+		orgRouter.POST("/create", middlewares.UserAuthenticationMiddleware("", nil, false), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.CreateOrgDTO
 			if err := ctx.ShouldBindJSON(&body); err != nil {
@@ -28,9 +28,9 @@ func OrgRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		orgRouter.GET("/fetch", middlewares.UserAuthenticationMiddleware("", nil), func(ctx *gin.Context) {
+		orgRouter.GET("/fetch", middlewares.UserAuthenticationMiddleware("", nil, false), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
-			controller.FetchOrgs(&interfaces.ApplicationContext[dto.CreateOrgDTO]{
+			controller.FetchWorkspaces(&interfaces.ApplicationContext[dto.CreateOrgDTO]{
 				Ctx:      ctx,
 				Keys:     appContext.Keys,
 				DeviceID: appContext.DeviceID,

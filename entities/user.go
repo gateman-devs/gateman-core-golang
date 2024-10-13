@@ -39,9 +39,11 @@ type User struct {
 	VerifiedAccount bool         `bson:"verifiedAccount" json:"verifiedAccount"`
 	Devices         []Device     `bson:"devices" json:"devices"`
 
-	ID        string    `bson:"_id" json:"id"`
-	CreatedAt time.Time `bson:"createdAt" json:"createdAt"`
-	UpdatedAt time.Time `bson:"updatedAt" json:"updatedAt"`
+	ID            string     `bson:"_id" json:"id"`
+	CreatedAt     time.Time  `bson:"createdAt" json:"createdAt"`
+	UpdatedAt     time.Time  `bson:"updatedAt" json:"updatedAt"`
+	DeletedAt     *time.Time `bson:"deletedAt" json:"deletedAt"`
+	DeletedReason *string    `bson:"deletedReason" json:"deletedReason"`
 }
 
 func (model User) ParseModel() any {

@@ -14,8 +14,8 @@ import (
 )
 
 func CreateOrgUseCase(ctx any, payload *dto.CreateOrgDTO, deviceID *string, userAgent *string, userID string, email string) error {
-	orgMemberRepo := repository.OrgMemberRepo()
-	exists, err := orgMemberRepo.CountDocs(map[string]interface{}{
+	WorkspaceMemberRepo := repository.WorkspaceMemberRepo()
+	exists, err := WorkspaceMemberRepo.CountDocs(map[string]interface{}{
 		"email": email,
 	})
 	if err != nil {
@@ -26,8 +26,8 @@ func CreateOrgUseCase(ctx any, payload *dto.CreateOrgDTO, deviceID *string, user
 		apperrors.EntityAlreadyExistsError(ctx, "organisation with email already exists", deviceID)
 		return errors.New("")
 	}
-	orgRepo := repository.OrgRepo()
-	err = orgRepo.StartTransaction(func(sc mongo.Session, c context.Context) error {
+	workspaceRepo := repository.WorkspaceRepository()
+	err = workspaceRepo.StartTransaction(func(sc mongo.Session, c context.Context) error {
 		if err != nil {
 			logger.Error("an error occured while hashing org member password", logger.LoggerOptions{
 				Key:  "error",
@@ -36,26 +36,27 @@ func CreateOrgUseCase(ctx any, payload *dto.CreateOrgDTO, deviceID *string, user
 			sc.AbortTransaction(c)
 			return err
 		}
-		orgID := utils.GenerateUULDString()
-		orgMember := entities.OrgMember{
-			UserAgent:   *userAgent,
-			Email:       email,
-			DeviceID:    *deviceID,
-			UserID:      userID,
-			Permissions: []entities.MemberPermissions{entities.SUPER_ACCESS},
-			ID:          utils.GenerateUULDString(),
-			OrgID:       orgID,
+		workspaceID := utils.GenerateUULDString()
+		orgMember := entities.WorkspaceMember{
+			UserAgent:     *userAgent,
+			Email:         email,
+			DeviceID:      *deviceID,
+			UserID:        userID,
+			Permissions:   []entities.MemberPermissions{entities.SUPER_ACCESS},
+			ID:            utils.GenerateUULDString(),
+			WorkspaceID:   workspaceID,
+			WorkspaceName: payload.WorkspaceName,
 		}
-		orgData := entities.Organisation{
-			Name:        payload.OrgName,
+		orgData := entities.Workspace{
+			Name:        payload.WorkspaceName,
 			Email:       email,
 			Sector:      payload.Sector,
 			Country:     payload.Country,
 			SuperMember: orgMember.ID,
 			CreatedBy:   userID,
-			ID:          orgID,
+			ID:          workspaceID,
 		}
-		_, trxErr := orgRepo.CreateOne(context.TODO(), orgData)
+		_, trxErr := workspaceRepo.CreateOne(context.TODO(), orgData)
 		if trxErr != nil {
 			logger.Error("an error occured while creating an org", logger.LoggerOptions{
 				Key:  "error",
@@ -68,7 +69,7 @@ func CreateOrgUseCase(ctx any, payload *dto.CreateOrgDTO, deviceID *string, user
 			return trxErr
 		}
 
-		_, trxErr = orgMemberRepo.CreateOne(context.TODO(), orgMember)
+		_, trxErr = WorkspaceMemberRepo.CreateOne(context.TODO(), orgMember)
 		if trxErr != nil {
 			logger.Error("an error occured while creating an org member", logger.LoggerOptions{
 				Key:  "error",

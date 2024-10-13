@@ -14,9 +14,11 @@ type ActiveSubscription struct {
 	RenewalDate   string `bson:"renewalDate" json:"renewalDate"`
 	Payment       string `bson:"payment" json:"payment"`
 
-	ID        string    `bson:"_id" json:"id"`
-	CreatedAt time.Time `bson:"createdAt" json:"createdAt"`
-	UpdatedAt time.Time `bson:"updatedAt" json:"updatedAt"`
+	ID            string     `bson:"_id" json:"id"`
+	CreatedAt     time.Time  `bson:"createdAt" json:"createdAt"`
+	UpdatedAt     time.Time  `bson:"updatedAt" json:"updatedAt"`
+	DeletedAt     *time.Time `bson:"deletedAt" json:"deletedAt"`
+	DeletedReason *string    `bson:"deletedReason" json:"deletedReason"`
 }
 
 func (model ActiveSubscription) ParseModel() any {

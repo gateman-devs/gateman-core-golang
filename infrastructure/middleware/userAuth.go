@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func UserAuthenticationMiddleware(intent string, requiredPermissions *[]entities.MemberPermissions) gin.HandlerFunc {
+func UserAuthenticationMiddleware(intent string, requiredPermissions *[]entities.MemberPermissions, workspaceSpecific bool) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		appContext, next := middlewares.UserAuthenticationMiddleware(&interfaces.ApplicationContext[any]{
 			Ctx:      ctx,
@@ -16,9 +16,9 @@ func UserAuthenticationMiddleware(intent string, requiredPermissions *[]entities
 			Header:   ctx.Request.Header,
 			DeviceID: utils.GetStringPointer(ctx.Request.Header.Get("X-Device-Id")),
 			Param: map[string]any{
-				"orgID": ctx.Param("orgID"),
+				"workspaceID": ctx.Param("workspaceID"),
 			},
-		}, intent, requiredPermissions)
+		}, intent, requiredPermissions, workspaceSpecific)
 		if next {
 			ctx.Set("AppContext", appContext)
 			ctx.Next()

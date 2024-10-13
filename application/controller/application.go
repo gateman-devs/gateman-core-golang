@@ -45,7 +45,7 @@ func CreateApplication(ctx *interfaces.ApplicationContext[dto.ApplicationDTO]) {
 			}
 		}
 	}
-	app, apiKey := application_usecase.CreateApplicationUseCase(ctx.Ctx, ctx.Body, ctx.DeviceID, ctx.GetStringContextData("UserID"), ctx.GetStringContextData("OrgID"), ctx.GetStringContextData("Email"))
+	app, apiKey := application_usecase.CreateApplicationUseCase(ctx.Ctx, ctx.Body, ctx.DeviceID, ctx.GetStringContextData("UserID"), ctx.GetStringContextData("WorkspaceID"), ctx.GetStringContextData("Email"))
 	if app == nil {
 		return
 	}
@@ -57,8 +57,7 @@ func CreateApplication(ctx *interfaces.ApplicationContext[dto.ApplicationDTO]) {
 
 func FetchAppCreationConfigInfo(ctx *interfaces.ApplicationContext[any]) {
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "required fields", map[string]any{
-		"requiredFields":  constants.AVAILABLE_REQUIRED_DATA_POINTS,
-		"requestedFields": []string{},
+		"requiredFields": constants.AVAILABLE_REQUIRED_DATA_POINTS,
 	}, nil, nil, ctx.DeviceID)
 }
 
@@ -115,4 +114,57 @@ func FetchAppDetails(ctx *interfaces.ApplicationContext[any]) {
 		}
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "org fetched", app, nil, nil, ctx.DeviceID)
+}
+
+func FetchWorkspaceApps(ctx *interfaces.ApplicationContext[any]) {
+	appRepo := repository.ApplicationRepo()
+	apps, err := appRepo.FindMany(map[string]interface{}{
+		"workspaceID": ctx.GetStringContextData("WorkspaceID"),
+	})
+	if err != nil {
+		logger.Error("an error occured while trying to fetch workspace apps", logger.LoggerOptions{
+			Key:  "error",
+			Data: err,
+		})
+		apperrors.UnknownError(ctx.Ctx, err, ctx.DeviceID)
+	}
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "apps fetched", apps, nil, nil, ctx.DeviceID)
+}
+
+func DeleteApplication(ctx *interfaces.ApplicationContext[any]) {
+	appRepo := repository.ApplicationRepo()
+	deleted, err := appRepo.DeleteByID(ctx.GetStringParameter("id"))
+	if err != nil {
+		logger.Error("an error occured while trying to fetch workspace apps", logger.LoggerOptions{
+			Key:  "error",
+			Data: err,
+		})
+		apperrors.UnknownError(ctx.Ctx, err, ctx.DeviceID)
+		return
+	}
+	if deleted == 0 {
+		apperrors.NotFoundError(ctx.Ctx, "this resource does not exist", ctx.DeviceID)
+		return
+	}
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "apps fetched", nil, nil, nil, ctx.DeviceID)
+}
+
+func UpdateApplication(ctx *interfaces.ApplicationContext[dto.ApplicationDTO]) {
+	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
+	if valiedationErr != nil {
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
+		return
+	}
+	appRepo := repository.ApplicationRepo()
+	_, err := appRepo.UpdatePartialByID(ctx.GetStringParameter("id"), ctx.Body)
+	if err != nil {
+		logger.Error("an error occured while updating application", logger.LoggerOptions{
+			Key: "params", Data: ctx.Param,
+		}, logger.LoggerOptions{
+			Key: "payload", Data: ctx.Body,
+		})
+		apperrors.UnknownError(ctx.Ctx, err, ctx.DeviceID)
+		return
+	}
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "app updated", nil, nil, nil, ctx.DeviceID)
 }

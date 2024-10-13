@@ -17,3 +17,4 @@ var AVAILABLE_REQUIRED_DATA_POINTS = []string{"bvn", "nin", "address", "biometri
 
 var MAX_LOGIN_ATTEMPTS = 5
 
+var SUPPORT_EMAIL = "help@gateman.io"

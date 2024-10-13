@@ -6,7 +6,7 @@ import (
 	"authone.usepolymer.co/application/utils"
 )
 
-type Organisation struct {
+type Workspace struct {
 	Name        string `bson:"name" json:"name"`
 	Email       string `bson:"email" json:"email"`
 	SuperMember string `bson:"superMember" json:"superMember"`
@@ -15,12 +15,14 @@ type Organisation struct {
 	Sector      string `bson:"sector" json:"sector"`
 	Verified    bool   `bson:"verified" json:"verified"`
 
-	ID        string    `bson:"_id" json:"id"`
-	CreatedAt time.Time `bson:"createdAt" json:"createdAt"`
-	UpdatedAt time.Time `bson:"updatedAt" json:"updatedAt"`
+	ID            string     `bson:"_id" json:"id"`
+	CreatedAt     time.Time  `bson:"createdAt" json:"createdAt"`
+	UpdatedAt     time.Time  `bson:"updatedAt" json:"updatedAt"`
+	DeletedAt     *time.Time `bson:"deletedAt" json:"deletedAt"`
+	DeletedReason *string    `bson:"deletedReason" json:"deletedReason"`
 }
 
-func (model Organisation) ParseModel() any {
+func (model Workspace) ParseModel() any {
 	now := time.Now()
 	if model.ID == "" {
 		model.CreatedAt = now

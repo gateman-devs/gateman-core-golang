@@ -4,6 +4,6 @@ import (
 	"authone.usepolymer.co/entities"
 )
 
-func CreateOrgMemberUseCase(ctx any, payload *entities.OrgMember, super bool, deviceID *string) error {
+func CreateOrgMemberUseCase(ctx any, payload *entities.WorkspaceMember, super bool, deviceID *string) error {
 	return nil
 }

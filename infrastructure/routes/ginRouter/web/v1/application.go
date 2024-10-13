@@ -14,7 +14,7 @@ import (
 func AppRouter(router *gin.RouterGroup) {
 	appRouter := router.Group("/app")
 	{
-		appRouter.POST("/create", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.ORG_CREATE_APPLICATIONS}), func(ctx *gin.Context) {
+		appRouter.POST("/create", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.WORKSPACE_CREATE_APPLICATIONS}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.ApplicationDTO
 			if err := ctx.ShouldBindJSON(&body); err != nil {
@@ -25,6 +25,23 @@ func AppRouter(router *gin.RouterGroup) {
 				Ctx:  ctx,
 				Body: &body,
 				Keys: appContext.Keys,
+			})
+		})
+
+		appRouter.PATCH("/update/:id", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.WORKSPACE_EDIT_APPLICATIONS}, true), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			var body dto.ApplicationDTO
+			if err := ctx.ShouldBindJSON(&body); err != nil {
+				apperrors.ErrorProcessingPayload(ctx, utils.GetStringPointer(ctx.GetHeader("Polymer-Device-Id")))
+				return
+			}
+			controller.UpdateApplication(&interfaces.ApplicationContext[dto.ApplicationDTO]{
+				Ctx:  ctx,
+				Body: &body,
+				Keys: appContext.Keys,
+				Param: map[string]any{
+					"id": ctx.Param("id"),
+				},
 			})
 		})
 
@@ -46,8 +63,30 @@ func AppRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		appRouter.GET("/config/fetch", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.ORG_CREATE_APPLICATIONS}), func(ctx *gin.Context) {
+		appRouter.DELETE("/delete/:id", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.WORKSPACE_DELETE_APPLICATIONS}, true), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			id, found := ctx.Params.Get("id")
+			if !found {
+				apperrors.ClientError(ctx, "missing parameter id", nil, nil, utils.GetStringPointer(ctx.GetHeader("Polymer-Device-Id")))
+			}
+			controller.DeleteApplication(&interfaces.ApplicationContext[any]{
+				Ctx:    ctx,
+				Header: appContext.Header,
+				Param: map[string]any{
+					"id": id,
+				},
+			})
+		})
+
+		appRouter.GET("/config/fetch", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.WORKSPACE_CREATE_APPLICATIONS}, true), func(ctx *gin.Context) {
 			controller.FetchAppCreationConfigInfo(&interfaces.ApplicationContext[any]{
+				Ctx: ctx,
+			},
+			)
+		})
+
+		appRouter.GET("/all", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.WORKSPACE_VIEW_APPLICATIONS}, true), func(ctx *gin.Context) {
+			controller.FetchWorkspaceApps(&interfaces.ApplicationContext[any]{
 				Ctx: ctx,
 			},
 			)

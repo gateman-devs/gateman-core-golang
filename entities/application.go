@@ -14,7 +14,8 @@ type LocaleRestriction struct {
 type Application struct {
 	Name                  string               `bson:"name" json:"name"`
 	Description           string               `bson:"description" json:"description"`
-	OrgID                 string               `bson:"orgID" json:"-"`
+	WorkspaceID           string               `bson:"workspaceID" json:"-"`
+	AppImg                string               `bson:"appImg" json:"appImg"`
 	CreatorID             string               `bson:"creatorID" json:"-"`
 	AppID                 string               `bson:"appID" json:"appID"`
 	APIKey                string               `bson:"apiKey" json:"-"`
@@ -22,9 +23,11 @@ type Application struct {
 	RequestedFields       []string             `bson:"requestedFields" json:"requestedFields"`             // the fields the application are interested in recieving. MUST NOT BE EMPTY
 	LocaleRestriction     *[]LocaleRestriction `bson:"localeRestriction" json:"localeRestriction"`
 
-	ID        string    `bson:"_id" json:"id"`
-	CreatedAt time.Time `bson:"createdAt" json:"createdAt"`
-	UpdatedAt time.Time `bson:"updatedAt" json:"updatedAt"`
+	ID            string     `bson:"_id" json:"id"`
+	CreatedAt     time.Time  `bson:"createdAt" json:"createdAt"`
+	UpdatedAt     time.Time  `bson:"updatedAt" json:"updatedAt"`
+	DeletedAt     *time.Time `bson:"deletedAt" json:"deletedAt"`
+	DeletedReason *string    `bson:"deletedReason" json:"deletedReason"`
 }
 
 func (model Application) ParseModel() any {
