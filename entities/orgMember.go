@@ -35,13 +35,11 @@ const (
 )
 
 type WorkspaceMember struct {
-	Email         string              `bson:"email" json:"email"`
-	UserAgent     string              `bson:"userAgent" json:"userAgent"`
-	UserID        string              `bson:"userID" json:"userID"`
-	DeviceID      string              `bson:"deviceID" json:"deviceID"`
+	FirstName     string              `bson:"firstName" json:"firstName"`
+	LastName      string              `bson:"lastName" json:"lastName"`
+	Username      string              `bson:"username" json:"username"`
 	WorkspaceID   string              `bson:"workspaceID" json:"workspaceID"`
 	WorkspaceName string              `bson:"workspaceName" json:"workspaceName"`
-	Password      string              `bson:"password" json:"password"`
 	Deactivated   bool                `bson:"deactivated" json:"deactivated"`
 	Permissions   []MemberPermissions `bson:"permissions" json:"permissions"`
 

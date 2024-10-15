@@ -41,3 +41,17 @@ type VerifyDevice struct {
 	ImgURL   string `json:"imgURL"`
 	DeviceID string `json:"deviceID"`
 }
+
+type SetPasswordDTO struct {
+	Password string `json:"password" validate:"required,min=8"`
+}
+
+type UpdateAccountDetailsDTO struct {
+	FirstName string `json:"firstName" validate:"max=100,min=2"`
+	LastName  string `json:"lastName" validate:"max=100,min=2"`
+}
+
+type UpdatePasswordDTO struct {
+	OldPassword string `json:"oldPassword"`
+	NewPassword string `json:"newPassword" validate:"required,min=8"`
+}

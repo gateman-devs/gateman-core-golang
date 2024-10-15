@@ -38,10 +38,6 @@ func CreateOrgUseCase(ctx any, payload *dto.CreateOrgDTO, deviceID *string, user
 		}
 		workspaceID := utils.GenerateUULDString()
 		orgMember := entities.WorkspaceMember{
-			UserAgent:     *userAgent,
-			Email:         email,
-			DeviceID:      *deviceID,
-			UserID:        userID,
 			Permissions:   []entities.MemberPermissions{entities.SUPER_ACCESS},
 			ID:            utils.GenerateUULDString(),
 			WorkspaceID:   workspaceID,

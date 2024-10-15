@@ -10,6 +10,8 @@ type SubscriptionPlan struct {
 	Features     []string `bson:"features" json:"plfeaturesan"`
 	MonthlyPrice string   `bson:"monthlyPrice" json:"monthlyPrice"`
 	AnnualPrice  string   `bson:"annualPrice" json:"annualPrice"`
+	AnnualURL    string   `bson:"annualURL" json:"annualURL"`
+	MonthlyURL   string   `bson:"monthlyURL" json:"monthlyURL"`
 	Name         string   `bson:"name" json:"name"`
 
 	ID            string     `bson:"_id" json:"id"`

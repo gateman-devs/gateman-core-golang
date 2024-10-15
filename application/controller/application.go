@@ -1,10 +1,11 @@
 package controller
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
+	"time"
 
 	apperrors "authone.usepolymer.co/application/appErrors"
 	"authone.usepolymer.co/application/constants"
@@ -13,11 +14,11 @@ import (
 	"authone.usepolymer.co/application/repository"
 	application_usecase "authone.usepolymer.co/application/usecases/application"
 	"authone.usepolymer.co/application/utils"
-	"authone.usepolymer.co/infrastructure/ipresolver"
+	"authone.usepolymer.co/entities"
+	"authone.usepolymer.co/infrastructure/cryptography"
 	"authone.usepolymer.co/infrastructure/logger"
 	server_response "authone.usepolymer.co/infrastructure/serverResponse"
 	"authone.usepolymer.co/infrastructure/validator"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func CreateApplication(ctx *interfaces.ApplicationContext[dto.ApplicationDTO]) {
@@ -62,56 +63,9 @@ func FetchAppCreationConfigInfo(ctx *interfaces.ApplicationContext[any]) {
 }
 
 func FetchAppDetails(ctx *interfaces.ApplicationContext[any]) {
-	appRepo := repository.ApplicationRepo()
-	app, err := appRepo.FindOneByFilter(map[string]interface{}{
-		"appID": ctx.Param["id"],
-	}, options.FindOne().SetProjection(map[string]any{
-		"name":                  1,
-		"requiredVerifications": 1,
-		"requestedFields":       1,
-		"localeRestriction":     1,
-		"description":           1,
-	}))
+	app, err := application_usecase.FetchAppUseCase(ctx.Ctx, ctx.Param["id"].(string), ctx.DeviceID, ctx.Keys["ip"].(string))
 	if err != nil {
-		logger.Error("an error occured while fethcing app details", logger.LoggerOptions{
-			Key:  "error",
-			Data: err,
-		})
-		apperrors.UnknownError(ctx.Ctx, err, ctx.DeviceID)
 		return
-	}
-	if app == nil {
-		apperrors.NotFoundError(ctx.Ctx, "This application was not found. Seems the link you used might be damaged or malformed. Contact the App owner to report or help you resolve this issue", ctx.DeviceID)
-		return
-	}
-	if app.LocaleRestriction != nil {
-		ipData, err := ipresolver.IPResolverInstance.LookUp(ctx.Keys["ip"].(string))
-		if err != nil {
-			logger.Error("an error occured while resolving users ip for locale restriction", logger.LoggerOptions{
-				Key:  "error",
-				Data: err,
-			})
-			apperrors.UnknownError(ctx.Ctx, err, ctx.DeviceID)
-			return
-		}
-		passed := false
-		for _, locale := range *app.LocaleRestriction {
-			if locale.States != nil {
-				if utils.HasItemString(locale.States, strings.ToLower(ipData.City)) && locale.Country == ipData.CountryCode {
-					passed = true
-					break
-				}
-			} else {
-				if locale.Country == ipData.CountryCode {
-					passed = true
-					break
-				}
-			}
-		}
-		if !passed {
-			apperrors.ClientError(ctx.Ctx, "Seems you are not in a location that supports this app. If you are using a VPN please turn it off before attempting to access this app.", nil, nil, ctx.DeviceID)
-			return
-		}
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "org fetched", app, nil, nil, ctx.DeviceID)
 }
@@ -167,4 +121,54 @@ func UpdateApplication(ctx *interfaces.ApplicationContext[dto.ApplicationDTO]) {
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "app updated", nil, nil, nil, ctx.DeviceID)
+}
+
+func RefreshAppAPIKey(ctx *interfaces.ApplicationContext[any]) {
+	apiKey, _ := cryptography.EncryptData([]byte(utils.GenerateUULDString()), nil)
+	hashedAPIKey, _ := cryptography.CryptoHahser.HashString(string(*apiKey), nil)
+	appRepo := repository.ApplicationRepo()
+	_, err := appRepo.UpdatePartialByID(ctx.GetStringParameter("id"), map[string]any{
+		"apiKey": string(hashedAPIKey),
+	})
+	if err != nil {
+		logger.Error("an error occured while updating api key", logger.LoggerOptions{
+			Key: "params", Data: ctx.Param,
+		}, logger.LoggerOptions{
+			Key: "payload", Data: ctx.Body,
+		})
+		apperrors.UnknownError(ctx.Ctx, err, ctx.DeviceID)
+		return
+	}
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "api key updated. this will only be displayed once", apiKey, nil, nil, ctx.DeviceID)
+}
+
+func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpDTO]) {
+	_, err := application_usecase.FetchAppUseCase(ctx.Ctx, ctx.Body.AppID, ctx.DeviceID, ctx.Keys["ip"].(string))
+	if err != nil {
+		return
+	}
+	appUserRepo := repository.AppUserRepo()
+	context, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	appUserRepo.CreateOne(context, entities.AppUser{
+		AppID:  ctx.Body.AppID,
+		UserID: ctx.GetStringContextData("UserID"),
+	})
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "application signup", nil, nil, nil, ctx.DeviceID)
+}
+
+func FetchUserApps(ctx *interfaces.ApplicationContext[any]) {
+	appUserRepo := repository.AppUserRepo()
+	apps, err := appUserRepo.FindMany(map[string]interface{}{
+		"userID": ctx.GetStringContextData("UserID"),
+	})
+	if err != nil {
+		logger.Error("an error occured while fetching user apps", logger.LoggerOptions{
+			Key:  "userID",
+			Data: ctx.GetStringContextData("UserID"),
+		})
+		apperrors.UnknownError(ctx.Ctx, err, ctx.DeviceID)
+		return
+	}
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "apps fetched", apps, nil, nil, ctx.DeviceID)
 }

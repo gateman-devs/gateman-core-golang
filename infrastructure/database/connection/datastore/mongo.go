@@ -15,6 +15,7 @@ var (
 	WorkspaceModel        *mongo.Collection
 	WorkspaceMemberModel  *mongo.Collection
 	ApplicationModel      *mongo.Collection
+	AppUserModel          *mongo.Collection
 	UserModel             *mongo.Collection
 	SubscriptionPlanModel *mongo.Collection
 	WorkspaceInviteModel  *mongo.Collection
@@ -86,6 +87,15 @@ func setUpIndexes(ctx context.Context, db *mongo.Database) {
 	WorkspaceInviteModel = db.Collection("WorkspaceInvites")
 	WorkspaceInviteModel.Indexes().CreateMany(ctx, []mongo.IndexModel{{
 		Keys:    bson.D{{Key: "workspaceID", Value: 1}},
+		Options: options.Index(),
+	}})
+
+	AppUserModel = db.Collection("AppUser")
+	AppUserModel.Indexes().CreateMany(ctx, []mongo.IndexModel{{
+		Keys:    bson.D{{Key: "appID", Value: 1}},
+		Options: options.Index(),
+	}, {
+		Keys:    bson.D{{Key: "userID", Value: 1}},
 		Options: options.Index(),
 	}})
 

@@ -22,6 +22,7 @@ type Application struct {
 	RequiredVerifications *[]string            `bson:"requiredVerifications" json:"requiredVerifications"` // the verifications that must be completed before signup is approved
 	RequestedFields       []string             `bson:"requestedFields" json:"requestedFields"`             // the fields the application are interested in recieving. MUST NOT BE EMPTY
 	LocaleRestriction     *[]LocaleRestriction `bson:"localeRestriction" json:"localeRestriction"`
+	PaymentCard           string               `bson:"paymentCard" json:"paymentCard"`
 
 	ID            string     `bson:"_id" json:"id"`
 	CreatedAt     time.Time  `bson:"createdAt" json:"createdAt"`

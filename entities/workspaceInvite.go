@@ -7,11 +7,13 @@ import (
 )
 
 type WorkspaceInvite struct {
-	WorkspaceID string    `bson:"workspaceID" json:"workspaceID"`
-	Email       string    `bson:"email" json:"email"`
-	InvitedByID string    `bson:"invitedByID" json:"invitedByID"`
-	Accepted    *bool     `bson:"accepted" json:"accepted"`
-	ResentAt    time.Time `bson:"resentAt" json:"resentAt"`
+	WorkspaceID   string              `bson:"workspaceID" json:"workspaceID"`
+	WorkspaceName string              `bson:"workspaceName" json:"workspaceName"`
+	Email         string              `bson:"email" json:"email"`
+	InvitedByID   string              `bson:"invitedByID" json:"invitedByID"`
+	Accepted      *bool               `bson:"accepted" json:"accepted"`
+	ResentAt      time.Time           `bson:"resentAt" json:"resentAt"`
+	Permissions   []MemberPermissions `bson:"permissions" json:"permissions"`
 
 	ID        string    `bson:"_id" json:"id"`
 	CreatedAt time.Time `bson:"createdAt" json:"createdAt"`

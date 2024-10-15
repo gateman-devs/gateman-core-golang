@@ -11,7 +11,8 @@ type AppUser struct {
 	AppID         string     `bson:"appID" json:"appID"`
 	UserID        string     `bson:"userID" json:"userID"`
 	Blocked       bool       `bson:"blocked" json:"blocked"`
-	DeletedUserAt *time.Time `bson:"deletedUserAt" json:"deletedUserAt"`
+	BlockedReason *string    `bson:"blockedReason" json:"blockedReason"`
+	BlockedUserAt *time.Time `bson:"blockedUserAt" json:"blockedUserAt"`
 
 	ID            string     `bson:"_id" json:"id"`
 	CreatedAt     time.Time  `bson:"createdAt" json:"createdAt"`

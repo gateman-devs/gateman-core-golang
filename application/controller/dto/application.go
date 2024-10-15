@@ -9,3 +9,7 @@ type ApplicationDTO struct {
 	LocaleRestriction     *[]entities.LocaleRestriction `json:"localeRestriction"`
 	RequestedFields       []string                      `json:"requestedFields" validate:"required"`
 }
+
+type ApplicationSignUpDTO struct {
+	AppID string `json:"appID" validate:"required"`
+}

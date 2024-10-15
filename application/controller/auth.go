@@ -52,25 +52,6 @@ func AuthenticateUser(ctx *interfaces.ApplicationContext[dto.CreateUserDTO]) {
 	}, nil, nil, ctx.DeviceID)
 }
 
-func CreateUserWithPassword(ctx *interfaces.ApplicationContext[dto.CreateUserDTO]) {
-	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
-	if valiedationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
-		return
-	}
-	serverPublicKey, encryptedSecret := auth_usecases.InitiateKeyExchange(ctx.Ctx, ctx.Body.ClientPublicKey, ctx.DeviceID)
-	token, url, code, err := user_usecases.CreateUserUseCase(ctx.Ctx, ctx.Body, ctx.DeviceID, ctx.UserAgent, encryptedSecret, ctx.DeviceName)
-	if err != nil {
-		return
-	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "authentication complete", map[string]any{
-		"serverPublicKey": hex.EncodeToString(serverPublicKey),
-		"url":             url,
-		"code":            code,
-		"token":           token,
-	}, nil, nil, ctx.DeviceID)
-}
-
 func VerifyUserAccount(ctx *interfaces.ApplicationContext[any]) {
 	userRepo := repository.UserRepo()
 	filter := map[string]any{}
@@ -117,7 +98,7 @@ func VerifyUserAccount(ctx *interfaces.ApplicationContext[any]) {
 		UserAgent: profile.UserAgent,
 		// DeviceID:  profile.DeviceID,
 		IssuedAt:  time.Now().Unix(),
-		ExpiresAt: time.Now().Local().Add(time.Hour * 1).Unix(), //lasts for 1 hr
+		ExpiresAt: time.Now().Add(time.Hour * 1).Unix(), //lasts for 1 hr
 	})
 	if err != nil {
 		logger.Error("an error occured while generating auth token after org verification", logger.LoggerOptions{
@@ -192,7 +173,7 @@ func VerifyOTP(ctx *interfaces.ApplicationContext[dto.VerifyOTPDTO]) {
 		PhoneNum:  ctx.Body.Phone,
 		Intent:    *otpIntent,
 		IssuedAt:  time.Now().Unix(),
-		ExpiresAt: time.Now().Local().Add(time.Minute * time.Duration(10)).Unix(), //lasts for 10 mins
+		ExpiresAt: time.Now().Add(time.Minute * time.Duration(10)).Unix(), //lasts for 10 mins
 	})
 	if err != nil {
 		apperrors.FatalServerError(ctx.Ctx, err, ctx.DeviceID)

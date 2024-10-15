@@ -12,20 +12,16 @@ import (
 )
 
 func GeneratedSignedURL(ctx *interfaces.ApplicationContext[dto.GeneratedSignedURLDTO]) {
-	var fileName string
 	if ctx.Body.AccountImage {
-		fileName = "accountimage"
-	} else {
-		fileName = *ctx.DeviceID
+		ctx.Body.FilePath = fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), "accountimage")
 	}
-	filePath := fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), fileName)
-	url, err := fileupload.FileUploader.GeneratedSignedURL(filePath, ctx.Body.Permission)
+	url, err := fileupload.FileUploader.GeneratedSignedURL(ctx.Body.FilePath, ctx.Body.Permission)
 	if err != nil {
 		apperrors.UnknownError(ctx.Ctx, err, ctx.DeviceID)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "account created", map[string]any{
 		"url":      url,
-		"filePath": filePath,
+		"filePath": ctx.Body.FilePath,
 	}, nil, nil, ctx.DeviceID)
 }

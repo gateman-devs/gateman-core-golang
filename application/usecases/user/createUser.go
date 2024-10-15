@@ -62,7 +62,7 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID *string, us
 				DeviceID:  *deviceID,
 				Intent:    "face_verification",
 				IssuedAt:  time.Now().Unix(),
-				ExpiresAt: time.Now().Local().Add(time.Minute * 10).Unix(), //lasts for 10 mins
+				ExpiresAt: time.Now().Add(time.Minute * 10).Unix(), //lasts for 10 mins
 			})
 			if err != nil {
 				apperrors.UnknownError(ctx, err, deviceID)
@@ -205,7 +205,7 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID *string, us
 		DeviceID:  *deviceID,
 		Intent:    "face_verification",
 		IssuedAt:  time.Now().Unix(),
-		ExpiresAt: time.Now().Local().Add(time.Minute * 10).Unix(), //lasts for 10 mins
+		ExpiresAt: time.Now().Add(time.Minute * 10).Unix(), //lasts for 10 mins
 	})
 	if err != nil {
 		apperrors.UnknownError(ctx, err, deviceID)
