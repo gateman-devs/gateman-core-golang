@@ -35,10 +35,11 @@ func (ts *TermiiService) SendOTP(phone string, whatsapp bool, otp *string) *stri
 			"to":               phone,
 			"channel":          "dnd",
 			"pin_attempts":     4,
-			"pin_time_to_live": 7,
+			"pin_time_to_live": 10,
 			"pin_length":       6,
 			"pin_placeholder":  "< 123456 >",
 			"message_text":     "Your Polymer confirmation code is < 123456 >. Valid for 10 minutes, one-time use only.",
+			"pin_type":         "NUMERIC",
 		}, nil, false, nil)
 	}
 	var termiiResponse TermiiOTPResponse
@@ -77,9 +78,7 @@ func (ts *TermiiService) VerifyOTP(otpID string, otp string) bool {
 		"pin_id":  otpID,
 	}, nil, false, nil)
 	var termiiResponse TermiiOTPVerifiedResponse
-	var termiiRespons map[string]any
 	json.Unmarshal(*response, &termiiResponse)
-	json.Unmarshal(*response, &termiiRespons)
 	if err != nil {
 		logger.Error("error verifying termii otp", logger.LoggerOptions{
 			Key:  "error",

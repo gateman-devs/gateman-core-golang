@@ -8,11 +8,11 @@ import (
 	"authone.usepolymer.co/application/constants"
 	"authone.usepolymer.co/application/controller/dto"
 	"authone.usepolymer.co/application/repository"
-	polymercore "authone.usepolymer.co/application/services/polymer-core"
 	"authone.usepolymer.co/application/utils"
 	"authone.usepolymer.co/entities"
 	"authone.usepolymer.co/infrastructure/cryptography"
 	"authone.usepolymer.co/infrastructure/logger"
+	"authone.usepolymer.co/infrastructure/messaging/emails"
 )
 
 func CreateApplicationUseCase(ctx any, payload *dto.ApplicationDTO, deviceID *string, userID string, workspaceID string, email string) (*entities.Application, *string) {
@@ -30,8 +30,8 @@ func CreateApplicationUseCase(ctx any, payload *dto.ApplicationDTO, deviceID *st
 		})
 		return nil, nil
 	}
-	if currentApps >= 20 {
-		apperrors.ClientError(ctx, fmt.Sprintf("you have reached the maximum number of applications a workspace can have. Contact %s to assist in creating more.", constants.SUPPORT_EMAIL), nil, nil, deviceID)
+	if currentApps >= 30 {
+		apperrors.ClientError(ctx, fmt.Sprintf("You have reached the maximum number of applications a workspace can have. Contact %s to assist in creating more.", constants.SUPPORT_EMAIL), nil, nil)
 		return nil, nil
 	}
 	appID := utils.GenerateUULDString()
@@ -61,11 +61,12 @@ func CreateApplicationUseCase(ctx any, payload *dto.ApplicationDTO, deviceID *st
 		})
 		return nil, nil
 	}
-	err = polymercore.PolymerService.SendEmail("application_created", email, "Your new application has been created!", map[string]any{
+
+	emails.EmailService.SendEmail(email, "Verify your AuthOne account", "application_created", map[string]any{
 		"APP_NAME": payload.Name,
 	})
 	if err != nil {
-		apperrors.UnknownError(ctx, err, deviceID)
+		apperrors.UnknownError(ctx, err)
 		return nil, nil
 	}
 	return app, apiKey

@@ -5,7 +5,6 @@ import (
 	"authone.usepolymer.co/application/controller"
 	"authone.usepolymer.co/application/controller/dto"
 	"authone.usepolymer.co/application/interfaces"
-	"authone.usepolymer.co/application/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,7 +15,7 @@ func MiscRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.GeneratedSignedURLDTO
 			if err := ctx.ShouldBindJSON(&body); err != nil {
-				apperrors.ErrorProcessingPayload(ctx, utils.GetStringPointer(*appContext.DeviceID))
+				apperrors.ErrorProcessingPayload(ctx)
 				return
 			}
 			controller.GeneratedSignedURL(&interfaces.ApplicationContext[dto.GeneratedSignedURLDTO]{

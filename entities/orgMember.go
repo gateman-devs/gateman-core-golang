@@ -39,6 +39,7 @@ type WorkspaceMember struct {
 	LastName      string              `bson:"lastName" json:"lastName"`
 	Username      string              `bson:"username" json:"username"`
 	WorkspaceID   string              `bson:"workspaceID" json:"workspaceID"`
+	UserID        string              `bson:"userID" json:"userID"`
 	WorkspaceName string              `bson:"workspaceName" json:"workspaceName"`
 	Deactivated   bool                `bson:"deactivated" json:"deactivated"`
 	Permissions   []MemberPermissions `bson:"permissions" json:"permissions"`
@@ -52,7 +53,7 @@ type WorkspaceMember struct {
 
 func (model WorkspaceMember) ParseModel() any {
 	now := time.Now()
-	if model.ID == "" {
+	if model.CreatedAt.IsZero() {
 		model.CreatedAt = now
 		model.ID = utils.GenerateUULDString()
 	}

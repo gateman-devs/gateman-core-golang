@@ -1,18 +1,24 @@
 package auth
 
+type TokenType string
+
+var AccessToken TokenType = "access_token"
+var RefreshToken TokenType = "refresh_token"
+
 type ClaimsData struct {
-	Issuer      string
-	UserID      string
-	FirstName   string
-	LastName    string
-	Email       *string
-	PhoneNum    *string
-	WorkspaceID *string
-	ExpiresAt   int64
-	IssuedAt    int64
-	UserAgent   string
-	DeviceID    string
-	Intent      string
+	Issuer          string
+	UserID          string
+	FirstName       string
+	LastName        string
+	VerifiedAccount bool
+	Email           *string
+	PhoneNum        *string
+	ExpiresAt       int64
+	IssuedAt        int64
+	UserAgent       string
+	DeviceID        string
+	Intent          string
+	TokenType       TokenType
 }
 
 type InterserviceClaimsData struct {

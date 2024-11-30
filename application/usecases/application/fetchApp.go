@@ -29,11 +29,11 @@ func FetchAppUseCase(ctx any, appID string, deviceID *string, ip string) (*entit
 			Key:  "error",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx, err, deviceID)
+		apperrors.UnknownError(ctx, err)
 		return nil, err
 	}
 	if app == nil {
-		apperrors.NotFoundError(ctx, "This application was not found. Seems the link you used might be damaged or malformed. Contact the App owner to report or help you resolve this issue", deviceID)
+		apperrors.NotFoundError(ctx, "This application was not found. Seems the link you used might be damaged or malformed. Contact the App owner to report or help you resolve this issue")
 		return nil, errors.New("app does not exist")
 	}
 	if app.LocaleRestriction != nil {
@@ -43,7 +43,7 @@ func FetchAppUseCase(ctx any, appID string, deviceID *string, ip string) (*entit
 				Key:  "error",
 				Data: err,
 			})
-			apperrors.UnknownError(ctx, err, deviceID)
+			apperrors.UnknownError(ctx, err)
 			return nil, err
 		}
 		passed := false
@@ -61,7 +61,7 @@ func FetchAppUseCase(ctx any, appID string, deviceID *string, ip string) (*entit
 			}
 		}
 		if !passed {
-			apperrors.ClientError(ctx, "Seems you are not in a location that supports this app. If you are using a VPN please turn it off before attempting to access this app.", nil, nil, deviceID)
+			apperrors.ClientError(ctx, "Seems you are not in a location that supports this app. If you are using a VPN please turn it off before attempting to access this app.", nil, nil)
 			return nil, errors.New("invalid location")
 		}
 	}

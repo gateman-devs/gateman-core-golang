@@ -23,7 +23,7 @@ type SubscriptionPlan struct {
 
 func (model SubscriptionPlan) ParseModel() any {
 	now := time.Now()
-	if model.ID == "" {
+	if model.CreatedAt.IsZero() {
 		model.CreatedAt = now
 		model.ID = utils.GenerateUULDString()
 	}

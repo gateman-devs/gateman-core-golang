@@ -3,7 +3,7 @@ package dto
 import "authone.usepolymer.co/entities"
 
 type CreateOrgDTO struct {
-	WorkspaceName string `json:"WorkspaceName" validate:"required"`
+	WorkspaceName string `json:"workspaceName" validate:"required"`
 	Country       string `json:"country" validate:"required,iso3166_1_alpha2"`
 	Sector        string `json:"sector" validate:"required,oneof=fintech government, health, education other"`
 }

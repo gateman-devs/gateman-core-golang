@@ -17,13 +17,11 @@ type VerifyOTPDTO struct {
 }
 
 type CreateUserDTO struct {
-	Email           *string               `json:"email,omitempty" validate:"omitempty,email,max=100"`
-	Password        *string               `json:"password" validate:"omitempty,min=8"`
-	Phone           *entities.PhoneNumber `json:"phone,omitempty"`
-	DeviceID        string                `json:"deviceID" validate:"required,max=50"`
-	DeviceName      string                `json:"deviceName" validate:"required,max=30"`
-	UserAgent       string                `json:"userAgent" validate:"required,max=1000"`
-	ClientPublicKey string                `json:"clientPublicKey" validate:"required"`
+	Email      *string               `json:"email,omitempty" validate:"omitempty,email,max=100"`
+	Phone      *entities.PhoneNumber `json:"phone,omitempty"`
+	DeviceID   string                `json:"deviceID" validate:"required,max=50"`
+	DeviceName string                `json:"deviceName" validate:"required,max=30"`
+	UserAgent  string                `json:"userAgent" validate:"required,max=1000"`
 }
 
 type LoginDTO struct {
@@ -37,9 +35,8 @@ type ResendOTPDTO struct {
 	PhonePrefix *string `json:"phonePrefix"`
 }
 
-type VerifyDevice struct {
-	ImgURL   string `json:"imgURL"`
-	DeviceID string `json:"deviceID"`
+type VerifyDeviceDTO struct {
+	Email string `json:"email"`
 }
 
 type SetPasswordDTO struct {

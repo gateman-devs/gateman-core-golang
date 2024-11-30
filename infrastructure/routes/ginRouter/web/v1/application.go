@@ -5,7 +5,6 @@ import (
 	"authone.usepolymer.co/application/controller"
 	"authone.usepolymer.co/application/controller/dto"
 	"authone.usepolymer.co/application/interfaces"
-	"authone.usepolymer.co/application/utils"
 	"authone.usepolymer.co/entities"
 	middlewares "authone.usepolymer.co/infrastructure/middleware"
 	"github.com/gin-gonic/gin"
@@ -18,7 +17,7 @@ func AppRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.ApplicationDTO
 			if err := ctx.ShouldBindJSON(&body); err != nil {
-				apperrors.ErrorProcessingPayload(ctx, utils.GetStringPointer(ctx.GetHeader("Polymer-Device-Id")))
+				apperrors.ErrorProcessingPayload(ctx)
 				return
 			}
 			controller.CreateApplication(&interfaces.ApplicationContext[dto.ApplicationDTO]{
@@ -32,7 +31,7 @@ func AppRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.ApplicationDTO
 			if err := ctx.ShouldBindJSON(&body); err != nil {
-				apperrors.ErrorProcessingPayload(ctx, utils.GetStringPointer(ctx.GetHeader("Polymer-Device-Id")))
+				apperrors.ErrorProcessingPayload(ctx)
 				return
 			}
 			controller.UpdateApplication(&interfaces.ApplicationContext[dto.ApplicationDTO]{
@@ -45,11 +44,30 @@ func AppRouter(router *gin.RouterGroup) {
 			})
 		})
 
+		appRouter.PATCH("/apikey/refresh/:id", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.WORKSPACE_EDIT_APPLICATIONS}, true), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			controller.RefreshAppAPIKey(&interfaces.ApplicationContext[any]{
+				Ctx:  ctx,
+				Keys: appContext.Keys,
+				Param: map[string]any{
+					"id": ctx.Param("id"),
+				},
+			})
+		})
+
+		appRouter.GET("/workspace/fetch", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.WORKSPACE_VIEW_APPLICATIONS}, true), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			controller.FetchWorkspaceApps(&interfaces.ApplicationContext[any]{
+				Ctx:  ctx,
+				Keys: appContext.Keys,
+			})
+		})
+
 		appRouter.GET("/details/:id", func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			id, found := ctx.Params.Get("id")
 			if !found {
-				apperrors.ClientError(ctx, "missing parameter id", nil, nil, utils.GetStringPointer(ctx.GetHeader("Polymer-Device-Id")))
+				apperrors.ClientError(ctx, "missing parameter id", nil, nil)
 			}
 			controller.FetchAppDetails(&interfaces.ApplicationContext[any]{
 				Ctx: ctx,
@@ -67,7 +85,7 @@ func AppRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			id, found := ctx.Params.Get("id")
 			if !found {
-				apperrors.ClientError(ctx, "missing parameter id", nil, nil, utils.GetStringPointer(ctx.GetHeader("Polymer-Device-Id")))
+				apperrors.ClientError(ctx, "missing parameter id", nil, nil)
 			}
 			controller.DeleteApplication(&interfaces.ApplicationContext[any]{
 				Ctx:    ctx,

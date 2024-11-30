@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"crypto/tls"
 	"os"
 
 	"authone.usepolymer.co/infrastructure/logger"
@@ -14,11 +13,10 @@ var (
 
 func connectRedis() {
 	opt := &redis.Options{
-		Addr:      os.Getenv("REDIS_ADDR"),
-		Password:  os.Getenv("REDIS_PASSWORD"),
-		DB:        0,
-		TLSConfig: &tls.Config{},
-		PoolSize:  50,
+		Addr:     os.Getenv("REDIS_ADDR"),
+		Password: os.Getenv("REDIS_PASSWORD"),
+		DB:       0,
+		PoolSize: 50,
 	}
 	Client = redis.NewClient(opt)
 	logger.Info("connected to redis successfully")

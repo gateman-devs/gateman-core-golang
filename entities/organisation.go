@@ -8,7 +8,7 @@ import (
 
 type Workspace struct {
 	Name               string     `bson:"name" json:"name"`
-	Email              string     `bson:"email" json:"email"`
+	AdminEmail         string     `bson:"adminEmail" json:"adminEemail"`
 	SuperMember        string     `bson:"superMember" json:"superMember"`
 	CreatedBy          string     `bson:"createdBy" json:"createdBy"`
 	Country            string     `bson:"country" json:"country"`
@@ -26,7 +26,7 @@ type Workspace struct {
 
 func (model Workspace) ParseModel() any {
 	now := time.Now()
-	if model.ID == "" {
+	if model.CreatedAt.IsZero() {
 		model.CreatedAt = now
 		model.ID = utils.GenerateUULDString()
 	}

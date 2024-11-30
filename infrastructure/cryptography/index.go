@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"os"
 	"time"
@@ -45,53 +46,61 @@ func DecryptData(stringToDecrypt string, keyString *string) ([]byte, error) {
 	if keyString == nil {
 		keyString = utils.GetStringPointer(os.Getenv("ENC_KEY"))
 	}
-	key, _ := hex.DecodeString(*keyString)
-	ciphertext, _ := base64.URLEncoding.DecodeString(stringToDecrypt)
+
+	key, err := hex.DecodeString(*keyString)
+	if err != nil {
+		return nil, fmt.Errorf("invalid key format: %w", err)
+	}
+
+	ciphertext, err := base64.URLEncoding.DecodeString(stringToDecrypt)
+	if err != nil {
+		return nil, fmt.Errorf("invalid base64 input: %w", err)
+	}
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to create cipher: %w", err)
 	}
 
 	if len(ciphertext) < aes.BlockSize {
-		panic("ciphertext too short")
+		return nil, fmt.Errorf("ciphertext too short: must be at least %d bytes", aes.BlockSize)
 	}
-	iv := ciphertext[:aes.BlockSize]
 
+	iv := ciphertext[:aes.BlockSize]
 	ciphertext = ciphertext[aes.BlockSize:]
 
 	stream := cipher.NewCFBDecrypter(block, iv)
+	plaintext := make([]byte, len(ciphertext))
+	stream.XORKeyStream(plaintext, ciphertext)
 
-	// XORKeyStream can work in-place if the two arguments are the same.
-	stream.XORKeyStream(ciphertext, ciphertext)
-	return ciphertext, nil
+	return plaintext, nil
 }
 
-func EncryptData(payload []byte, keyString *string) (encryptedString *string, err error) {
-	// convert key to bytes
+func EncryptData(payload []byte, keyString *string) (*string, error) {
 	if keyString == nil {
 		keyString = utils.GetStringPointer(os.Getenv("ENC_KEY"))
 	}
-	key, _ := hex.DecodeString(*keyString)
 
-	//Create a new Cipher Block from the key
-	block, err := aes.NewCipher(key)
+	key, err := hex.DecodeString(*keyString)
 	if err != nil {
-		logger.Error(err.Error())
-		panic(err.Error())
+		return nil, fmt.Errorf("invalid key format: %w", err)
 	}
 
-	// The IV needs to be unique, but not secure. Therefore it's common to
-	// include it at the beginning of the ciphertext.
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cipher: %w", err)
+	}
+
 	ciphertext := make([]byte, aes.BlockSize+len(payload))
 	iv := ciphertext[:aes.BlockSize]
+
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to generate IV: %w", err)
 	}
 
 	stream := cipher.NewCFBEncrypter(block, iv)
 	stream.XORKeyStream(ciphertext[aes.BlockSize:], payload)
 
-	// convert to base64
-	return utils.GetStringPointer(base64.URLEncoding.EncodeToString(ciphertext)), nil
+	encoded := base64.URLEncoding.EncodeToString(ciphertext)
+	return utils.GetStringPointer(encoded), nil
 }

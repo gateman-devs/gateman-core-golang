@@ -33,7 +33,7 @@ type Application struct {
 
 func (model Application) ParseModel() any {
 	now := time.Now()
-	if model.ID == "" {
+	if model.CreatedAt.IsZero() {
 		model.CreatedAt = now
 		model.ID = utils.GenerateUULDString()
 	}

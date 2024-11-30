@@ -18,7 +18,7 @@ var jwksURL = "https://firebaseappcheck.googleapis.com/v1beta/jwks"
 func AttestationVerifier(ctx *interfaces.ApplicationContext[any]) (*interfaces.ApplicationContext[any], bool) {
 	attestationToken := ctx.GetHeader("X-Firebase-Token")
 	if attestationToken == nil {
-		apperrors.AuthenticationError(ctx.Ctx, "attestation token missing", ctx.DeviceID)
+		apperrors.AuthenticationError(ctx.Ctx, "attestation token missing")
 		return nil, false
 	}
 	if os.Getenv("ENV") == "development" {
@@ -40,7 +40,7 @@ func AttestationVerifier(ctx *interfaces.ApplicationContext[any]) (*interfaces.A
 			Key:  "error",
 			Data: err,
 		})
-		apperrors.AuthenticationError(ctx.Ctx, "client verification failed", ctx.DeviceID)
+		apperrors.AuthenticationError(ctx.Ctx, "client verification failed")
 		return nil, false
 	}
 
@@ -50,7 +50,7 @@ func AttestationVerifier(ctx *interfaces.ApplicationContext[any]) (*interfaces.A
 			Key:  "error",
 			Data: err,
 		})
-		apperrors.AuthenticationError(ctx.Ctx, "client verification failed", ctx.DeviceID)
+		apperrors.AuthenticationError(ctx.Ctx, "client verification failed")
 		return nil, false
 	}
 
@@ -59,7 +59,7 @@ func AttestationVerifier(ctx *interfaces.ApplicationContext[any]) (*interfaces.A
 			Key:  "token",
 			Data: attestationToken,
 		})
-		apperrors.AuthenticationError(ctx.Ctx, "client verification failed", ctx.DeviceID)
+		apperrors.AuthenticationError(ctx.Ctx, "client verification failed")
 		return nil, false
 	} else if payload.Header["alg"] != "RS256" {
 		// Ensure the token's header uses the algorithm RS256
@@ -67,7 +67,7 @@ func AttestationVerifier(ctx *interfaces.ApplicationContext[any]) (*interfaces.A
 			Key:  "token",
 			Data: attestationToken,
 		})
-		apperrors.AuthenticationError(ctx.Ctx, "client verification failed", ctx.DeviceID)
+		apperrors.AuthenticationError(ctx.Ctx, "client verification failed")
 		return nil, false
 	} else if payload.Header["typ"] != "JWT" {
 		// Ensure the token's header has type JWT
@@ -75,7 +75,7 @@ func AttestationVerifier(ctx *interfaces.ApplicationContext[any]) (*interfaces.A
 			Key:  "token",
 			Data: attestationToken,
 		})
-		apperrors.AuthenticationError(ctx.Ctx, "client verification failed", ctx.DeviceID)
+		apperrors.AuthenticationError(ctx.Ctx, "client verification failed")
 		return nil, false
 	} else if !verifyAudClaim(payload.Claims.(jwt.MapClaims)["aud"].([]interface{})) {
 		// Ensure the token's audience matches your project
@@ -83,7 +83,7 @@ func AttestationVerifier(ctx *interfaces.ApplicationContext[any]) (*interfaces.A
 			Key:  "token",
 			Data: attestationToken,
 		})
-		apperrors.AuthenticationError(ctx.Ctx, "client verification failed", ctx.DeviceID)
+		apperrors.AuthenticationError(ctx.Ctx, "client verification failed")
 		return nil, false
 	} else if !strings.Contains(payload.Claims.(jwt.MapClaims)["iss"].(string),
 		"https://firebaseappcheck.googleapis.com/"+os.Getenv("PROJECT_NUMBER")) {
@@ -92,7 +92,7 @@ func AttestationVerifier(ctx *interfaces.ApplicationContext[any]) (*interfaces.A
 			Key:  "token",
 			Data: attestationToken,
 		})
-		apperrors.AuthenticationError(ctx.Ctx, "client verification failed", ctx.DeviceID)
+		apperrors.AuthenticationError(ctx.Ctx, "client verification failed")
 		return nil, false
 	}
 	jwks.EndBackground()

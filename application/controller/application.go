@@ -24,16 +24,16 @@ import (
 func CreateApplication(ctx *interfaces.ApplicationContext[dto.ApplicationDTO]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
 		return
 	}
 	if len(ctx.Body.RequestedFields) == 0 {
-		apperrors.ValidationFailedError(ctx.Ctx, &[]error{errors.New("requestedFields cannot be empty")}, ctx.DeviceID)
+		apperrors.ValidationFailedError(ctx.Ctx, &[]error{errors.New("requestedFields cannot be empty")})
 		return
 	}
 	for _, field := range *ctx.Body.RequiredVerifications {
 		if !utils.HasItemString(&constants.AVAILABLE_REQUIRED_DATA_POINTS, field) {
-			apperrors.ValidationFailedError(ctx.Ctx, &[]error{fmt.Errorf("%s is not allowed in requested field", field)}, ctx.DeviceID)
+			apperrors.ValidationFailedError(ctx.Ctx, &[]error{fmt.Errorf("%s is not allowed in requested field", field)})
 			return
 		}
 	}
@@ -41,7 +41,7 @@ func CreateApplication(ctx *interfaces.ApplicationContext[dto.ApplicationDTO]) {
 		for _, r := range *ctx.Body.LocaleRestriction {
 			valiedationErr := validator.ValidatorInstance.ValidateStruct(r)
 			if valiedationErr != nil {
-				apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
+				apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
 				return
 			}
 		}
@@ -50,16 +50,16 @@ func CreateApplication(ctx *interfaces.ApplicationContext[dto.ApplicationDTO]) {
 	if app == nil {
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "org created", map[string]any{
+	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "app created", map[string]any{
 		"app":    app,
 		"apiKey": apiKey,
-	}, nil, nil, ctx.DeviceID)
+	}, nil, nil, nil, nil)
 }
 
 func FetchAppCreationConfigInfo(ctx *interfaces.ApplicationContext[any]) {
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "required fields", map[string]any{
 		"requiredFields": constants.AVAILABLE_REQUIRED_DATA_POINTS,
-	}, nil, nil, ctx.DeviceID)
+	}, nil, nil, nil, nil)
 }
 
 func FetchAppDetails(ctx *interfaces.ApplicationContext[any]) {
@@ -67,7 +67,7 @@ func FetchAppDetails(ctx *interfaces.ApplicationContext[any]) {
 	if err != nil {
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "org fetched", app, nil, nil, ctx.DeviceID)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "app fetched", app, nil, nil, nil, nil)
 }
 
 func FetchWorkspaceApps(ctx *interfaces.ApplicationContext[any]) {
@@ -80,9 +80,9 @@ func FetchWorkspaceApps(ctx *interfaces.ApplicationContext[any]) {
 			Key:  "error",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx.Ctx, err, ctx.DeviceID)
+		apperrors.UnknownError(ctx.Ctx, err)
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "apps fetched", apps, nil, nil, ctx.DeviceID)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "apps fetched", apps, nil, nil, nil, nil)
 }
 
 func DeleteApplication(ctx *interfaces.ApplicationContext[any]) {
@@ -93,20 +93,20 @@ func DeleteApplication(ctx *interfaces.ApplicationContext[any]) {
 			Key:  "error",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx.Ctx, err, ctx.DeviceID)
+		apperrors.UnknownError(ctx.Ctx, err)
 		return
 	}
 	if deleted == 0 {
-		apperrors.NotFoundError(ctx.Ctx, "this resource does not exist", ctx.DeviceID)
+		apperrors.NotFoundError(ctx.Ctx, "this resource does not exist")
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "apps fetched", nil, nil, nil, ctx.DeviceID)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "app deleted", nil, nil, nil, nil, nil)
 }
 
 func UpdateApplication(ctx *interfaces.ApplicationContext[dto.ApplicationDTO]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
 		return
 	}
 	appRepo := repository.ApplicationRepo()
@@ -117,17 +117,17 @@ func UpdateApplication(ctx *interfaces.ApplicationContext[dto.ApplicationDTO]) {
 		}, logger.LoggerOptions{
 			Key: "payload", Data: ctx.Body,
 		})
-		apperrors.UnknownError(ctx.Ctx, err, ctx.DeviceID)
+		apperrors.UnknownError(ctx.Ctx, err)
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "app updated", nil, nil, nil, ctx.DeviceID)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "app updated", nil, nil, nil, nil, nil)
 }
 
 func RefreshAppAPIKey(ctx *interfaces.ApplicationContext[any]) {
 	apiKey, _ := cryptography.EncryptData([]byte(utils.GenerateUULDString()), nil)
 	hashedAPIKey, _ := cryptography.CryptoHahser.HashString(string(*apiKey), nil)
 	appRepo := repository.ApplicationRepo()
-	_, err := appRepo.UpdatePartialByID(ctx.GetStringParameter("id"), map[string]any{
+	app, err := appRepo.UpdatePartialByID(ctx.GetStringParameter("id"), map[string]any{
 		"apiKey": string(hashedAPIKey),
 	})
 	if err != nil {
@@ -136,10 +136,14 @@ func RefreshAppAPIKey(ctx *interfaces.ApplicationContext[any]) {
 		}, logger.LoggerOptions{
 			Key: "payload", Data: ctx.Body,
 		})
-		apperrors.UnknownError(ctx.Ctx, err, ctx.DeviceID)
+		apperrors.UnknownError(ctx.Ctx, err)
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "api key updated. this will only be displayed once", apiKey, nil, nil, ctx.DeviceID)
+	if app == 0 {
+		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found")
+		return
+	}
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "API key updated. This will only be displayed once", apiKey, nil, nil, nil, nil)
 }
 
 func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpDTO]) {
@@ -154,7 +158,7 @@ func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpD
 		AppID:  ctx.Body.AppID,
 		UserID: ctx.GetStringContextData("UserID"),
 	})
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "application signup", nil, nil, nil, ctx.DeviceID)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "application signup", nil, nil, nil, nil, nil)
 }
 
 func FetchUserApps(ctx *interfaces.ApplicationContext[any]) {
@@ -167,8 +171,8 @@ func FetchUserApps(ctx *interfaces.ApplicationContext[any]) {
 			Key:  "userID",
 			Data: ctx.GetStringContextData("UserID"),
 		})
-		apperrors.UnknownError(ctx.Ctx, err, ctx.DeviceID)
+		apperrors.UnknownError(ctx.Ctx, err)
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "apps fetched", apps, nil, nil, ctx.DeviceID)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "apps fetched", apps, nil, nil, nil, nil)
 }

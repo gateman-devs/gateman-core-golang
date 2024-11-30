@@ -52,10 +52,6 @@ func connectMongo() *context.CancelFunc {
 // Set up the indexes for the database
 func setUpIndexes(ctx context.Context, db *mongo.Database) {
 	WorkspaceModel = db.Collection("Workspaces")
-	WorkspaceModel.Indexes().CreateMany(ctx, []mongo.IndexModel{{
-		Keys:    bson.D{{Key: "createdBy", Value: 1}},
-		Options: options.Index(),
-	}})
 
 	WorkspaceMemberModel = db.Collection("WorkspaceMembers")
 	WorkspaceMemberModel.Indexes().CreateMany(ctx, []mongo.IndexModel{{

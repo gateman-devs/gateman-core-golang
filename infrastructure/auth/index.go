@@ -66,18 +66,19 @@ func VerifyOTP(key string, otp string) (string, bool) {
 
 func GenerateAuthToken(claimsData ClaimsData) (*string, error) {
 	tokenString, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"iss":         os.Getenv("JWT_ISSUER"),
-		"userID":      claimsData.UserID,
-		"workspaceID": claimsData.WorkspaceID,
-		"exp":         claimsData.ExpiresAt,
-		"email":       claimsData.Email,
-		"firstName":   claimsData.FirstName,
-		"lastName":    claimsData.LastName,
-		"iat":         claimsData.IssuedAt,
-		"deviceID":    claimsData.DeviceID,
-		"userAgent":   claimsData.UserAgent,
-		"intent":      claimsData.Intent,
-		"phone":       claimsData.PhoneNum,
+		"iss":             os.Getenv("JWT_ISSUER"),
+		"userID":          claimsData.UserID,
+		"exp":             claimsData.ExpiresAt,
+		"email":           claimsData.Email,
+		"firstName":       claimsData.FirstName,
+		"lastName":        claimsData.LastName,
+		"iat":             claimsData.IssuedAt,
+		"deviceID":        claimsData.DeviceID,
+		"userAgent":       claimsData.UserAgent,
+		"intent":          claimsData.Intent,
+		"phone":           claimsData.PhoneNum,
+		"verifiedAccount": claimsData.VerifiedAccount,
+		"tokenType":       claimsData.TokenType,
 	}).SignedString([]byte(os.Getenv("JWT_SIGNING_KEY")))
 	if err != nil {
 		return nil, err

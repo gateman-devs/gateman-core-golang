@@ -22,7 +22,7 @@ type WorkspaceInvite struct {
 
 func (model WorkspaceInvite) ParseModel() any {
 	now := time.Now()
-	if model.ID == "" {
+	if model.CreatedAt.IsZero() {
 		model.CreatedAt = now
 		model.ID = utils.GenerateUULDString()
 	}

@@ -1,7 +1,9 @@
 package routev1
 
 import (
+	apperrors "authone.usepolymer.co/application/appErrors"
 	"authone.usepolymer.co/application/controller"
+	"authone.usepolymer.co/application/controller/dto"
 	"authone.usepolymer.co/application/interfaces"
 	middlewares "authone.usepolymer.co/infrastructure/middleware"
 	"github.com/gin-gonic/gin"
@@ -16,6 +18,21 @@ func UserRouter(router *gin.RouterGroup) {
 				Ctx:      ctx,
 				Keys:     appContext.Keys,
 				DeviceID: appContext.DeviceID,
+			})
+		})
+
+		userRouter.POST("/set-nin", middlewares.UserAuthenticationMiddleware("", nil, false), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			var body dto.SetNINDetails
+			if err := ctx.ShouldBindJSON(&body); err != nil {
+				apperrors.ErrorProcessingPayload(ctx)
+				return
+			}
+			controller.SetNINDetails(&interfaces.ApplicationContext[dto.SetNINDetails]{
+				Ctx:      ctx,
+				Keys:     appContext.Keys,
+				DeviceID: appContext.DeviceID,
+				Body:     &body,
 			})
 		})
 	}

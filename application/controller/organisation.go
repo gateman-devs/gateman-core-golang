@@ -14,19 +14,14 @@ import (
 )
 
 func CreateOrganisation(ctx *interfaces.ApplicationContext[dto.CreateOrgDTO]) {
-	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
-	if valiedationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
-		return
-	}
 	err := org_usecases.CreateOrgUseCase(ctx.Ctx, ctx.Body, ctx.DeviceID, ctx.UserAgent, ctx.GetStringContextData("UserID"), ctx.GetStringContextData("Email"))
 	if err != nil {
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "org created", nil, nil, nil, ctx.DeviceID)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "org created", nil, nil, nil, nil, nil)
 }
 
-func FetchWorkspaces(ctx *interfaces.ApplicationContext[dto.CreateOrgDTO]) {
+func FetchWorkspaces(ctx *interfaces.ApplicationContext[any]) {
 	WorkspaceMemberRepo := repository.WorkspaceMemberRepo()
 	workspaces, err := WorkspaceMemberRepo.FindMany(map[string]interface{}{
 		"userID": ctx.GetStringContextData("UserID"),
@@ -36,16 +31,16 @@ func FetchWorkspaces(ctx *interfaces.ApplicationContext[dto.CreateOrgDTO]) {
 			Key:  "error",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx.Ctx, err, ctx.DeviceID)
+		apperrors.UnknownError(ctx.Ctx, err)
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "workspaces fetched", workspaces, nil, nil, ctx.DeviceID)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "workspaces fetched", workspaces, nil, nil, nil, nil)
 }
 
 func UpdateOrgDetails(ctx *interfaces.ApplicationContext[dto.UpdateOrgDTO]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
 		return
 	}
 	workspaceRepo := repository.WorkspaceRepository()
@@ -60,5 +55,5 @@ func UpdateOrgDetails(ctx *interfaces.ApplicationContext[dto.UpdateOrgDTO]) {
 			"workspaceName": ctx.Body.WorkspaceName,
 		})
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "org updated", nil, nil, nil, ctx.DeviceID)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "org updated", nil, nil, nil, nil, nil)
 }

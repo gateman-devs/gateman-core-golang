@@ -11,6 +11,7 @@ type ApplicationContext[T interface{}] struct {
 	Body       *T
 	Nonce      *string
 	Keys       map[string]any
+	Cookies    []map[string]any
 	Query      map[string]any
 	Param      map[string]any
 	Header     map[string][]string

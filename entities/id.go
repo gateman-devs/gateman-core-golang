@@ -6,13 +6,13 @@ import (
 	"authone.usepolymer.co/application/utils"
 )
 
-type ActiveSubscription struct {
-	Plan          string `bson:"plan" json:"plan"`
-	Active        bool   `bson:"active" json:"active"`
-	ApplicationID string `bson:"applicationID" json:"applicationID"`
-	Name          string `bson:"name" json:"name"`
-	RenewalDate   string `bson:"renewalDate" json:"renewalDate"`
-	Payment       string `bson:"payment" json:"payment"`
+type GovID struct {
+	Type        string `bson:"type" json:"type"`
+	GovID       string `bson:"govID" json:"govID"`
+	AnnualPrice string `bson:"annualPrice" json:"annualPrice"`
+	AnnualURL   string `bson:"annualURL" json:"annualURL"`
+	MonthlyURL  string `bson:"monthlyURL" json:"monthlyURL"`
+	Name        string `bson:"name" json:"name"`
 
 	ID            string     `bson:"_id" json:"id"`
 	CreatedAt     time.Time  `bson:"createdAt" json:"createdAt"`
@@ -21,7 +21,7 @@ type ActiveSubscription struct {
 	DeletedReason *string    `bson:"deletedReason" json:"deletedReason"`
 }
 
-func (model ActiveSubscription) ParseModel() any {
+func (model GovID) ParseModel() any {
 	now := time.Now()
 	if model.CreatedAt.IsZero() {
 		model.CreatedAt = now

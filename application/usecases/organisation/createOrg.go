@@ -2,7 +2,6 @@ package org_usecases
 
 import (
 	"context"
-	"errors"
 
 	apperrors "authone.usepolymer.co/application/appErrors"
 	"authone.usepolymer.co/application/controller/dto"
@@ -15,18 +14,8 @@ import (
 
 func CreateOrgUseCase(ctx any, payload *dto.CreateOrgDTO, deviceID *string, userAgent *string, userID string, email string) error {
 	WorkspaceMemberRepo := repository.WorkspaceMemberRepo()
-	exists, err := WorkspaceMemberRepo.CountDocs(map[string]interface{}{
-		"email": email,
-	})
-	if err != nil {
-		apperrors.FatalServerError(ctx, err, deviceID)
-		return err
-	}
-	if exists != 0 {
-		apperrors.EntityAlreadyExistsError(ctx, "organisation with email already exists", deviceID)
-		return errors.New("")
-	}
 	workspaceRepo := repository.WorkspaceRepository()
+	var err error
 	err = workspaceRepo.StartTransaction(func(sc mongo.Session, c context.Context) error {
 		if err != nil {
 			logger.Error("an error occured while hashing org member password", logger.LoggerOptions{
@@ -42,10 +31,10 @@ func CreateOrgUseCase(ctx any, payload *dto.CreateOrgDTO, deviceID *string, user
 			ID:            utils.GenerateUULDString(),
 			WorkspaceID:   workspaceID,
 			WorkspaceName: payload.WorkspaceName,
+			UserID:        userID,
 		}
 		orgData := entities.Workspace{
 			Name:        payload.WorkspaceName,
-			Email:       email,
 			Sector:      payload.Sector,
 			Country:     payload.Country,
 			SuperMember: orgMember.ID,
@@ -83,7 +72,7 @@ func CreateOrgUseCase(ctx any, payload *dto.CreateOrgDTO, deviceID *string, user
 	})
 
 	if err != nil {
-		apperrors.UnknownError(ctx, err, deviceID)
+		apperrors.UnknownError(ctx, err)
 		return err
 	}
 	return nil

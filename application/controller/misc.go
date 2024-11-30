@@ -17,11 +17,11 @@ func GeneratedSignedURL(ctx *interfaces.ApplicationContext[dto.GeneratedSignedUR
 	}
 	url, err := fileupload.FileUploader.GeneratedSignedURL(ctx.Body.FilePath, ctx.Body.Permission)
 	if err != nil {
-		apperrors.UnknownError(ctx.Ctx, err, ctx.DeviceID)
+		apperrors.UnknownError(ctx.Ctx, err)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "account created", map[string]any{
 		"url":      url,
 		"filePath": ctx.Body.FilePath,
-	}, nil, nil, ctx.DeviceID)
+	}, nil, nil, nil, nil)
 }

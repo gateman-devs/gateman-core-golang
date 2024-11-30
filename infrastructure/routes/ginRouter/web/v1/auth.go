@@ -5,7 +5,6 @@ import (
 	"authone.usepolymer.co/application/controller"
 	"authone.usepolymer.co/application/controller/dto"
 	"authone.usepolymer.co/application/interfaces"
-	"authone.usepolymer.co/application/utils"
 	middlewares "authone.usepolymer.co/infrastructure/middleware"
 	"github.com/gin-gonic/gin"
 )
@@ -13,26 +12,11 @@ import (
 func AuthRouter(router *gin.RouterGroup) {
 	authRouter := router.Group("/auth")
 	{
-		authRouter.POST("/org/create", func(ctx *gin.Context) {
-			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
-			var body dto.CreateOrgDTO
-			if err := ctx.ShouldBindJSON(&body); err != nil {
-				apperrors.ErrorProcessingPayload(ctx, utils.GetStringPointer(ctx.GetHeader("Polymer-Device-Id")))
-				return
-			}
-			controller.CreateOrganisation(&interfaces.ApplicationContext[dto.CreateOrgDTO]{
-				Ctx:       ctx,
-				Body:      &body,
-				DeviceID:  appContext.DeviceID,
-				UserAgent: appContext.UserAgent,
-			})
-		})
-
 		authRouter.POST("/otp/verify", func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.VerifyOTPDTO
 			if err := ctx.ShouldBindJSON(&body); err != nil {
-				apperrors.ErrorProcessingPayload(ctx, utils.GetStringPointer(ctx.GetHeader("Polymer-Device-Id")))
+				apperrors.ErrorProcessingPayload(ctx)
 				return
 			}
 			controller.VerifyOTP(&interfaces.ApplicationContext[dto.VerifyOTPDTO]{
@@ -44,6 +28,7 @@ func AuthRouter(router *gin.RouterGroup) {
 
 		authRouter.PATCH("/user/account/verify", middlewares.OTPTokenMiddleware("verify_account"), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+
 			controller.VerifyUserAccount(&interfaces.ApplicationContext[any]{
 				Ctx:      ctx,
 				DeviceID: appContext.DeviceID,
@@ -53,19 +38,33 @@ func AuthRouter(router *gin.RouterGroup) {
 
 		authRouter.POST("/verify-device", func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
-			var body dto.VerifyDevice
+			var body dto.VerifyDeviceDTO
 			if err := ctx.ShouldBindJSON(&body); err != nil {
-				apperrors.ErrorProcessingPayload(ctx, utils.GetStringPointer(*appContext.DeviceID))
+				apperrors.ErrorProcessingPayload(ctx)
 				return
 			}
+			controller.VeirfyDeviceImage(&interfaces.ApplicationContext[dto.VerifyDeviceDTO]{
+				Ctx:      ctx,
+				DeviceID: appContext.DeviceID,
+				Keys:     appContext.Keys,
+				Body:     &body,
+			})
+		})
 
+		authRouter.GET("/refresh", middlewares.RefreshTokenMiddleware(), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			controller.RefreshToken(&interfaces.ApplicationContext[any]{
+				Ctx:      ctx,
+				DeviceID: appContext.DeviceID,
+				Keys:     appContext.Keys,
+			})
 		})
 
 		authRouter.POST("/user/authenticate", func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.CreateUserDTO
 			if err := ctx.ShouldBindJSON(&body); err != nil {
-				apperrors.ErrorProcessingPayload(ctx, utils.GetStringPointer(*appContext.DeviceID))
+				apperrors.ErrorProcessingPayload(ctx)
 				return
 			}
 			body.UserAgent = *appContext.UserAgent
@@ -85,7 +84,7 @@ func AuthRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.ResendOTPDTO
 			if err := ctx.ShouldBindJSON(&body); err != nil {
-				apperrors.ErrorProcessingPayload(ctx, utils.GetStringPointer(*appContext.DeviceID))
+				apperrors.ErrorProcessingPayload(ctx)
 				return
 			}
 			controller.ResendOTP(&interfaces.ApplicationContext[dto.ResendOTPDTO]{
