@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"context"
 	"time"
 
 	"github.com/go-redis/redis"
@@ -18,10 +17,6 @@ type RedisRepository struct {
 	Clinet *redis.Client
 }
 
-func generateContext() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), 15*time.Second)
-}
-
 func (redisRepo *RedisRepository) preRequest() {
 	if redisRepo.Clinet == nil {
 		redisRepo.Clinet = redisClient.Client
@@ -33,16 +28,13 @@ func (redisRepo *RedisRepository) CreateEntry(key string, payload interface{}, t
 	redisRepo.preRequest()
 	_, err := redisRepo.Clinet.Set(key, payload, ttl).Result()
 	if err != nil {
-		logger.Error("redis error occured while running CreateEntry", logger.LoggerOptions{
-			Key:  "error",
-			Data: err,
-		}, logger.LoggerOptions{
-			Key:  "key",
-			Data: key,
-		}, logger.LoggerOptions{
-			Key:  "payload",
-			Data: payload,
-		})
+		// logger.Error("redis error occured while running CreateEntry", logger.LoggerOptions{
+		// 	Key:  "error",
+		// 	Data: err,
+		// }, logger.LoggerOptions{
+		// 	Key:  "key",
+		// 	Data: key,
+		// })
 		return false
 	}
 

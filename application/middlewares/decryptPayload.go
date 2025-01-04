@@ -16,7 +16,7 @@ func DecryptPayloadMiddleware(ctx *interfaces.ApplicationContext[string]) []byte
 	if ctx.Body == nil || *ctx.Body == "" {
 		return nil
 	}
-	sharedKey := cache.Cache.FindOne(fmt.Sprintf("%s-key", *ctx.DeviceID))
+	sharedKey := cache.Cache.FindOne(fmt.Sprintf("%s-key", ctx.DeviceID))
 	if sharedKey == nil {
 		apperrors.ClientError(ctx.Ctx, "expired encryption key", nil, nil)
 		return nil

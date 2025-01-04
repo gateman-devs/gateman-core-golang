@@ -11,6 +11,7 @@ type MemberPermissions string
 const (
 	// org users
 	USER_RESTRICT MemberPermissions = "user_restrict"
+	USER_VIEW     MemberPermissions = "user_view"
 	USER_BLOCK    MemberPermissions = "user_block"
 	USER_DELETE   MemberPermissions = "user_delete"
 

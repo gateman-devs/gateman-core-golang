@@ -2,6 +2,7 @@ package user_usecases
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -20,11 +21,13 @@ import (
 	fileupload "authone.usepolymer.co/infrastructure/file_upload"
 	"authone.usepolymer.co/infrastructure/file_upload/types"
 	"authone.usepolymer.co/infrastructure/logger"
-	"authone.usepolymer.co/infrastructure/messaging/emails"
+	messagequeue "authone.usepolymer.co/infrastructure/message_queue"
+	queue_tasks "authone.usepolymer.co/infrastructure/message_queue/tasks"
+	mq_types "authone.usepolymer.co/infrastructure/message_queue/types"
 	"authone.usepolymer.co/infrastructure/messaging/sms"
 )
 
-func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID *string, userAgent *string, deviceName *string) (*string, *string, *uint, error) {
+func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, userAgent string, deviceName string) (*string, *string, *uint, error) {
 	var availabilityFilter = map[string]any{}
 	if payload.Email != nil {
 		availabilityFilter["email"] = strings.ToLower(*payload.Email)
@@ -33,7 +36,6 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID *string, us
 		availabilityFilter["phone.localNumber"] = payload.Phone.LocalNumber
 		payload.Email = nil
 	}
-	fmt.Println(availabilityFilter, payload.Phone)
 	userRepo := repository.UserRepo()
 	account, err := userRepo.FindOneByFilter(availabilityFilter)
 	if err != nil {
@@ -48,10 +50,28 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID *string, us
 					apperrors.FatalServerError(ctx, err)
 					return nil, nil, nil, nil
 				}
-				emails.EmailService.SendEmail(*account.Email, "Verify your AuthOne account", "authone_user_welcome", map[string]any{
-					"OTP": otp,
+
+				emailPayload, err := json.Marshal(queue_tasks.EmailPayload{
+					Opts: map[string]any{
+						"OTP": otp,
+					},
+					To:       *payload.Email,
+					Subject:  "Verify Your Gateman Email",
+					Template: "authone_user_welcome",
+					Intent:   ("verify_account"),
 				})
-				cache.Cache.CreateEntry(fmt.Sprintf("%s-otp-intent", *account.Email), "verify_account", time.Minute*10)
+				if err != nil {
+					logger.Error("error marshalling payload for email queue")
+					apperrors.FatalServerError(ctx, err)
+					return nil, nil, nil, err
+				}
+				messagequeue.TaskQueue.Enqueue(mq_types.QueueTask{
+					Payload:   emailPayload,
+					Name:      queue_tasks.HandleEmailDeliveryTaskName,
+					Priority:  mq_types.High,
+					ProcessIn: 1,
+				})
+
 			} else {
 				otp, err := auth.GenerateOTP(6, account.Phone.LocalNumber)
 				if err != nil {
@@ -69,14 +89,14 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID *string, us
 			}
 
 			for i, device := range account.Devices {
-				if device.ID == *deviceID {
+				if device.ID == deviceID {
 					account.Devices = append(account.Devices[:i], account.Devices[i+1:]...)
 					break
 				}
 			}
 			account.Devices = append(account.Devices, entities.Device{
-				ID:        *deviceID,
-				Name:      *deviceName,
+				ID:        deviceID,
+				Name:      deviceName,
 				LastLogin: time.Now(),
 			})
 			_, err := userRepo.UpdateByID(account.ID, account)
@@ -100,10 +120,27 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID *string, us
 					apperrors.FatalServerError(ctx, err)
 					return nil, nil, nil, nil
 				}
-				emails.EmailService.SendEmail(*account.Email, "Verify your gateman login", "authone_user_welcome", map[string]any{
-					"OTP": otp,
+
+				payload, err := json.Marshal(queue_tasks.EmailPayload{
+					Opts: map[string]any{
+						"OTP": otp,
+					},
+					To:       *account.Email,
+					Subject:  "Verify your gateman login",
+					Template: "authone_user_welcome",
+					Intent:   "verify_account",
 				})
-				cache.Cache.CreateEntry(fmt.Sprintf("%s-otp-intent", *account.Email), "verify_account", time.Minute*10)
+				if err != nil {
+					logger.Error("error marshalling payload for email queue")
+					apperrors.FatalServerError(ctx, err)
+					return nil, nil, nil, err
+				}
+				messagequeue.TaskQueue.Enqueue(mq_types.QueueTask{
+					Payload:   payload,
+					Name:      queue_tasks.HandleEmailDeliveryTaskName,
+					Priority:  mq_types.High,
+					ProcessIn: 1,
+				})
 			} else {
 				otp, err := auth.GenerateOTP(6, account.Phone.LocalNumber)
 				if err != nil {
@@ -121,14 +158,14 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID *string, us
 			}
 
 			for i, device := range account.Devices {
-				if device.ID == *deviceID {
+				if device.ID == deviceID {
 					account.Devices = append(account.Devices[:i], account.Devices[i+1:]...)
 					break
 				}
 			}
 			account.Devices = append(account.Devices, entities.Device{
-				ID:        *deviceID,
-				Name:      *deviceName,
+				ID:        deviceID,
+				Name:      deviceName,
 				LastLogin: time.Now(),
 			})
 			_, err := userRepo.UpdateByID(account.ID, account)
@@ -146,14 +183,14 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID *string, us
 			return nil, nil, &constants.ACCOUNT_EXISTS_UNVERIFIED, nil
 		}
 		for i, device := range account.Devices {
-			if device.ID == *deviceID {
+			if device.ID == deviceID {
 				account.Devices = append(account.Devices[:i], account.Devices[i+1:]...)
 				break
 			}
 		}
 		account.Devices = append(account.Devices, entities.Device{
-			ID:        *deviceID,
-			Name:      *deviceName,
+			ID:        deviceID,
+			Name:      deviceName,
 			LastLogin: time.Now(),
 		})
 		_, err := userRepo.UpdateByID(account.ID, account)
@@ -168,7 +205,7 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID *string, us
 			apperrors.UnknownError(ctx, err)
 			return nil, nil, nil, err
 		}
-		url, err := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", account.ID, *deviceID), types.SignedURLPermission{
+		url, err := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", account.ID, deviceID), types.SignedURLPermission{
 			Write: true,
 		})
 		if err != nil {
@@ -209,11 +246,11 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID *string, us
 		Email: payload.Email,
 		Phone: payload.Phone,
 		Devices: []entities.Device{{
-			ID:        *deviceID,
-			Name:      *deviceName,
+			ID:        deviceID,
+			Name:      deviceName,
 			LastLogin: time.Now(),
 		}},
-		UserAgent: *userAgent,
+		UserAgent: userAgent,
 		// Image:     fmt.Sprintf("%s/%s", id, "accountimage"),
 	})
 	if err != nil {
@@ -231,10 +268,26 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID *string, us
 			apperrors.FatalServerError(ctx, err)
 			return nil, nil, nil, nil
 		}
-		emails.EmailService.SendEmail(*payload.Email, "Verify your AuthOne account", "authone_user_welcome", map[string]any{
-			"OTP": otp,
+		emailPayload, err := json.Marshal(queue_tasks.EmailPayload{
+			Opts: map[string]any{
+				"OTP": otp,
+			},
+			To:       *payload.Email,
+			Subject:  "Gateman OTP",
+			Template: "authone_user_welcome",
+			Intent:   ("verify_account"),
 		})
-		cache.Cache.CreateEntry(fmt.Sprintf("%s-otp-intent", *payload.Email), "verify_account", time.Minute*10)
+		if err != nil {
+			logger.Error("error marshalling payload for email queue")
+			apperrors.FatalServerError(ctx, err)
+			return nil, nil, nil, err
+		}
+		messagequeue.TaskQueue.Enqueue(mq_types.QueueTask{
+			Payload:   emailPayload,
+			Name:      queue_tasks.HandleEmailDeliveryTaskName,
+			Priority:  mq_types.High,
+			ProcessIn: 1,
+		})
 	} else {
 		otp, err := auth.GenerateOTP(6, payload.Phone.LocalNumber)
 		if err != nil {

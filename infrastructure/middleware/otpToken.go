@@ -3,7 +3,6 @@ package middlewares
 import (
 	"authone.usepolymer.co/application/interfaces"
 	"authone.usepolymer.co/application/middlewares"
-	"authone.usepolymer.co/application/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -12,7 +11,7 @@ func OTPTokenMiddleware(intent string) gin.HandlerFunc {
 		appContext, next := middlewares.OTPTokenMiddleware(&interfaces.ApplicationContext[any]{
 			Ctx:      ctx,
 			Keys:     ctx.Keys,
-			DeviceID: utils.GetStringPointer(ctx.Request.Header.Get("X-Device-Id")),
+			DeviceID: ctx.Request.Header.Get("X-Device-Id"),
 			Header:   ctx.Request.Header,
 		}, ctx.ClientIP(), intent)
 		if next {

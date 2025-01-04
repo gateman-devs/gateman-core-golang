@@ -3,7 +3,6 @@ package middlewares
 import (
 	"authone.usepolymer.co/application/interfaces"
 	"authone.usepolymer.co/application/middlewares"
-	"authone.usepolymer.co/application/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -13,7 +12,7 @@ func RefreshTokenMiddleware() gin.HandlerFunc {
 			Ctx:      ctx,
 			Keys:     ctx.Keys,
 			Header:   ctx.Request.Header,
-			DeviceID: utils.GetStringPointer(ctx.Request.Header.Get("X-Device-Id")),
+			DeviceID: ctx.Request.Header.Get("X-Device-Id"),
 		})
 		if next {
 			ctx.Set("AppContext", appContext)

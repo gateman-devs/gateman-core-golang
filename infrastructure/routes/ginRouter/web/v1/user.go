@@ -35,5 +35,13 @@ func UserRouter(router *gin.RouterGroup) {
 				Body:     &body,
 			})
 		})
+
+		userRouter.POST("/verify-nin", middlewares.OTPTokenMiddleware("verify_nin"), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			controller.VerifyNINDetails(&interfaces.ApplicationContext[any]{
+				Ctx:  ctx,
+				Keys: appContext.Keys,
+			})
+		})
 	}
 }

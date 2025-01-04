@@ -23,7 +23,7 @@ func DecryptPayloadMiddleware() gin.HandlerFunc {
 		decryptedBody := middlewares.DecryptPayloadMiddleware(&interfaces.ApplicationContext[string]{
 			Ctx:      ctx,
 			Body:     utils.GetStringPointer(string(body)),
-			DeviceID: utils.GetStringPointer(ctx.GetHeader("X-Device-Id")),
+			DeviceID: ctx.GetHeader("X-Device-Id"),
 		})
 		ctx.Set("DecryptedBody", utils.GetStringPointer(hex.EncodeToString(decryptedBody)))
 		ctx.Next()

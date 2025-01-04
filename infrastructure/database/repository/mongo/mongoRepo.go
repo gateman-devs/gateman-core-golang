@@ -157,6 +157,39 @@ func (repo *MongoRepository[T]) FindMany(filter map[string]interface{}, opts ...
 	return &result, nil
 }
 
+func (repo *MongoRepository[T]) FindManyPaginated(filter map[string]interface{}, pageSize int64, lastID *string, sort int, opts ...*options.FindOptions) (*[]T, error) {
+	c, cancel := repo.createCtx()
+
+	defer func() {
+		cancel()
+	}()
+	opts = append(opts, options.Find().
+		SetSort(bson.D{{Key: "_id", Value: sort}}).
+		SetLimit(pageSize))
+	// filter["_id"] = bson.M{"$lt": lastID}
+	var result []T
+	cursor, err := repo.Model.Find(c, filter, opts...)
+	if err != nil {
+		return nil, err
+	}
+	err = cursor.All(c, &result)
+	if err != nil {
+		if err.Error() == "mongo: no documents in result" {
+			return nil, errors.New("no documents found")
+		}
+		logger.Error("mongo error occured while running FindMany", logger.LoggerOptions{
+			Key:  "error",
+			Data: err,
+		}, logger.LoggerOptions{
+			Key:  "filter",
+			Data: filter,
+		})
+		return nil, err
+	}
+	logger.Info("FindMany complete")
+	return &result, nil
+}
+
 // FindManyStripped
 // Strips all unneeded parts of the payload that does is nil
 func (repo *MongoRepository[T]) FindManyStripped(filter map[string]interface{}, opts ...*options.FindOptions) (*[]map[string]interface{}, error) {

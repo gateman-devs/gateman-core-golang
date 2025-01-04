@@ -7,9 +7,18 @@ type ApplicationDTO struct {
 	Description           string                        `json:"description" validate:"required"`
 	RequiredVerifications *[]string                     `json:"requiredVerifications"`
 	LocaleRestriction     *[]entities.LocaleRestriction `json:"localeRestriction"`
-	RequestedFields       []string                      `json:"requestedFields" validate:"required"`
+	RequestedFields       []entities.RequestedField     `json:"requestedFields" validate:"required"`
 }
 
 type ApplicationSignUpDTO struct {
 	AppID string `json:"appID" validate:"required"`
+}
+
+type FetchAppUsersDTO struct {
+	AppID    string  `json:"appID" validate:"required"`
+	PageSize int64   `json:"pageSize" validate:"required"`
+	LastID   *string `json:"lastID"`
+	Blocked  *bool   `json:"blocked"`
+	Deleted  *bool   `json:"deleted"`
+	Sort     int8    `json:"sort"`
 }

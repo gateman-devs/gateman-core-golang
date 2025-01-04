@@ -103,11 +103,35 @@ func AppRouter(router *gin.RouterGroup) {
 			)
 		})
 
-		appRouter.GET("/all", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.WORKSPACE_VIEW_APPLICATIONS}, true), func(ctx *gin.Context) {
-			controller.FetchWorkspaceApps(&interfaces.ApplicationContext[any]{
-				Ctx: ctx,
-			},
-			)
+		appRouter.POST("/signup", middlewares.IPAddressMiddleware(), middlewares.UserAuthenticationMiddleware("", nil, false), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			var body dto.ApplicationSignUpDTO
+			if err := ctx.ShouldBindJSON(&body); err != nil {
+				apperrors.ErrorProcessingPayload(ctx)
+				return
+			}
+			appContext.Keys["ip"] = ctx.ClientIP()
+			controller.ApplicationSignUp(&interfaces.ApplicationContext[dto.ApplicationSignUpDTO]{
+				Ctx:  ctx,
+				Body: &body,
+				Keys: appContext.Keys,
+			})
+		})
+
+		appRouter.POST("/users", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{
+			entities.USER_VIEW,
+		}, true), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			var body dto.FetchAppUsersDTO
+			if err := ctx.ShouldBindJSON(&body); err != nil {
+				apperrors.ErrorProcessingPayload(ctx)
+				return
+			}
+			controller.FetchAppUsers(&interfaces.ApplicationContext[dto.FetchAppUsersDTO]{
+				Ctx:  ctx,
+				Body: &body,
+				Keys: appContext.Keys,
+			})
 		})
 	}
 }

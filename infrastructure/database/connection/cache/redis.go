@@ -16,7 +16,7 @@ func connectRedis() {
 		Addr:     os.Getenv("REDIS_ADDR"),
 		Password: os.Getenv("REDIS_PASSWORD"),
 		DB:       0,
-		PoolSize: 50,
+		PoolSize: 100,
 	}
 	Client = redis.NewClient(opt)
 	logger.Info("connected to redis successfully")

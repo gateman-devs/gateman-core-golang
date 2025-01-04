@@ -7,7 +7,6 @@ import (
 	"authone.usepolymer.co/infrastructure/database/connection/datastore"
 	fileupload "authone.usepolymer.co/infrastructure/file_upload"
 	identityverification "authone.usepolymer.co/infrastructure/identity_verification"
-	"authone.usepolymer.co/infrastructure/ipresolver"
 	"authone.usepolymer.co/infrastructure/logger"
 	"authone.usepolymer.co/infrastructure/messaging/sms"
 )
@@ -16,7 +15,6 @@ import (
 func StartServices() {
 	logger.InitializeLogger()
 	database.SetUpDatabase()
-	ipresolver.IPResolverInstance.ConnectToDB()
 	polymercore.PolymerService.Initialise()
 	logger.RequestMetricMonitor.Init()
 	fileupload.InitialiseFileUploader()

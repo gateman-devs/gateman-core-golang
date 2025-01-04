@@ -32,8 +32,8 @@ func connectMongo() *context.CancelFunc {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 
 	clientOpts := options.Client().ApplyURI(url)
-	clientOpts.SetMinPoolSize(5)
-	clientOpts.SetMaxPoolSize(10)
+	clientOpts.SetMinPoolSize(50)
+	clientOpts.SetMaxPoolSize(100)
 
 	client, err := mongo.Connect(ctx, clientOpts)
 

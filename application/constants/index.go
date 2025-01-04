@@ -15,6 +15,6 @@ var ACCOUNT_EXISTS_EMAIL_OR_PHONE_UNVERIFIED uint = 9140 // take the user to the
 
 var AVAILABLE_REQUIRED_DATA_POINTS = []string{"bvn", "nin", "address", "biometric", "email", "phone", "login_location"}
 
-var MAX_LOGIN_ATTEMPTS = 5
+var MAX_ORGANISATIONS_CREATED int64 = 20
 
 var SUPPORT_EMAIL = "help@gateman.io"

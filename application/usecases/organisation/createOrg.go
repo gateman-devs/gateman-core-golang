@@ -2,8 +2,10 @@ package org_usecases
 
 import (
 	"context"
+	"fmt"
 
 	apperrors "authone.usepolymer.co/application/appErrors"
+	"authone.usepolymer.co/application/constants"
 	"authone.usepolymer.co/application/controller/dto"
 	"authone.usepolymer.co/application/repository"
 	"authone.usepolymer.co/application/utils"
@@ -12,19 +14,22 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func CreateOrgUseCase(ctx any, payload *dto.CreateOrgDTO, deviceID *string, userAgent *string, userID string, email string) error {
-	WorkspaceMemberRepo := repository.WorkspaceMemberRepo()
+func CreateOrgUseCase(ctx any, payload *dto.CreateOrgDTO, deviceID string, userAgent string, userID string, email string) error {
+	workspaceMemberRepo := repository.WorkspaceMemberRepo()
 	workspaceRepo := repository.WorkspaceRepository()
-	var err error
+	createdWorkspaces, err := workspaceRepo.CountDocs(map[string]interface{}{
+		"createdBy": userID,
+	})
+	if err != nil {
+		apperrors.UnknownError(ctx, err)
+		return err
+	}
+	if createdWorkspaces >= constants.MAX_ORGANISATIONS_CREATED {
+		err = fmt.Errorf("you have exceeded the number of organisations a user can create on Gateman. if you think this is a mistake reach out to our support team at %s", constants.SUPPORT_EMAIL)
+		apperrors.ClientError(ctx, err.Error(), nil, nil)
+		return err
+	}
 	err = workspaceRepo.StartTransaction(func(sc mongo.Session, c context.Context) error {
-		if err != nil {
-			logger.Error("an error occured while hashing org member password", logger.LoggerOptions{
-				Key:  "error",
-				Data: err,
-			})
-			sc.AbortTransaction(c)
-			return err
-		}
 		workspaceID := utils.GenerateUULDString()
 		orgMember := entities.WorkspaceMember{
 			Permissions:   []entities.MemberPermissions{entities.SUPER_ACCESS},
@@ -54,7 +59,7 @@ func CreateOrgUseCase(ctx any, payload *dto.CreateOrgDTO, deviceID *string, user
 			return trxErr
 		}
 
-		_, trxErr = WorkspaceMemberRepo.CreateOne(context.TODO(), orgMember)
+		_, trxErr = workspaceMemberRepo.CreateOne(context.TODO(), orgMember)
 		if trxErr != nil {
 			logger.Error("an error occured while creating an org member", logger.LoggerOptions{
 				Key:  "error",

@@ -2,6 +2,7 @@ package application_usecase
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	apperrors "authone.usepolymer.co/application/appErrors"
@@ -12,10 +13,12 @@ import (
 	"authone.usepolymer.co/entities"
 	"authone.usepolymer.co/infrastructure/cryptography"
 	"authone.usepolymer.co/infrastructure/logger"
-	"authone.usepolymer.co/infrastructure/messaging/emails"
+	messagequeue "authone.usepolymer.co/infrastructure/message_queue"
+	queue_tasks "authone.usepolymer.co/infrastructure/message_queue/tasks"
+	mq_types "authone.usepolymer.co/infrastructure/message_queue/types"
 )
 
-func CreateApplicationUseCase(ctx any, payload *dto.ApplicationDTO, deviceID *string, userID string, workspaceID string, email string) (*entities.Application, *string) {
+func CreateApplicationUseCase(ctx any, payload *dto.ApplicationDTO, deviceID string, userID string, workspaceID string, email string) (*entities.Application, *string, *string) {
 	appRepo := repository.ApplicationRepo()
 	currentApps, err := appRepo.CountDocs(map[string]interface{}{
 		"workspaceID": workspaceID,
@@ -28,15 +31,17 @@ func CreateApplicationUseCase(ctx any, payload *dto.ApplicationDTO, deviceID *st
 			Key:  "payload",
 			Data: *payload,
 		})
-		return nil, nil
+		return nil, nil, nil
 	}
 	if currentApps >= 30 {
 		apperrors.ClientError(ctx, fmt.Sprintf("You have reached the maximum number of applications a workspace can have. Contact %s to assist in creating more.", constants.SUPPORT_EMAIL), nil, nil)
-		return nil, nil
+		return nil, nil, nil
 	}
-	appID := utils.GenerateUULDString()
 	apiKey, _ := cryptography.EncryptData([]byte(utils.GenerateUULDString()), nil)
 	hashedAPIKey, _ := cryptography.CryptoHahser.HashString(string(*apiKey), nil)
+	appSigningKey := utils.GenerateUULDString()
+	appSigningKey = fmt.Sprintf("%s%s", appSigningKey, "-g8man")
+	encryptedAppSigningKey, _ := cryptography.EncryptData([]byte(appSigningKey), nil)
 	appPriKey := utils.GenerateUULDString()
 	app, err := appRepo.CreateOne(context.TODO(), entities.Application{
 		ID:                    appPriKey,
@@ -48,7 +53,7 @@ func CreateApplicationUseCase(ctx any, payload *dto.ApplicationDTO, deviceID *st
 		LocaleRestriction:     payload.LocaleRestriction,
 		RequiredVerifications: payload.RequiredVerifications,
 		RequestedFields:       payload.RequestedFields,
-		AppID:                 appID,
+		AppSigningKey:         *encryptedAppSigningKey,
 		APIKey:                string(hashedAPIKey),
 	})
 	if err != nil {
@@ -59,15 +64,27 @@ func CreateApplicationUseCase(ctx any, payload *dto.ApplicationDTO, deviceID *st
 			Key:  "payload",
 			Data: *payload,
 		})
-		return nil, nil
+		return nil, nil, nil
 	}
 
-	emails.EmailService.SendEmail(email, "Verify your AuthOne account", "application_created", map[string]any{
-		"APP_NAME": payload.Name,
+	emailPayload, err := json.Marshal(queue_tasks.EmailPayload{
+		Opts: map[string]any{
+			"APP_NAME": payload.Name,
+		},
+		To:       email,
+		Subject:  "Your app has been added to Gateman",
+		Template: "application_created",
 	})
 	if err != nil {
-		apperrors.UnknownError(ctx, err)
-		return nil, nil
+		logger.Error("error marshalling payload for email queue")
+		apperrors.FatalServerError(ctx, err)
+		return nil, nil, nil
 	}
-	return app, apiKey
+	messagequeue.TaskQueue.Enqueue(mq_types.QueueTask{
+		Payload:   emailPayload,
+		Name:      queue_tasks.HandleEmailDeliveryTaskName,
+		Priority:  "high",
+		ProcessIn: 1,
+	})
+	return app, apiKey, utils.GetStringPointer(string(appSigningKey))
 }

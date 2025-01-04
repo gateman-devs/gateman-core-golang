@@ -26,8 +26,7 @@ func UserAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], inten
 	authToken := strings.Split(authTokenHeader, " ")[1]
 	validAccessToken, err := auth.DecodeAuthToken(authToken)
 	if err != nil {
-		fmt.Println(err)
-		apperrors.AuthenticationError(ctx.Ctx, "this session has expired 1")
+		apperrors.AuthenticationError(ctx.Ctx, "this session has expired")
 		return nil, false
 	}
 	if !validAccessToken.Valid {
@@ -44,15 +43,15 @@ func UserAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], inten
 		return nil, false
 	}
 
-	deviceIDHash, _ := cryptography.CryptoHahser.HashString(*ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
+	deviceIDHash, _ := cryptography.CryptoHahser.HashString(ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
 	validToken := cache.Cache.FindOne(fmt.Sprintf("%s-access", string(deviceIDHash)))
 	if validToken == nil {
-		apperrors.AuthenticationError(ctx.Ctx, "this session has expired 2")
+		apperrors.AuthenticationError(ctx.Ctx, "this session has expired")
 		return nil, false
 	}
 	match := cryptography.CryptoHahser.VerifyHashData(*validToken, authToken)
 	if !match {
-		apperrors.AuthenticationError(ctx.Ctx, "this session has expired 3")
+		apperrors.AuthenticationError(ctx.Ctx, "this session has expired")
 		return nil, false
 	}
 
@@ -71,13 +70,13 @@ func UserAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], inten
 		return nil, false
 	}
 
-	if ctx.DeviceID == nil {
+	if ctx.DeviceID == "" {
 		logger.Info("device id missing from client")
-		apperrors.AuthenticationError(ctx.Ctx, "unauthorized access1")
+		apperrors.AuthenticationError(ctx.Ctx, "unauthorized access")
 		return nil, false
 	}
 
-	if authTokenClaims["deviceID"] != *ctx.DeviceID {
+	if authTokenClaims["deviceID"] != ctx.DeviceID {
 		logger.Warning("client made request using device id different from that in access token", logger.LoggerOptions{
 			Key:  "token device id",
 			Data: authTokenClaims["deviceID"],
@@ -85,15 +84,15 @@ func UserAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], inten
 			Key:  "request  device id",
 			Data: ctx.DeviceID,
 		})
-		apperrors.AuthenticationError(ctx.Ctx, "unauthorized access2")
+		apperrors.AuthenticationError(ctx.Ctx, "unauthorized access")
 		return nil, false
 	}
 
 	var workspaceName string
 	var workspaceID string
 	if workspaceSpecific {
-		if ctx.Header["X-Workspace-Id"] == nil {
-			apperrors.AuthenticationError(ctx.Ctx, "unauthorized access3")
+		if ctx.GetHeader("X-Workspace-Id") == nil {
+			apperrors.AuthenticationError(ctx.Ctx, "unauthorized access")
 			return nil, false
 		} else {
 			WorkspaceMemberRepo := repository.WorkspaceMemberRepo()
@@ -102,15 +101,15 @@ func UserAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], inten
 				"userID":      authTokenClaims["userID"],
 			})
 			if err != nil {
-				apperrors.AuthenticationError(ctx.Ctx, "unauthorized access4")
+				apperrors.AuthenticationError(ctx.Ctx, "unauthorized access")
 				return nil, false
 			}
 			if orgMember == nil {
-				apperrors.AuthenticationError(ctx.Ctx, "unauthorized access5")
+				apperrors.AuthenticationError(ctx.Ctx, "unauthorized access")
 				return nil, false
 			}
 			if orgMember.Deactivated {
-				apperrors.AuthenticationError(ctx.Ctx, "unauthorized access6")
+				apperrors.AuthenticationError(ctx.Ctx, "unauthorized access")
 				return nil, false
 			}
 			hasAccess := false

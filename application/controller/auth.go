@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -20,7 +21,9 @@ import (
 	fileupload "authone.usepolymer.co/infrastructure/file_upload"
 	"authone.usepolymer.co/infrastructure/file_upload/types"
 	"authone.usepolymer.co/infrastructure/logger"
-	"authone.usepolymer.co/infrastructure/messaging/emails"
+	messagequeue "authone.usepolymer.co/infrastructure/message_queue"
+	queue_tasks "authone.usepolymer.co/infrastructure/message_queue/tasks"
+	mq_types "authone.usepolymer.co/infrastructure/message_queue/types"
 	sms "authone.usepolymer.co/infrastructure/messaging/sms"
 	server_response "authone.usepolymer.co/infrastructure/serverResponse"
 	"authone.usepolymer.co/infrastructure/validator"
@@ -64,6 +67,8 @@ func VerifyUserAccount(ctx *interfaces.ApplicationContext[any]) {
 		"firstName": 1,
 		"lastName":  1,
 		"deviceID":  1,
+		"email":     1,
+		"phone":     1,
 	}))
 	if err != nil {
 		logger.Error("an error occured while fetching user profile for verification", logger.LoggerOptions{
@@ -99,7 +104,7 @@ func VerifyUserAccount(ctx *interfaces.ApplicationContext[any]) {
 		UserID:          profile.ID,
 		UserAgent:       profile.UserAgent,
 		PhoneNum:        phone,
-		DeviceID:        *ctx.DeviceID,
+		DeviceID:        ctx.DeviceID,
 		Intent:          "face_verification",
 		TokenType:       auth.AccessToken,
 		VerifiedAccount: true,
@@ -116,7 +121,7 @@ func VerifyUserAccount(ctx *interfaces.ApplicationContext[any]) {
 	}
 
 	hashedAccessToken, _ := cryptography.CryptoHahser.HashString(*token, nil)
-	hashedDeviceID, _ := cryptography.CryptoHahser.HashString(*ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
+	hashedDeviceID, _ := cryptography.CryptoHahser.HashString(ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
 	cache.Cache.CreateEntry(fmt.Sprintf("%s-access", string(hashedDeviceID)), hashedAccessToken, time.Minute*10)
 
 	url, err := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", profile.ID, "accountimage"), types.SignedURLPermission{
@@ -127,7 +132,7 @@ func VerifyUserAccount(ctx *interfaces.ApplicationContext[any]) {
 			Key:  "error",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err)
 		return
 	}
 
@@ -210,24 +215,41 @@ func ResendOTP(ctx *interfaces.ApplicationContext[dto.ResendOTPDTO]) {
 	if ctx.Body.Email != nil {
 		otp, err := auth.GenerateOTP(6, *ctx.Body.Email)
 		if err != nil {
-			apperrors.FatalServerError(ctx, err)
+			apperrors.FatalServerError(ctx.Ctx, err)
 			return
 		}
-		emails.EmailService.SendEmail(*ctx.Body.Email, "AuthOne OTP", "authone_user_welcome", map[string]any{
-			"OTP": otp,
+
+		payload, err := json.Marshal(queue_tasks.EmailPayload{
+			Opts: map[string]any{
+				"OTP": otp,
+			},
+			To:       *ctx.Body.Email,
+			Subject:  "Gateman OTP",
+			Template: "authone_user_welcome",
+			Intent:   "verify_account",
 		})
-		cache.Cache.CreateEntry(fmt.Sprintf("%s-otp-intent", *ctx.Body.Email), "verify_account", time.Minute*10)
+		if err != nil {
+			logger.Error("error marshalling payload for email queue")
+			apperrors.FatalServerError(ctx.Ctx, err)
+			return
+		}
+		messagequeue.TaskQueue.Enqueue(mq_types.QueueTask{
+			Payload:   payload,
+			Name:      queue_tasks.HandleEmailDeliveryTaskName,
+			Priority:  "high",
+			ProcessIn: 1,
+		})
 	}
 	if ctx.Body.Phone != nil {
 		otp, err := auth.GenerateOTP(6, *ctx.Body.Phone)
 		if err != nil {
-			apperrors.FatalServerError(ctx, err)
+			apperrors.FatalServerError(ctx.Ctx, err)
 			return
 		}
 		ref := sms.SMSService.SendOTP(fmt.Sprintf("%s%s", *ctx.Body.PhonePrefix, *ctx.Body.Phone), false, otp)
 		encryptedRef, err := cryptography.EncryptData([]byte(*ref), nil)
 		if err != nil {
-			apperrors.UnknownError(ctx, err)
+			apperrors.UnknownError(ctx.Ctx, err)
 			return
 		}
 		cache.Cache.CreateEntry(fmt.Sprintf("%s-sms-otp-ref", *ctx.Body.Phone), *encryptedRef, time.Minute*10)
@@ -237,17 +259,27 @@ func ResendOTP(ctx *interfaces.ApplicationContext[dto.ResendOTPDTO]) {
 }
 
 func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) {
+	var accountSearchFilter = map[string]any{}
+	if ctx.Body.Email != nil {
+		accountSearchFilter["email"] = *ctx.Body.Email
+	} else {
+		accountSearchFilter["phone.localNumber"] = *ctx.Body.Phone
+	}
 	userRepo := repository.UserRepo()
-	account, err := userRepo.FindByID(ctx.GetStringContextData("UserID"))
+	account, err := userRepo.FindOneByFilter(accountSearchFilter)
 	if err != nil {
-		apperrors.UnknownError(ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err)
+		return
+	}
+	if account == nil {
+		apperrors.NotFoundError(ctx.Ctx, "account not found")
 		return
 	}
 	if !account.VerifiedAccount {
-		apperrors.AuthenticationError(ctx.Ctx, "Verify your device before attempting to login")
+		apperrors.AuthenticationError(ctx.Ctx, "Verify your account before attempting to login")
 		return
 	}
-	exists, err := fileupload.FileUploader.CheckFileExists(fmt.Sprintf("%s/%s", account.ID, *ctx.DeviceID))
+	exists, err := fileupload.FileUploader.CheckFileExists(fmt.Sprintf("%s/%s", account.ID, ctx.DeviceID))
 	if err != nil {
 		apperrors.ExternalDependencyError(ctx.Ctx, "azure", "500", err)
 		return
@@ -256,7 +288,7 @@ func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) 
 		apperrors.ClientError(ctx.Ctx, "Image has not been uploaded. Request for a new url and upload image before attempting this request again.", nil, utils.GetUIntPointer(http.StatusBadRequest))
 		return
 	}
-	url, _ := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), *ctx.DeviceID), types.SignedURLPermission{
+	url, _ := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), ctx.DeviceID), types.SignedURLPermission{
 		Read: true,
 	})
 	alive, err := biometric.BiometricService.LivenessCheck(url)
@@ -290,7 +322,7 @@ func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) 
 	}
 	var savedDevice entities.Device
 	for i, device := range account.Devices {
-		if device.ID == *ctx.DeviceID {
+		if device.ID == ctx.DeviceID {
 			savedDevice = account.Devices[i]
 			account.Devices = append(account.Devices[:i], account.Devices[i+1:]...)
 			break
@@ -318,7 +350,7 @@ func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) 
 	if account.Phone != nil {
 		phone = utils.GetStringPointer(fmt.Sprintf("%s%s", account.Phone.Prefix, account.Phone.LocalNumber))
 	}
-	err = fileupload.FileUploader.DeleteFile(fmt.Sprintf("%s/%s", account.ID, *ctx.DeviceID))
+	err = fileupload.FileUploader.DeleteFile(fmt.Sprintf("%s/%s", account.ID, ctx.DeviceID))
 	if err != nil {
 		logger.Error("an error occured while trying to clear user device image", logger.LoggerOptions{
 			Key:  "filePath",
@@ -334,11 +366,15 @@ func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) 
 		Email:           account.Email,
 		VerifiedAccount: account.VerifiedAccount,
 		PhoneNum:        phone,
-		DeviceID:        *ctx.DeviceID,
+		DeviceID:        ctx.DeviceID,
 		TokenType:       auth.AccessToken,
 		IssuedAt:        time.Now().Unix(),
 		ExpiresAt:       time.Now().Add(time.Hour * 1).Unix(), //lasts for 1 hr
 	})
+	if err != nil {
+		apperrors.UnknownError(ctx.Ctx, err)
+		return
+	}
 	refreshToken, err := auth.GenerateAuthToken(auth.ClaimsData{
 		UserID:          account.ID,
 		UserAgent:       account.UserAgent,
@@ -346,18 +382,18 @@ func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) 
 		VerifiedAccount: account.VerifiedAccount,
 		TokenType:       auth.RefreshToken,
 		PhoneNum:        phone,
-		DeviceID:        *ctx.DeviceID,
+		DeviceID:        ctx.DeviceID,
 		IssuedAt:        time.Now().Unix(),
 		ExpiresAt:       time.Now().Add(time.Hour * 24 * 180).Unix(), //lasts for 180 days
 	})
 
 	if err != nil {
-		apperrors.UnknownError(ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err)
 		return
 	}
 	hashedAccessToken, _ := cryptography.CryptoHahser.HashString(*accessToken, nil)
 	hashedRefreshToken, _ := cryptography.CryptoHahser.HashString(*refreshToken, nil)
-	hashedDeviceID, _ := cryptography.CryptoHahser.HashString(*ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
+	hashedDeviceID, _ := cryptography.CryptoHahser.HashString(ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
 	cache.Cache.CreateEntry(fmt.Sprintf("%s-access", string(hashedDeviceID)), hashedAccessToken, time.Hour*24)       // token should last for 10 mins
 	cache.Cache.CreateEntry(fmt.Sprintf("%s-refresh", string(hashedDeviceID)), hashedRefreshToken, time.Hour*24*180) // token should last for 100 days
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "device verified", nil, nil, nil, accessToken, refreshToken)
@@ -380,7 +416,7 @@ func RefreshToken(ctx *interfaces.ApplicationContext[any]) {
 		Email:           account.Email,
 		VerifiedAccount: account.VerifiedAccount,
 		PhoneNum:        phone,
-		DeviceID:        *ctx.DeviceID,
+		DeviceID:        ctx.DeviceID,
 		TokenType:       auth.AccessToken,
 		IssuedAt:        time.Now().Unix(),
 		ExpiresAt:       time.Now().Add(time.Hour * 1).Unix(), //lasts for 1 hr
@@ -392,18 +428,18 @@ func RefreshToken(ctx *interfaces.ApplicationContext[any]) {
 		VerifiedAccount: account.VerifiedAccount,
 		TokenType:       auth.RefreshToken,
 		PhoneNum:        phone,
-		DeviceID:        *ctx.DeviceID,
+		DeviceID:        ctx.DeviceID,
 		IssuedAt:        time.Now().Unix(),
 		ExpiresAt:       time.Now().Add(time.Hour * 24 * 180).Unix(), //lasts for 180 days
 	})
 
 	if err != nil {
-		apperrors.UnknownError(ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err)
 		return
 	}
 	hashedAccessToken, _ := cryptography.CryptoHahser.HashString(*accessToken, nil)
 	hashedRefreshToken, _ := cryptography.CryptoHahser.HashString(*refreshToken, nil)
-	hashedDeviceID, _ := cryptography.CryptoHahser.HashString(*ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
+	hashedDeviceID, _ := cryptography.CryptoHahser.HashString(ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
 	cache.Cache.CreateEntry(fmt.Sprintf("%s-access", string(hashedDeviceID)), hashedAccessToken, time.Hour*24)       // token should last for 10 mins
 	cache.Cache.CreateEntry(fmt.Sprintf("%s-refresh", string(hashedDeviceID)), hashedRefreshToken, time.Hour*24*180) // token should last for 100 days
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "token refreshed", nil, nil, nil, accessToken, refreshToken)

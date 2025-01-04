@@ -5,6 +5,7 @@ import (
 	"authone.usepolymer.co/application/controller"
 	"authone.usepolymer.co/application/controller/dto"
 	"authone.usepolymer.co/application/interfaces"
+	"authone.usepolymer.co/entities"
 	middlewares "authone.usepolymer.co/infrastructure/middleware"
 	"github.com/gin-gonic/gin"
 )
@@ -28,6 +29,20 @@ func OrgRouter(router *gin.RouterGroup) {
 			})
 		})
 
+		orgRouter.POST("/invite", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.MEMBER_INVITE}, true), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			var body dto.InviteWorspaceMembersDTO
+			if err := ctx.ShouldBindJSON(&body); err != nil {
+				apperrors.ErrorProcessingPayload(ctx)
+				return
+			}
+			controller.InviteWorkspaceMembers(&interfaces.ApplicationContext[dto.InviteWorspaceMembersDTO]{
+				Ctx:  ctx,
+				Body: &body,
+				Keys: appContext.Keys,
+			})
+		})
+
 		orgRouter.GET("/fetch", middlewares.UserAuthenticationMiddleware("", nil, false), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			controller.FetchWorkspaces(&interfaces.ApplicationContext[any]{
@@ -36,5 +51,6 @@ func OrgRouter(router *gin.RouterGroup) {
 				DeviceID: appContext.DeviceID,
 			})
 		})
+
 	}
 }

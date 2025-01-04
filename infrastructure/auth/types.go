@@ -19,6 +19,7 @@ type ClaimsData struct {
 	DeviceID        string
 	Intent          string
 	TokenType       TokenType
+	Payload         map[string]any
 }
 
 type InterserviceClaimsData struct {

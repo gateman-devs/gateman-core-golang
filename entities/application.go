@@ -11,18 +11,24 @@ type LocaleRestriction struct {
 	Country string    `bson:"country" json:"country" validate:"required,iso3166_1_alpha2"`
 }
 
+type RequestedField struct {
+	Name     string `bson:"name" json:"name"`
+	Verified bool   `bson:"verified" json:"verified"`
+}
+
 type Application struct {
 	Name                  string               `bson:"name" json:"name"`
 	Description           string               `bson:"description" json:"description"`
 	WorkspaceID           string               `bson:"workspaceID" json:"-"`
 	AppImg                string               `bson:"appImg" json:"appImg"`
 	CreatorID             string               `bson:"creatorID" json:"-"`
-	AppID                 string               `bson:"appID" json:"appID"`
+	AppSigningKey         string               `bson:"appSigningKey" json:"-"`
 	APIKey                string               `bson:"apiKey" json:"-"`
+	VPN                   bool                 `bson:"vpn" json:"vpn"`
 	RequiredVerifications *[]string            `bson:"requiredVerifications" json:"requiredVerifications"` // the verifications that must be completed before signup is approved
-	RequestedFields       []string             `bson:"requestedFields" json:"requestedFields"`             // the fields the application are interested in recieving. MUST NOT BE EMPTY
+	RequestedFields       []RequestedField     `bson:"requestedFields" json:"requestedFields"`             // the fields the application are interested in recieving. MUST NOT BE EMPTY
 	LocaleRestriction     *[]LocaleRestriction `bson:"localeRestriction" json:"localeRestriction"`
-	PaymentCard           string               `bson:"paymentCard" json:"paymentCard"`
+	PaymentCard           *string              `bson:"paymentCard" json:"-"`
 
 	ID            string     `bson:"_id" json:"id"`
 	CreatedAt     time.Time  `bson:"createdAt" json:"createdAt"`

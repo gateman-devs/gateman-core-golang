@@ -15,9 +15,9 @@ type ApplicationContext[T interface{}] struct {
 	Query      map[string]any
 	Param      map[string]any
 	Header     map[string][]string
-	DeviceID   *string
-	DeviceName *string
-	UserAgent  *string
+	DeviceID   string
+	DeviceName string
+	UserAgent  string
 	Ctx        any
 }
 

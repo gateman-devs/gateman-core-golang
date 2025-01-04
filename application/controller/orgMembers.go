@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync"
@@ -14,7 +15,9 @@ import (
 	user_usecases "authone.usepolymer.co/application/usecases/user"
 	"authone.usepolymer.co/entities"
 	"authone.usepolymer.co/infrastructure/logger"
-	"authone.usepolymer.co/infrastructure/messaging/emails"
+	messagequeue "authone.usepolymer.co/infrastructure/message_queue"
+	queue_tasks "authone.usepolymer.co/infrastructure/message_queue/tasks"
+	mq_types "authone.usepolymer.co/infrastructure/message_queue/types"
 	server_response "authone.usepolymer.co/infrastructure/serverResponse"
 	"authone.usepolymer.co/infrastructure/validator"
 )
@@ -30,60 +33,33 @@ func InviteWorkspaceMembers(ctx *interfaces.ApplicationContext[dto.InviteWorspac
 		return
 	}
 	var wg sync.WaitGroup
-	inviteRepo := repository.WorkspaceInviteRepo()
-	invitePayloadChan := make(chan entities.WorkspaceInvite)
 	for _, invite := range ctx.Body.Invites {
 		wg.Add(1)
 		go func(invite dto.MemberInvite, workspaceID string, invitedBy string, workspaceName string) {
 			defer wg.Done()
 
-			inviteRepo := repository.WorkspaceInviteRepo()
-			inviteExists, err := inviteRepo.CountDocs(map[string]interface{}{
-				"workspaceID": workspaceID,
-				"email":       invite.Email,
-			})
-			if err != nil {
-				logger.Error("an error occured while trying to check if invite exists", logger.LoggerOptions{
-					Key:  "err",
-					Data: err.Error(),
-				}, logger.LoggerOptions{
-					Key:  "invite",
-					Data: invite,
-				}, logger.LoggerOptions{
-					Key: "workspaceID", Data: workspaceID,
-				})
-				return
-			}
-			if inviteExists != 0 {
-				// resend email
-				return
-			}
-			invitePayloadChan <- entities.WorkspaceInvite{
+			payload, err := json.Marshal(queue_tasks.WorkspaceInvitePayload{
 				Email:         invite.Email,
+				WorkspaceName: workspaceName,
 				WorkspaceID:   workspaceID,
 				Permissions:   invite.Permissions,
-				InvitedByID:   invitedBy,
-				WorkspaceName: workspaceName,
+				InvitedBy:     ctx.GetStringContextData("UserID"),
+			})
+			if err != nil {
+				logger.Error("error marshalling payload for workspace invite queue")
+				apperrors.FatalServerError(ctx.Ctx, err)
+				return
 			}
-			emails.EmailService.SendEmail(invite.Email, fmt.Sprintf("You have been invited to join %s", ctx.GetStringContextData("WorkspaceName")), "workspace_invite", nil)
+			messagequeue.TaskQueue.Enqueue(mq_types.QueueTask{
+				Payload:   payload,
+				Name:      queue_tasks.HandleWorkspaceInviteTaskName,
+				Priority:  "high",
+				ProcessIn: 1,
+			})
 		}(invite, ctx.GetStringContextData("WorkspaceID"), ctx.GetStringContextData("UserID"), ctx.GetStringContextData("WorkspaceName"))
 	}
 	wg.Wait()
-	invitePayloadArray := []entities.WorkspaceInvite{}
-	for invite := range invitePayloadChan {
-		invitePayloadArray = append(invitePayloadArray, invite)
-	}
-	_, err := inviteRepo.CreateBulk(invitePayloadArray)
-	if err != nil {
-		logger.Error("an error occured while trying to create invites", logger.LoggerOptions{
-			Key:  "err",
-			Data: err.Error(),
-		}, logger.LoggerOptions{
-			Key:  "user",
-			Data: ctx.GetStringContextData("UserID"),
-		})
-		return
-	}
+
 	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "members invited", nil, nil, nil, nil, nil)
 }
 
@@ -94,14 +70,11 @@ func ResendInvite(ctx *interfaces.ApplicationContext[dto.ResendWorspaceInviteDTO
 		return
 	}
 	inviteRepo := repository.WorkspaceInviteRepo()
-	invite, err := inviteRepo.FindOneByFilter(map[string]interface{}{
-		"workspaceID": ctx.GetStringContextData("WorkspaceID"),
-		"email":       ctx.Body.Email,
-	})
+	invite, err := inviteRepo.FindByID(ctx.Body.ID)
 	if err != nil {
 		logger.Error("an error occured while trying to resend workspace invite", logger.LoggerOptions{
-			Key:  "email",
-			Data: ctx.Body.Email,
+			Key:  "id",
+			Data: ctx.Body.ID,
 		}, logger.LoggerOptions{
 			Key:  "workspaceID",
 			Data: ctx.GetStringContextData("WorkspaceID"),
@@ -117,14 +90,32 @@ func ResendInvite(ctx *interfaces.ApplicationContext[dto.ResendWorspaceInviteDTO
 		return
 	}
 	if invite.Accepted != nil {
-		apperrors.ClientError(ctx.Ctx, "User has already rejected the incinte sent to them", nil, nil)
+		decision := "accepted"
+		if !*invite.Accepted {
+			decision = "rejected"
+		}
+		apperrors.ClientError(ctx.Ctx, fmt.Sprintf("User has already %s the invite sent to them", decision), nil, nil)
 		return
 	}
-	emails.EmailService.SendEmail(invite.Email, fmt.Sprintf("You have been invited to join %s", ctx.GetStringContextData("WorkspaceName")), "workspace_invite", nil)
-	inviteRepo.UpdatePartialByFilter(map[string]interface{}{
-		"workspaceID": ctx.GetStringContextData("WorkspaceID"),
-		"email":       ctx.Body.Email,
-	}, map[string]any{
+
+	payload, err := json.Marshal(queue_tasks.EmailPayload{
+		To:       invite.Email,
+		Subject:  fmt.Sprintf("You have been invited to join %s", ctx.GetStringContextData("WorkspaceName")),
+		Template: "workspace_invite",
+	})
+	if err != nil {
+		logger.Error("error marshalling payload for email queue")
+		apperrors.FatalServerError(ctx.Ctx, err)
+		return
+	}
+	messagequeue.TaskQueue.Enqueue(mq_types.QueueTask{
+		Payload:   payload,
+		Name:      queue_tasks.HandleEmailDeliveryTaskName,
+		Priority:  "high",
+		ProcessIn: 1,
+	})
+
+	inviteRepo.UpdatePartialByID(ctx.Body.ID, map[string]any{
 		"resentAt": time.Now(),
 	})
 }
@@ -154,21 +145,6 @@ func AcknowledgeWorkspaceInvite(ctx *interfaces.ApplicationContext[dto.Acknowled
 		return
 	}
 	workspaceMemberRepo := repository.WorkspaceMemberRepo()
-	workspaceCount, err := workspaceMemberRepo.CountDocs(map[string]any{
-		"email": invite.Email,
-	})
-	if err != nil {
-		logger.Error("something went wrong while trying to count user workspaces to acknowledge invite", logger.LoggerOptions{
-			Key:  "invite",
-			Data: invite,
-		})
-		apperrors.UnknownError(ctx.Ctx, err)
-		return
-	}
-	if workspaceCount >= 20 {
-		apperrors.ClientError(ctx.Ctx, "you have reached the maximum of number of workspaces", nil, nil)
-		return
-	}
 	inviteRepo.UpdatePartialByID(ctx.Body.ID, map[string]any{
 		"accepted": ctx.Body.Accepted,
 	})

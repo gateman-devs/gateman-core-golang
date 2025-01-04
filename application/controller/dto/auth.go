@@ -36,7 +36,8 @@ type ResendOTPDTO struct {
 }
 
 type VerifyDeviceDTO struct {
-	Email string `json:"email"`
+	Email *string `json:"email"`
+	Phone *string `json:"phone"`
 }
 
 type SetPasswordDTO struct {

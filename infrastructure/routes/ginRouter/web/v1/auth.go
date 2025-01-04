@@ -60,16 +60,16 @@ func AuthRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		authRouter.POST("/user/authenticate", func(ctx *gin.Context) {
+		authRouter.POST("/user/authenticate", middlewares.IPAddressMiddleware(), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.CreateUserDTO
 			if err := ctx.ShouldBindJSON(&body); err != nil {
 				apperrors.ErrorProcessingPayload(ctx)
 				return
 			}
-			body.UserAgent = *appContext.UserAgent
-			body.DeviceID = *appContext.DeviceID
-			body.DeviceName = *appContext.DeviceName
+			body.UserAgent = *appContext.GetHeader("User-Agent")
+			body.DeviceID = *appContext.GetHeader("X-Device-Id")
+			body.DeviceName = appContext.DeviceName
 			controller.AuthenticateUser(&interfaces.ApplicationContext[dto.CreateUserDTO]{
 				Ctx:        ctx,
 				Body:       &body,

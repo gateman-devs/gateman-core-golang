@@ -24,7 +24,7 @@ func RefreshTokenMiddleware(ctx *interfaces.ApplicationContext[any]) (*interface
 	authToken := strings.Split(authTokenHeader, " ")[1]
 	validAccessToken, err := auth.DecodeAuthToken(authToken)
 	if err != nil {
-		apperrors.AuthenticationError(ctx.Ctx, "this session has expired 1")
+		apperrors.AuthenticationError(ctx.Ctx, "this session has expired")
 		return nil, false
 	}
 	if !validAccessToken.Valid {
@@ -41,10 +41,10 @@ func RefreshTokenMiddleware(ctx *interfaces.ApplicationContext[any]) (*interface
 		return nil, false
 	}
 
-	deviceIDHash, _ := cryptography.CryptoHahser.HashString(*ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
+	deviceIDHash, _ := cryptography.CryptoHahser.HashString(ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
 	validToken := cache.Cache.FindOne(fmt.Sprintf("%s-refresh", string(deviceIDHash)))
 	if validToken == nil {
-		apperrors.AuthenticationError(ctx.Ctx, "this session has expired 2")
+		apperrors.AuthenticationError(ctx.Ctx, "this session has expired")
 		return nil, false
 	}
 	match := cryptography.CryptoHahser.VerifyHashData(*validToken, authToken)
@@ -62,13 +62,13 @@ func RefreshTokenMiddleware(ctx *interfaces.ApplicationContext[any]) (*interface
 		return nil, false
 	}
 
-	if ctx.DeviceID == nil {
+	if ctx.DeviceID == "" {
 		logger.Info("device id missing from client")
-		apperrors.AuthenticationError(ctx.Ctx, "unauthorized access1")
+		apperrors.AuthenticationError(ctx.Ctx, "unauthorized access")
 		return nil, false
 	}
 
-	if authTokenClaims["deviceID"] != *ctx.DeviceID {
+	if authTokenClaims["deviceID"] != ctx.DeviceID {
 		logger.Warning("client made request using device id different from that in access token", logger.LoggerOptions{
 			Key:  "token device id",
 			Data: authTokenClaims["deviceID"],
@@ -76,7 +76,7 @@ func RefreshTokenMiddleware(ctx *interfaces.ApplicationContext[any]) (*interface
 			Key:  "request  device id",
 			Data: ctx.DeviceID,
 		})
-		apperrors.AuthenticationError(ctx.Ctx, "unauthorized access2")
+		apperrors.AuthenticationError(ctx.Ctx, "unauthorized access")
 		return nil, false
 	}
 

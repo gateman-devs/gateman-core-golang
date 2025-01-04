@@ -8,5 +8,4 @@ FROM alpine
 WORKDIR /app
 COPY --from=builder /app/main .
 EXPOSE 8080
-RUN docker pull maxmindinc/geoipupdate:latest
 CMD ["./main"]

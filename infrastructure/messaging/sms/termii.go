@@ -3,7 +3,9 @@ package sms
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
+	"authone.usepolymer.co/application/utils"
 	"authone.usepolymer.co/infrastructure/logger"
 	"authone.usepolymer.co/infrastructure/network"
 )
@@ -14,6 +16,9 @@ type TermiiService struct {
 }
 
 func (ts *TermiiService) SendOTP(phone string, whatsapp bool, otp *string) *string {
+	if os.Getenv("ENV") != "production" {
+		return utils.GetStringPointer(utils.GenerateUULDString())
+	}
 	var response *[]byte
 	var statusCode *int
 	var err error
@@ -72,6 +77,9 @@ func (ts *TermiiService) SendOTP(phone string, whatsapp bool, otp *string) *stri
 }
 
 func (ts *TermiiService) VerifyOTP(otpID string, otp string) bool {
+	if os.Getenv("ENV") != "production" {
+		return otp == "000000"
+	}
 	response, statusCode, err := ts.Network.Post("/sms/otp/verify", nil, map[string]any{
 		"api_key": ts.API_KEY,
 		"pin":     otp,

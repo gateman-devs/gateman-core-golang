@@ -1,5 +1,7 @@
 package identity_verification_types
 
+import "encoding/json"
+
 type IdentityVerifierType interface {
 	FetchBVNDetails(string) (*BVNData, error)
 	FetchNINDetails(string) (*NINData, error)
@@ -33,6 +35,15 @@ type NINData struct {
 	PhoneNumber *string `json:"phone_number"`
 	Address     string  `json:"address"`
 	Base64Image string  `json:"photo"`
+}
+
+func (n *NINData) MarshalBinary() ([]byte, error) {
+	return json.Marshal(n) // Serialize to JSON
+}
+
+// Implement encoding.BinaryUnmarshaler
+func (n *NINData) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data, n) // Deserialize from JSON
 }
 
 type CACResponse struct {

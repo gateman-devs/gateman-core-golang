@@ -1,6 +1,25 @@
 package infrastructure
 
-func StartServer(){
+import (
+	"sync"
+
+	messagequeue "authone.usepolymer.co/infrastructure/message_queue"
+)
+
+func StartServer() {
 	var server serverInterface = &ginServer{}
-	server.Start()
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		messagequeue.StartQueue()
+	}()
+
+	go func() {
+		defer wg.Done()
+		server.Start()
+	}()
+
+	wg.Wait()
 }

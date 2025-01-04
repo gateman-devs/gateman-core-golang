@@ -25,7 +25,7 @@ func (pn *PhoneNumber) ParsePhoneNumber() string {
 }
 
 type KYCData[T any] struct {
-	Value    T    `bson:"value" json:"value"`
+	Value    *T    `bson:"value" json:"value"`
 	Verified bool `bson:"verified" json:"verified"`
 }
 
