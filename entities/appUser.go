@@ -10,6 +10,7 @@ import (
 type AppUser struct {
 	AppID         string     `bson:"appID" json:"appID"`
 	UserID        string     `bson:"userID" json:"userID"`
+	WorkspaceID   string     `bson:"workspaceID" json:"workspaceID"`
 	Blocked       bool       `bson:"blocked" json:"blocked"`
 	BlockedReason *string    `bson:"blockedReason" json:"blockedReason"`
 	BlockedUserAt *time.Time `bson:"blockedUserAt" json:"blockedUserAt"`

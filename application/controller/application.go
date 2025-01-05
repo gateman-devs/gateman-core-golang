@@ -22,6 +22,7 @@ import (
 	"authone.usepolymer.co/infrastructure/logger"
 	server_response "authone.usepolymer.co/infrastructure/serverResponse"
 	"authone.usepolymer.co/infrastructure/validator"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func CreateApplication(ctx *interfaces.ApplicationContext[dto.ApplicationDTO]) {
@@ -220,8 +221,9 @@ func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpD
 	}
 	if eligible {
 		appUserRepo.CreateOne(context.TODO(), entities.AppUser{
-			AppID:  ctx.Body.AppID,
-			UserID: ctx.GetStringContextData("UserID"),
+			AppID:       ctx.Body.AppID,
+			UserID:      ctx.GetStringContextData("UserID"),
+			WorkspaceID: app.WorkspaceID,
 		})
 		decryptedAppSigningKey, _ := cryptography.DecryptData(app.AppSigningKey, nil)
 		token, _ := auth.GenerateAppUserToken(auth.ClaimsData{
@@ -237,7 +239,8 @@ func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpD
 
 func FetchAppUsers(ctx *interfaces.ApplicationContext[dto.FetchAppUsersDTO]) {
 	filter := map[string]interface{}{
-		"appID": ctx.Body.AppID,
+		"appID":       ctx.Body.AppID,
+		"workspaceID": ctx.GetHeader("X-Workspace-Id"),
 	}
 	if ctx.Body.Blocked != nil {
 		filter["blocked"] = ctx.Body.Blocked
@@ -258,6 +261,48 @@ func FetchAppUsers(ctx *interfaces.ApplicationContext[dto.FetchAppUsersDTO]) {
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "users fetched", users, nil, nil, nil, nil)
 }
 
+func BlockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
+	appUserRepo := repository.AppUserRepo()
+	_, err := appUserRepo.UpdatePartialByFilter(map[string]interface{}{
+		"_id": map[string]any{
+			"$in": ctx.Body.IDs,
+		},
+		"workspaceID": ctx.GetHeader("X-Workspace-Id"),
+	}, map[string]any{
+		"blocked": true,
+	})
+	if err != nil {
+		logger.Error("an error occured while blocking users", logger.LoggerOptions{
+			Key:  "ids",
+			Data: ctx.Body.IDs,
+		})
+		apperrors.UnknownError(ctx.Ctx, err)
+		return
+	}
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "users blocked", nil, nil, nil, nil, nil)
+}
+
+func UnblockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
+	appUserRepo := repository.AppUserRepo()
+	_, err := appUserRepo.UpdatePartialByFilter(map[string]interface{}{
+		"_id": map[string]any{
+			"$in": ctx.Body.IDs,
+		},
+		"workspaceID": ctx.GetHeader("X-Workspace-Id"),
+	}, map[string]any{
+		"blocked": false,
+	})
+	if err != nil {
+		logger.Error("an error occured while unblocking users", logger.LoggerOptions{
+			Key:  "ids",
+			Data: ctx.Body.IDs,
+		})
+		apperrors.UnknownError(ctx.Ctx, err)
+		return
+	}
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "users unblocked", nil, nil, nil, nil, nil)
+}
+
 func FetchUserApps(ctx *interfaces.ApplicationContext[any]) {
 	appUserRepo := repository.AppUserRepo()
 	apps, err := appUserRepo.FindMany(map[string]interface{}{
@@ -272,4 +317,24 @@ func FetchUserApps(ctx *interfaces.ApplicationContext[any]) {
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "apps fetched", apps, nil, nil, nil, nil)
+}
+
+func GetAppMetrics(ctx *interfaces.ApplicationContext[dto.FetchAppMetrics]) {
+	appMetrics := map[string]any{}
+	appRepo := repository.ApplicationRepo()
+	app, _ := appRepo.FindByID(ctx.Body.ID, options.FindOne().SetProjection(map[string]any{
+		"name":      1,
+		"createdAt": 1,
+		"appImg":    1,
+	}))
+	appMetrics["name"] = app.Name
+	appMetrics["createdAt"] = app.CreatedAt
+	appMetrics["appImg"] = app.AppImg
+	appUserRepo := repository.AppUserRepo()
+	usersCount, _ := appUserRepo.CountDocs(map[string]any{
+		"workspaceID": ctx.GetHeader("X-Workspace-Id"),
+		"appID":       ctx.Body.ID,
+	})
+	appMetrics["usersCount"] = usersCount
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "metrics fetched", appMetrics, nil, nil, nil, nil)
 }

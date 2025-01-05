@@ -103,7 +103,7 @@ func AppRouter(router *gin.RouterGroup) {
 			)
 		})
 
-		appRouter.POST("/signup", middlewares.IPAddressMiddleware(), middlewares.UserAuthenticationMiddleware("", nil, false), func(ctx *gin.Context) {
+		appRouter.POST("/signup", middlewares.UserAuthenticationMiddleware("", nil, false), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.ApplicationSignUpDTO
 			if err := ctx.ShouldBindJSON(&body); err != nil {
@@ -112,9 +112,10 @@ func AppRouter(router *gin.RouterGroup) {
 			}
 			appContext.Keys["ip"] = ctx.ClientIP()
 			controller.ApplicationSignUp(&interfaces.ApplicationContext[dto.ApplicationSignUpDTO]{
-				Ctx:  ctx,
-				Body: &body,
-				Keys: appContext.Keys,
+				Ctx:    ctx,
+				Body:   &body,
+				Keys:   appContext.Keys,
+				Header: ctx.Request.Header,
 			})
 		})
 
@@ -131,6 +132,57 @@ func AppRouter(router *gin.RouterGroup) {
 				Ctx:  ctx,
 				Body: &body,
 				Keys: appContext.Keys,
+			})
+		})
+
+		appRouter.PATCH("/users/block", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{
+			entities.USER_BLOCK,
+		}, true), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			var body dto.BlockAccountsDTO
+			if err := ctx.ShouldBindJSON(&body); err != nil {
+				apperrors.ErrorProcessingPayload(ctx)
+				return
+			}
+			controller.BlockAccounts(&interfaces.ApplicationContext[dto.BlockAccountsDTO]{
+				Ctx:    ctx,
+				Body:   &body,
+				Keys:   appContext.Keys,
+				Header: ctx.Request.Header,
+			})
+		})
+
+		appRouter.PATCH("/users/unblock", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{
+			entities.USER_BLOCK,
+		}, true), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			var body dto.BlockAccountsDTO
+			if err := ctx.ShouldBindJSON(&body); err != nil {
+				apperrors.ErrorProcessingPayload(ctx)
+				return
+			}
+			controller.UnblockAccounts(&interfaces.ApplicationContext[dto.BlockAccountsDTO]{
+				Ctx:    ctx,
+				Body:   &body,
+				Keys:   appContext.Keys,
+				Header: ctx.Request.Header,
+			})
+		})
+
+		appRouter.POST("/metrics", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{
+			entities.WORKSPACE_VIEW_APPLICATIONS,
+		}, true), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			var body dto.FetchAppMetrics
+			if err := ctx.ShouldBindJSON(&body); err != nil {
+				apperrors.ErrorProcessingPayload(ctx)
+				return
+			}
+			controller.GetAppMetrics(&interfaces.ApplicationContext[dto.FetchAppMetrics]{
+				Ctx:    ctx,
+				Body:   &body,
+				Keys:   appContext.Keys,
+				Header: ctx.Request.Header,
 			})
 		})
 	}

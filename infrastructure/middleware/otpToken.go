@@ -8,10 +8,11 @@ import (
 
 func OTPTokenMiddleware(intent string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
+		savedCtx := (ctx.MustGet("AppContext")).(*interfaces.ApplicationContext[any])
 		appContext, next := middlewares.OTPTokenMiddleware(&interfaces.ApplicationContext[any]{
 			Ctx:      ctx,
-			Keys:     ctx.Keys,
-			DeviceID: ctx.Request.Header.Get("X-Device-Id"),
+			Keys:     savedCtx.Keys,
+			DeviceID: savedCtx.DeviceID,
 			Header:   ctx.Request.Header,
 		}, ctx.ClientIP(), intent)
 		if next {

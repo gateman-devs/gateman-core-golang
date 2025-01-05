@@ -24,6 +24,7 @@ func FetchAppUseCase(ctx any, appID string, deviceID string, ip string) (*entiti
 		"appImg":                1,
 		"appIssuer":             1,
 		"appSigningKey":         1,
+		"workspaceID":           1,
 	}))
 	if err != nil {
 		logger.Error("an error occured while fethcing app details", logger.LoggerOptions{

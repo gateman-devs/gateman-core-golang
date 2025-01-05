@@ -60,7 +60,7 @@ func AuthRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		authRouter.POST("/user/authenticate", middlewares.IPAddressMiddleware(), func(ctx *gin.Context) {
+		authRouter.POST("/user/authenticate", func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.CreateUserDTO
 			if err := ctx.ShouldBindJSON(&body); err != nil {

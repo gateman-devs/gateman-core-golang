@@ -165,7 +165,6 @@ func SetNINDetails(ctx *interfaces.ApplicationContext[dto.SetNINDetails]) {
 		nin = *fetchedNIN
 		ninByte, _ := nin.MarshalBinary()
 		cache.Cache.CreateEntry(string(hashedNIN), ninByte, time.Hour*24*365) // save fetched nin details for a year
-		return
 	} else {
 		err := json.Unmarshal([]byte(*cachedNIN), &nin)
 		if err != nil {
@@ -181,7 +180,6 @@ func SetNINDetails(ctx *interfaces.ApplicationContext[dto.SetNINDetails]) {
 			}
 			ninByte, _ := nin.MarshalBinary()
 			cache.Cache.CreateEntry(string(hashedNIN), ninByte, time.Hour*24*365) // save fetched nin details for a year
-			return
 		}
 	}
 	if os.Getenv("ENV") != "production" {
@@ -230,8 +228,9 @@ func SetNINDetails(ctx *interfaces.ApplicationContext[dto.SetNINDetails]) {
 			return
 		}
 	}
-	cache.Cache.CreateEntry(fmt.Sprintf("%s-nin", ctx.GetStringContextData("UserID")), hashedNIN, time.Hour*24*365)
 	if nin.PhoneNumber != nil && *nin.PhoneNumber != "" {
+		cache.Cache.CreateEntry(fmt.Sprintf("%s-nin", *nin.PhoneNumber), hashedNIN, time.Hour*24*365)
+		cache.Cache.CreateEntry(fmt.Sprintf("%s-nin-user", *nin.PhoneNumber), ctx.GetStringContextData("UserID"), time.Hour*24*365)
 		otp, err := auth.GenerateOTP(6, *nin.PhoneNumber)
 		if err != nil {
 			apperrors.FatalServerError(ctx.Ctx, err)
@@ -257,7 +256,7 @@ func SetNINDetails(ctx *interfaces.ApplicationContext[dto.SetNINDetails]) {
 }
 
 func VerifyNINDetails(ctx *interfaces.ApplicationContext[any]) {
-	cachedNINNumber := cache.Cache.FindOne(fmt.Sprintf("%s-nin", ctx.GetStringContextData("UserID")))
+	cachedNINNumber := cache.Cache.FindOne(fmt.Sprintf("%s-nin", ctx.GetStringContextData("OTPPhone")))
 	if cachedNINNumber == nil {
 		logger.Error("cached nin number not found", logger.LoggerOptions{
 			Key:  "id",
@@ -271,6 +270,15 @@ func VerifyNINDetails(ctx *interfaces.ApplicationContext[any]) {
 		logger.Error("cached nin not found", logger.LoggerOptions{
 			Key:  "id",
 			Data: ctx.GetStringContextData("UserID"),
+		})
+		apperrors.NotFoundError(ctx.Ctx, "NIN verification failed. Please restart verification process")
+		return
+	}
+	userID := cache.Cache.FindOne(fmt.Sprintf("%s-nin-user", ctx.GetStringContextData("OTPPhone")))
+	if userID == nil {
+		logger.Error("userID nin not found", logger.LoggerOptions{
+			Key:  "id",
+			Data: userID,
 		})
 		apperrors.NotFoundError(ctx.Ctx, "NIN verification failed. Please restart verification process")
 		return
@@ -296,7 +304,7 @@ func VerifyNINDetails(ctx *interfaces.ApplicationContext[any]) {
 		return
 	}
 	userRepo := repository.UserRepo()
-	userRepo.UpdatePartialByID(ctx.GetStringContextData("UserID"), map[string]any{
+	userRepo.UpdatePartialByID(*userID, map[string]any{
 		"address": entities.Address{
 			Value: &nin.Address,
 		},

@@ -22,3 +22,11 @@ type FetchAppUsersDTO struct {
 	Deleted  *bool   `json:"deleted"`
 	Sort     int8    `json:"sort"`
 }
+
+type BlockAccountsDTO struct {
+	IDs []string `json:"ids"`
+}
+
+type FetchAppMetrics struct {
+	ID string `json:"id"`
+}
