@@ -55,6 +55,39 @@ func AppRouter(router *gin.RouterGroup) {
 			})
 		})
 
+		appRouter.PATCH("/sandbox-apikey/refresh/:id", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.WORKSPACE_EDIT_APPLICATIONS}, true), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			controller.RefreshSandboxAppAPIKey(&interfaces.ApplicationContext[any]{
+				Ctx:  ctx,
+				Keys: appContext.Keys,
+				Param: map[string]any{
+					"id": ctx.Param("id"),
+				},
+			})
+		})
+
+		appRouter.PATCH("/app-signing-key/refresh/:id", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.WORKSPACE_EDIT_APPLICATIONS}, true), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			controller.RefreshAppSigningKey(&interfaces.ApplicationContext[any]{
+				Ctx:  ctx,
+				Keys: appContext.Keys,
+				Param: map[string]any{
+					"id": ctx.Param("id"),
+				},
+			})
+		})
+
+		appRouter.PATCH("/sandbox-app-signing-key/refresh/:id", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.WORKSPACE_EDIT_APPLICATIONS}, true), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			controller.RefreshSandboxAppSigningKey(&interfaces.ApplicationContext[any]{
+				Ctx:  ctx,
+				Keys: appContext.Keys,
+				Param: map[string]any{
+					"id": ctx.Param("id"),
+				},
+			})
+		})
+
 		appRouter.GET("/workspace/fetch", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.WORKSPACE_VIEW_APPLICATIONS}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			controller.FetchWorkspaceApps(&interfaces.ApplicationContext[any]{

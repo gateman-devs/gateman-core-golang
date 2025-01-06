@@ -23,6 +23,8 @@ type Application struct {
 	AppImg                string               `bson:"appImg" json:"appImg"`
 	CreatorID             string               `bson:"creatorID" json:"-"`
 	AppSigningKey         string               `bson:"appSigningKey" json:"-"`
+	SandboxAppSigningKey  string               `bson:"sandBoxAppSigningKey" json:"-"`
+	SandboxAPIKey         string               `bson:"sandBoxAPIKey" json:"-"`
 	APIKey                string               `bson:"apiKey" json:"-"`
 	VPN                   bool                 `bson:"vpn" json:"vpn"`
 	RequiredVerifications *[]string            `bson:"requiredVerifications" json:"requiredVerifications"` // the verifications that must be completed before signup is approved

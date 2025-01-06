@@ -50,14 +50,16 @@ func CreateApplication(ctx *interfaces.ApplicationContext[dto.ApplicationDTO]) {
 			}
 		}
 	}
-	app, apiKey, appSigningKey := application_usecase.CreateApplicationUseCase(ctx.Ctx, ctx.Body, ctx.DeviceID, ctx.GetStringContextData("UserID"), ctx.GetStringContextData("WorkspaceID"), ctx.GetStringContextData("Email"))
+	app, apiKey, appSigningKey, sandboxAPIKey, sandboxAppSigningKey := application_usecase.CreateApplicationUseCase(ctx.Ctx, ctx.Body, ctx.DeviceID, ctx.GetStringContextData("UserID"), ctx.GetStringContextData("WorkspaceID"), ctx.GetStringContextData("Email"))
 	if app == nil {
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "app created", map[string]any{
-		"app":           app,
-		"apiKey":        apiKey,
-		"appSigningKey": appSigningKey,
+		"app":                  app,
+		"apiKey":               apiKey,
+		"appSigningKey":        appSigningKey,
+		"sandboxAPIKey":        sandboxAPIKey,
+		"sandboxAppSigningKey": sandboxAppSigningKey,
 	}, nil, nil, nil, nil)
 }
 
@@ -149,6 +151,77 @@ func RefreshAppAPIKey(ctx *interfaces.ApplicationContext[any]) {
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "API key updated. This will only be displayed once", apiKey, nil, nil, nil, nil)
+}
+
+func RefreshAppSigningKey(ctx *interfaces.ApplicationContext[any]) {
+	appSigningKey := utils.GenerateUULDString()
+	appSigningKey = fmt.Sprintf("%s%s", appSigningKey, "-g8man")
+	encryptedAppSigningKey, _ := cryptography.EncryptData([]byte(appSigningKey), nil)
+	appRepo := repository.ApplicationRepo()
+	app, err := appRepo.UpdatePartialByID(ctx.GetStringParameter("id"), map[string]any{
+		"appSigningKey": *encryptedAppSigningKey,
+	})
+	if err != nil {
+		logger.Error("an error occured while updating app signing key", logger.LoggerOptions{
+			Key: "params", Data: ctx.Param,
+		}, logger.LoggerOptions{
+			Key: "payload", Data: ctx.Body,
+		})
+		apperrors.UnknownError(ctx.Ctx, err)
+		return
+	}
+	if app == 0 {
+		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found")
+		return
+	}
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "App Signing Key updated. This will only be displayed once", appSigningKey, nil, nil, nil, nil)
+}
+
+func RefreshSandboxAppAPIKey(ctx *interfaces.ApplicationContext[any]) {
+	apiKey, _ := cryptography.EncryptData([]byte(utils.GenerateUULDString()), nil)
+	hashedAPIKey, _ := cryptography.CryptoHahser.HashString(string(*apiKey), nil)
+	appRepo := repository.ApplicationRepo()
+	app, err := appRepo.UpdatePartialByID(ctx.GetStringParameter("id"), map[string]any{
+		"sandBoxAPIKey": string(hashedAPIKey),
+	})
+	if err != nil {
+		logger.Error("an error occured while updating sandbox api key", logger.LoggerOptions{
+			Key: "params", Data: ctx.Param,
+		}, logger.LoggerOptions{
+			Key: "payload", Data: ctx.Body,
+		})
+		apperrors.UnknownError(ctx.Ctx, err)
+		return
+	}
+	if app == 0 {
+		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found")
+		return
+	}
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Sandbox API key updated. This will only be displayed once", apiKey, nil, nil, nil, nil)
+}
+
+func RefreshSandboxAppSigningKey(ctx *interfaces.ApplicationContext[any]) {
+	appSigningKey := utils.GenerateUULDString()
+	appSigningKey = fmt.Sprintf("sandbox-%s-g8man", appSigningKey)
+	encryptedAppSigningKey, _ := cryptography.EncryptData([]byte(appSigningKey), nil)
+	appRepo := repository.ApplicationRepo()
+	app, err := appRepo.UpdatePartialByID(ctx.GetStringParameter("id"), map[string]any{
+		"sandBoxAppSigningKey": *encryptedAppSigningKey,
+	})
+	if err != nil {
+		logger.Error("an error occured while updating app signing key", logger.LoggerOptions{
+			Key: "params", Data: ctx.Param,
+		}, logger.LoggerOptions{
+			Key: "payload", Data: ctx.Body,
+		})
+		apperrors.UnknownError(ctx.Ctx, err)
+		return
+	}
+	if app == 0 {
+		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found")
+		return
+	}
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Sandbox App Signing Key updated. This will only be displayed once", appSigningKey, nil, nil, nil, nil)
 }
 
 func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpDTO]) {
