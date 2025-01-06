@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"reflect"
+	"strconv"
 	"time"
 
 	apperrors "authone.usepolymer.co/application/appErrors"
@@ -20,6 +22,9 @@ import (
 	"authone.usepolymer.co/infrastructure/auth"
 	"authone.usepolymer.co/infrastructure/cryptography"
 	"authone.usepolymer.co/infrastructure/logger"
+	messagequeue "authone.usepolymer.co/infrastructure/message_queue"
+	queue_tasks "authone.usepolymer.co/infrastructure/message_queue/tasks"
+	mq_types "authone.usepolymer.co/infrastructure/message_queue/types"
 	server_response "authone.usepolymer.co/infrastructure/serverResponse"
 	"authone.usepolymer.co/infrastructure/validator"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -104,25 +109,59 @@ func DeleteApplication(ctx *interfaces.ApplicationContext[any]) {
 		return
 	}
 	if deleted == 0 {
-		apperrors.NotFoundError(ctx.Ctx, "this resource does not exist")
+		apperrors.NotFoundError(ctx.Ctx, "this application does not exist")
 		return
 	}
+
+	deleteAppPayload, err := json.Marshal(queue_tasks.DeleteAppPayload{
+		ID:          ctx.GetStringParameter("id"),
+		WorkspaceID: *ctx.GetHeader("X-Workspace-Id"),
+	})
+	if err != nil {
+		logger.Error("error marshalling payload for delete app queue")
+		apperrors.FatalServerError(ctx, err)
+		return
+	}
+	deleteIn := os.Getenv("DELETE_APP_IN_SECONDS")
+	if deleteIn == "" {
+		deleteIn = "1"
+	}
+	processIn, _ := strconv.Atoi(deleteIn)
+	messagequeue.TaskQueue.Enqueue(mq_types.QueueTask{
+		Payload:   deleteAppPayload,
+		Name:      queue_tasks.HandleAppDeletionTaskName,
+		Priority:  mq_types.Low,
+		ProcessIn: uint(processIn),
+	})
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "app deleted", nil, nil, nil, nil, nil)
 }
 
-func UpdateApplication(ctx *interfaces.ApplicationContext[dto.ApplicationDTO]) {
+func UpdateApplication(ctx *interfaces.ApplicationContext[dto.UpdateApplications]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
 		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
 		return
 	}
+	payload := map[string]any{}
+	if ctx.Body.Name != nil {
+		payload["name"] = ctx.Body.Name
+	}
+	if ctx.Body.Description != nil {
+		payload["description"] = ctx.Body.Description
+	}
+	if ctx.Body.LocaleRestriction != nil {
+		payload["localeRestriction"] = ctx.Body.LocaleRestriction
+	}
+	if ctx.Body.RequiredVerifications != nil {
+		payload["requiredVerifications"] = ctx.Body.RequiredVerifications
+	}
 	appRepo := repository.ApplicationRepo()
-	_, err := appRepo.UpdatePartialByID(ctx.GetStringParameter("id"), ctx.Body)
+	_, err := appRepo.UpdatePartialByID(ctx.GetStringParameter("id"), payload)
 	if err != nil {
 		logger.Error("an error occured while updating application", logger.LoggerOptions{
 			Key: "params", Data: ctx.Param,
 		}, logger.LoggerOptions{
-			Key: "payload", Data: ctx.Body,
+			Key: "payload", Data: payload,
 		})
 		apperrors.UnknownError(ctx.Ctx, err)
 		return
@@ -230,11 +269,11 @@ func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpD
 		return
 	}
 	appUserRepo := repository.AppUserRepo()
-	appUserExists, _ := appUserRepo.CountDocs(map[string]interface{}{
+	appUserExists, _ := appUserRepo.FindOneByFilter(map[string]interface{}{
 		"userID": ctx.GetStringContextData("UserID"),
 		"appID":  ctx.Body.AppID,
 	})
-	if appUserExists != 0 {
+	if appUserExists != nil {
 		apperrors.ClientError(ctx.Ctx, "Seems you have already signed up for this app", nil, nil)
 		return
 	}

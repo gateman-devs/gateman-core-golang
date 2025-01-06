@@ -6,9 +6,17 @@ import (
 	"authone.usepolymer.co/application/utils"
 )
 
+type RestrictionType string
+
+var (
+	Restrict RestrictionType = "restrict"
+	Allow    RestrictionType = "allow"
+)
+
 type LocaleRestriction struct {
-	States  *[]string `bson:"states" json:"states"`
-	Country string    `bson:"country" json:"country" validate:"required,iso3166_1_alpha2"`
+	States          *[]string       `bson:"states" json:"states"`
+	Country         string          `bson:"country" json:"country" validate:"required,iso3166_1_alpha2"`
+	RestrictionType RestrictionType `bson:"restrictionType" json:"restrictionType"`
 }
 
 type RequestedField struct {
@@ -27,6 +35,8 @@ type Application struct {
 	SandboxAPIKey         string               `bson:"sandBoxAPIKey" json:"-"`
 	APIKey                string               `bson:"apiKey" json:"-"`
 	VPN                   bool                 `bson:"vpn" json:"vpn"`
+	RefreshTokenTTL       uint32               `bson:"refreshTokenTTL" json:"refreshTokenTTL"`
+	AccessTokenTTL        uint16               `bson:"accessTokenTTL" json:"accessTokenTTL"`
 	RequiredVerifications *[]string            `bson:"requiredVerifications" json:"requiredVerifications"` // the verifications that must be completed before signup is approved
 	RequestedFields       []RequestedField     `bson:"requestedFields" json:"requestedFields"`             // the fields the application are interested in recieving. MUST NOT BE EMPTY
 	LocaleRestriction     *[]LocaleRestriction `bson:"localeRestriction" json:"localeRestriction"`

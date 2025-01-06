@@ -327,7 +327,9 @@ func (repo *MongoRepository[T]) DeleteOne(ctx context.Context, filter map[string
 		}
 	}()
 
-	result, err := repo.Model.DeleteOne(ctx, filter)
+	result, err := repo.Model.UpdateOne(ctx, filter, bson.D{primitive.E{Key: "$set", Value: map[string]any{
+		"deletedAt": time.Now(),
+	}}})
 	if err != nil {
 		logger.Error("mongo error occured while running DeleteOne", logger.LoggerOptions{
 			Key:  "error",
@@ -339,6 +341,35 @@ func (repo *MongoRepository[T]) DeleteOne(ctx context.Context, filter map[string
 		return 0, err
 	}
 	logger.Info("DeleteOne complete")
+	return result.MatchedCount, err
+}
+
+func (repo *MongoRepository[T]) RemoveFromDatabase(ctx context.Context, filter map[string]interface{}) (int64, error) {
+	var cancel context.CancelFunc
+	if ctx == nil {
+		c, ctxCancel := repo.createCtx()
+		ctx = c
+		cancel = ctxCancel
+	}
+
+	defer func() {
+		if cancel != nil {
+			cancel()
+		}
+	}()
+
+	result, err := repo.Model.DeleteOne(ctx, filter)
+	if err != nil {
+		logger.Error("mongo error occured while running RemoveFromDatabase", logger.LoggerOptions{
+			Key:  "error",
+			Data: err,
+		}, logger.LoggerOptions{
+			Key:  "filter",
+			Data: filter,
+		})
+		return 0, err
+	}
+	logger.Info("RemoveFromDatabase complete")
 	return result.DeletedCount, err
 }
 
@@ -349,7 +380,9 @@ func (repo *MongoRepository[T]) DeleteByID(id string) (int64, error) {
 		cancel()
 	}()
 
-	result, err := repo.Model.DeleteOne(c, bson.M{"_id": &id})
+	result, err := repo.Model.UpdateByID(c, id, bson.D{primitive.E{Key: "$set", Value: map[string]any{
+		"deletedAt": time.Now(),
+	}}})
 	if err != nil {
 		logger.Error("mongo error occured while running DeleteByID", logger.LoggerOptions{
 			Key:  "error",
@@ -361,7 +394,7 @@ func (repo *MongoRepository[T]) DeleteByID(id string) (int64, error) {
 		return 0, err
 	}
 	logger.Info("DeleteByID complete")
-	return result.DeletedCount, err
+	return result.ModifiedCount, err
 }
 
 func (repo *MongoRepository[T]) DeleteMany(filter map[string]interface{}) (int64, error) {
@@ -370,7 +403,9 @@ func (repo *MongoRepository[T]) DeleteMany(filter map[string]interface{}) (int64
 		cancel()
 	}()
 
-	count, err := repo.Model.DeleteMany(c, filter)
+	count, err := repo.Model.UpdateMany(c, filter, bson.D{primitive.E{Key: "$set", Value: map[string]any{
+		"deletedAt": time.Now(),
+	}}})
 	if err != nil {
 		logger.Error("mongo error occured while running DeleteMany", logger.LoggerOptions{
 			Key:  "error",
@@ -382,7 +417,7 @@ func (repo *MongoRepository[T]) DeleteMany(filter map[string]interface{}) (int64
 		return 0, err
 	}
 	logger.Info("DeleteMany complete")
-	return count.DeletedCount, err
+	return count.ModifiedCount, err
 }
 
 func (repo *MongoRepository[T]) UpdateByField(filter map[string]interface{}, payload *T, opts ...*options.UpdateOptions) (bool, error) {

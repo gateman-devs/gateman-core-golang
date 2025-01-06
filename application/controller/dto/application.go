@@ -10,6 +10,13 @@ type ApplicationDTO struct {
 	RequestedFields       []entities.RequestedField     `json:"requestedFields" validate:"required"`
 }
 
+type UpdateApplications struct {
+	Name                  *string                        `json:"name" validate:"required"`
+	Description           *string                        `json:"description" validate:"required"`
+	RequiredVerifications *[]string                     `json:"requiredVerifications"`
+	LocaleRestriction     *[]entities.LocaleRestriction `json:"localeRestriction"`
+}
+
 type ApplicationSignUpDTO struct {
 	AppID string `json:"appID" validate:"required"`
 }

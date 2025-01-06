@@ -29,12 +29,12 @@ func AppRouter(router *gin.RouterGroup) {
 
 		appRouter.PATCH("/update/:id", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.WORKSPACE_EDIT_APPLICATIONS}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
-			var body dto.ApplicationDTO
+			var body dto.UpdateApplications
 			if err := ctx.ShouldBindJSON(&body); err != nil {
 				apperrors.ErrorProcessingPayload(ctx)
 				return
 			}
-			controller.UpdateApplication(&interfaces.ApplicationContext[dto.ApplicationDTO]{
+			controller.UpdateApplication(&interfaces.ApplicationContext[dto.UpdateApplications]{
 				Ctx:  ctx,
 				Body: &body,
 				Keys: appContext.Keys,

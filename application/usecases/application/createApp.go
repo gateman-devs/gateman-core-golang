@@ -60,6 +60,8 @@ func CreateApplicationUseCase(ctx any, payload *dto.ApplicationDTO, deviceID str
 		RequestedFields:       payload.RequestedFields,
 		AppSigningKey:         *encryptedAppSigningKey,
 		SandboxAppSigningKey:  *encryptedSandboxAppSigningKey,
+		RefreshTokenTTL:       60 * 60 * 24 * 7, // 7 days
+		AccessTokenTTL:        60 * 60 * 2,      // 2 hours
 		SandboxAPIKey:         string(hashedSandboxAPIKey),
 		APIKey:                string(hashedAPIKey),
 	})

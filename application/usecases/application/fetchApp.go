@@ -50,17 +50,30 @@ func FetchAppUseCase(ctx any, appID string, deviceID string, ip string) (*entiti
 		}
 		passed := false
 		for _, locale := range *app.LocaleRestriction {
-			if locale.States != nil {
-				if utils.HasItemString(locale.States, strings.ToLower(ipData.City)) && locale.Country == ipData.CountryCode {
-					passed = true
-					break
+			if locale.RestrictionType == entities.Allow {
+				if locale.States != nil {
+					if utils.HasItemString(locale.States, strings.ToLower(ipData.City)) && locale.Country == ipData.CountryCode {
+						passed = true
+						break
+					}
+				} else {
+					if locale.Country == ipData.CountryCode {
+						passed = true
+						break
+					}
 				}
-			} else {
-				if locale.Country == ipData.CountryCode {
-					passed = true
-					break
+			} else if locale.RestrictionType == entities.Restrict {
+				if locale.States != nil {
+					if utils.HasItemString(locale.States, strings.ToLower(ipData.City)) && locale.Country == ipData.CountryCode {
+						break
+					}
+				} else {
+					if locale.Country == ipData.CountryCode {
+						break
+					}
 				}
 			}
+
 		}
 		if !passed {
 			apperrors.ClientError(ctx, "Seems you are not in a location that supports this app. If you are using a VPN please turn it off before attempting to access this app.", nil, nil)

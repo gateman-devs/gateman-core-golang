@@ -14,11 +14,10 @@ type SubscriptionPlan struct {
 	MonthlyURL   string   `bson:"monthlyURL" json:"monthlyURL"`
 	Name         string   `bson:"name" json:"name"`
 
-	ID            string     `bson:"_id" json:"id"`
-	CreatedAt     time.Time  `bson:"createdAt" json:"createdAt"`
-	UpdatedAt     time.Time  `bson:"updatedAt" json:"updatedAt"`
-	DeletedAt     *time.Time `bson:"deletedAt" json:"deletedAt"`
-	DeletedReason *string    `bson:"deletedReason" json:"deletedReason"`
+	ID        string     `bson:"_id" json:"id"`
+	CreatedAt time.Time  `bson:"createdAt" json:"createdAt"`
+	UpdatedAt time.Time  `bson:"updatedAt" json:"updatedAt"`
+	DeletedAt *time.Time `bson:"deletedAt" json:"deletedAt"`
 }
 
 func (model SubscriptionPlan) ParseModel() any {

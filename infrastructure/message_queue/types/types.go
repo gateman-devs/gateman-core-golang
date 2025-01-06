@@ -9,7 +9,7 @@ type QueueTask struct {
 	Name      Queues
 	Payload   []byte
 	Priority  TaskPriority
-	ProcessIn uint // minute
+	ProcessIn uint // second
 	TimeOut   uint // seconds
 }
 

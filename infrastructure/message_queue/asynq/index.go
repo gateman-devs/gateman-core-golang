@@ -43,6 +43,7 @@ func (aq *AsynqBroker) Start() {
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(string(queue_tasks.HandleEmailDeliveryTaskName), queue_tasks.HandleEmailDeliveryTask)
 	mux.HandleFunc(string(queue_tasks.HandleWorkspaceInviteTaskName), queue_tasks.HandleWorkspaceInviteTask)
+	mux.HandleFunc(string(queue_tasks.HandleAppDeletionTaskName), queue_tasks.HandleAppDeletionTask)
 
 	srv.Run(mux)
 }
