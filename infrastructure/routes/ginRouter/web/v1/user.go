@@ -43,5 +43,28 @@ func UserRouter(router *gin.RouterGroup) {
 				Keys: appContext.Keys,
 			})
 		})
+
+		userRouter.POST("/set-bvn", middlewares.UserAuthenticationMiddleware("", nil, false), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			var body dto.SetBVNDetails
+			if err := ctx.ShouldBindJSON(&body); err != nil {
+				apperrors.ErrorProcessingPayload(ctx)
+				return
+			}
+			controller.SetBVNDetails(&interfaces.ApplicationContext[dto.SetBVNDetails]{
+				Ctx:      ctx,
+				Keys:     appContext.Keys,
+				DeviceID: appContext.DeviceID,
+				Body:     &body,
+			})
+		})
+
+		userRouter.POST("/verify-bvn", middlewares.OTPTokenMiddleware("verify_bvn"), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			controller.VerifyBVNDetails(&interfaces.ApplicationContext[any]{
+				Ctx:  ctx,
+				Keys: appContext.Keys,
+			})
+		})
 	}
 }

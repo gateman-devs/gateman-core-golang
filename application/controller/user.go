@@ -189,7 +189,7 @@ func SetNINDetails(ctx *interfaces.ApplicationContext[dto.SetNINDetails]) {
 	}
 	if ctx.GetStringContextData("Phone") != "" && nin.PhoneNumber != nil {
 		if *nin.PhoneNumber == ctx.GetStringContextData("Phone") {
-			parsedNINDOB, err := time.Parse("2006-01-02", "1990-01-01")
+			parsedNINDOB, err := time.Parse("2006-01-02", nin.DateOfBirth)
 			if err != nil {
 				logger.Error("failed to parse NIN DOB", logger.LoggerOptions{
 					Key: "userID", Data: ctx.GetStringContextData("UserID"),
@@ -198,32 +198,44 @@ func SetNINDetails(ctx *interfaces.ApplicationContext[dto.SetNINDetails]) {
 				})
 				return
 			}
-			userRepo.UpdatePartialByID(ctx.GetStringContextData("UserID"), map[string]any{
-				"address": entities.Address{
+			user, _ := userRepo.FindByID(ctx.GetStringContextData("UserID"))
+			payload := map[string]any{"nin": hashedNIN}
+			if user.Address == nil {
+				payload["address"] = entities.Address{
 					Value: &nin.Address,
-				},
-				"firstName": entities.KYCData[string]{
+				}
+			}
+			if user.FirstName == nil || !user.FirstName.Verified {
+				payload["firstName"] = entities.KYCData[string]{
 					Value:    &nin.FirstName,
 					Verified: true,
-				},
-				"middleName": entities.KYCData[string]{
+				}
+			}
+			if user.MiddleName == nil || !user.MiddleName.Verified {
+				payload["middleName"] = entities.KYCData[string]{
 					Value:    nin.MiddleName,
 					Verified: true,
-				},
-				"lastName": entities.KYCData[string]{
+				}
+			}
+			if user.LastName == nil || !user.LastName.Verified {
+				payload["lastName"] = entities.KYCData[string]{
 					Value:    &nin.LastName,
 					Verified: true,
-				},
-				"gender": entities.KYCData[string]{
+				}
+			}
+			if user.Gender == nil || !user.Gender.Verified {
+				payload["gender"] = entities.KYCData[string]{
 					Value:    &nin.Gender,
 					Verified: true,
-				},
-				"dob": entities.KYCData[time.Time]{
+				}
+			}
+			if user.DOB == nil || !user.DOB.Verified {
+				payload["dob"] = entities.KYCData[time.Time]{
 					Value:    &parsedNINDOB,
 					Verified: true,
-				},
-				"nin": hashedNIN,
-			})
+				}
+
+			}
 			server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "NIN Added", nil, nil, nil, nil, nil)
 			return
 		}
@@ -304,33 +316,269 @@ func VerifyNINDetails(ctx *interfaces.ApplicationContext[any]) {
 		return
 	}
 	userRepo := repository.UserRepo()
-	userRepo.UpdatePartialByID(*userID, map[string]any{
-		"address": entities.Address{
+	user, _ := userRepo.FindByID(*userID)
+	payload := map[string]any{"nin": cachedNINNumber}
+	if user.Address == nil {
+		payload["address"] = entities.Address{
 			Value: &nin.Address,
-		},
-		"firstName": entities.KYCData[string]{
+		}
+	}
+	if user.FirstName == nil || !user.FirstName.Verified {
+		payload["firstName"] = entities.KYCData[string]{
 			Value:    &nin.FirstName,
 			Verified: true,
-		},
-		"middleName": entities.KYCData[string]{
+		}
+	}
+	if user.MiddleName == nil || !user.MiddleName.Verified {
+		payload["middleName"] = entities.KYCData[string]{
 			Value:    nin.MiddleName,
 			Verified: true,
-		},
-		"lastName": entities.KYCData[string]{
+		}
+	}
+	if user.LastName == nil || !user.LastName.Verified {
+		payload["lastName"] = entities.KYCData[string]{
 			Value:    &nin.LastName,
 			Verified: true,
-		},
-		"gender": entities.KYCData[string]{
+		}
+	}
+	if user.Gender == nil || !user.Gender.Verified {
+		payload["gender"] = entities.KYCData[string]{
 			Value:    &nin.Gender,
 			Verified: true,
-		},
-		"dob": entities.KYCData[time.Time]{
+		}
+	}
+	if user.DOB == nil || !user.DOB.Verified {
+		payload["dob"] = entities.KYCData[time.Time]{
 			Value:    &parsedNINDOB,
 			Verified: true,
-		},
-		"nin": cachedNINNumber,
-	})
+		}
+
+	}
 	cache.Cache.DeleteOne(fmt.Sprintf("%s-nin", ctx.GetStringContextData("UserID")))
 	cache.Cache.DeleteOne(*cachedNINNumber)
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "NIN Added", nil, nil, nil, nil, nil)
+}
+
+func SetBVNDetails(ctx *interfaces.ApplicationContext[dto.SetBVNDetails]) {
+	userRepo := repository.UserRepo()
+	account, _ := userRepo.FindByID(ctx.GetStringContextData("UserID"), options.FindOne().SetProjection(map[string]any{
+		"bvn": 1,
+	}))
+	if account.BVN != nil {
+		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Seems you have verified your BVN already. You're good to go!", nil, nil, nil, nil, nil)
+		return
+	}
+	hashedBVN, _ := cryptography.CryptoHahser.HashString(ctx.Body.BVN, []byte(os.Getenv("HASH_FIXED_SALT")))
+	bvnExists, _ := userRepo.CountDocs(map[string]interface{}{
+		"bvn": hashedBVN,
+	})
+	if bvnExists != 0 {
+		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "This BVN is already linked to another Gateman account.", nil, nil, nil, nil, nil)
+		return
+	}
+	var bvn identity_verification_types.BVNData
+	cachedBVN := cache.Cache.FindOne(string(hashedBVN))
+	if cachedBVN == nil {
+		fetchedBVN, _ := identityverification.IdentityVerifier.FetchBVNDetails(ctx.Body.BVN)
+		if fetchedBVN == nil {
+			apperrors.NotFoundError(ctx.Ctx, "Invalid BVN provided")
+			return
+		}
+		bvn = *fetchedBVN
+		bvnByte, _ := bvn.MarshalBinary()
+		cache.Cache.CreateEntry(string(hashedBVN), bvnByte, time.Hour*24*365) // save fetched bvn details for a year
+	} else {
+		err := json.Unmarshal([]byte(*cachedBVN), &bvn)
+		if err != nil {
+			logger.Error("failed to marshal cached bvn data", logger.LoggerOptions{
+				Key: "userID", Data: ctx.GetStringContextData("UserID"),
+			}, logger.LoggerOptions{
+				Key: "hashedBVN", Data: hashedBVN,
+			})
+			fetchedBVN, _ := identityverification.IdentityVerifier.FetchBVNDetails(ctx.Body.BVN)
+			if fetchedBVN == nil {
+				apperrors.NotFoundError(ctx.Ctx, "Invalid BVN provided")
+				return
+			}
+			bvnByte, _ := bvn.MarshalBinary()
+			cache.Cache.CreateEntry(string(hashedBVN), bvnByte, time.Hour*24*365) // save fetched bvn details for a year
+		}
+	}
+	if os.Getenv("ENV") != "production" {
+		bvn.PhoneNumber = "00000000000"
+	} else {
+		bvn.PhoneNumber = fmt.Sprintf("234%s", bvn.PhoneNumber)
+	}
+	if ctx.GetStringContextData("Phone") != "" && bvn.PhoneNumber != "" {
+		if bvn.PhoneNumber == ctx.GetStringContextData("Phone") {
+			parsedBVNDOB, err := time.Parse("2006-01-02", bvn.DateOfBirth)
+			if err != nil {
+				logger.Error("failed to parse BVN DOB", logger.LoggerOptions{
+					Key: "userID", Data: ctx.GetStringContextData("UserID"),
+				}, logger.LoggerOptions{Key: "hashedBVN", Data: hashedBVN}, logger.LoggerOptions{
+					Key: `err`, Data: err,
+				})
+				return
+			}
+
+			user, _ := userRepo.FindByID(ctx.GetStringContextData("UserID"))
+			payload := map[string]any{"bvn": hashedBVN}
+			if user.Address == nil {
+				payload["address"] = entities.Address{
+					Value: &bvn.Address,
+				}
+			}
+			if user.FirstName == nil || !user.FirstName.Verified {
+				payload["firstName"] = entities.KYCData[string]{
+					Value:    &bvn.FirstName,
+					Verified: true,
+				}
+			}
+			if user.MiddleName == nil || !user.MiddleName.Verified {
+				payload["middleName"] = entities.KYCData[string]{
+					Value:    bvn.MiddleName,
+					Verified: true,
+				}
+			}
+			if user.LastName == nil || !user.LastName.Verified {
+				payload["lastName"] = entities.KYCData[string]{
+					Value:    &bvn.LastName,
+					Verified: true,
+				}
+			}
+			if user.Gender == nil || !user.Gender.Verified {
+				payload["gender"] = entities.KYCData[string]{
+					Value:    &bvn.Gender,
+					Verified: true,
+				}
+			}
+			if user.DOB == nil || !user.DOB.Verified {
+				payload["dob"] = entities.KYCData[time.Time]{
+					Value:    &parsedBVNDOB,
+					Verified: true,
+				}
+
+			}
+			server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "BVN Added", nil, nil, nil, nil, nil)
+			return
+		}
+	}
+	if bvn.PhoneNumber != "" {
+		cache.Cache.CreateEntry(fmt.Sprintf("%s-bvn", bvn.PhoneNumber), hashedBVN, time.Hour*24*365)
+		cache.Cache.CreateEntry(fmt.Sprintf("%s-bvn-user", bvn.PhoneNumber), ctx.GetStringContextData("UserID"), time.Hour*24*365)
+		otp, err := auth.GenerateOTP(6, bvn.PhoneNumber)
+		if err != nil {
+			apperrors.FatalServerError(ctx.Ctx, err)
+			return
+		}
+		ref := sms.SMSService.SendOTP(bvn.PhoneNumber, false, otp)
+		encryptedRef, err := cryptography.EncryptData([]byte(*ref), nil)
+		if err != nil {
+			apperrors.UnknownError(ctx.Ctx, err)
+			return
+		}
+		cache.Cache.CreateEntry(fmt.Sprintf("%s-sms-otp-ref", bvn.PhoneNumber), *encryptedRef, time.Minute*10)
+		cache.Cache.CreateEntry(fmt.Sprintf("%s-otp-intent", bvn.PhoneNumber), "verify_bvn", time.Minute*10)
+		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, fmt.Sprintf("Verify OTP sent to ******%s", (bvn.PhoneNumber)[len(bvn.PhoneNumber)-4:]), nil, nil, nil, nil, nil)
+	} else {
+		logger.Error("Phone number not attached to BVN provided", logger.LoggerOptions{
+			Key: "bvn", Data: ctx.Body.BVN,
+		}, logger.LoggerOptions{
+			Key: "userID", Data: ctx.GetStringContextData("UserID"),
+		})
+		apperrors.CustomError(ctx.Ctx, "Phone number not attached to BVN provided. Please reach out to support to resolve this issue")
+	}
+}
+
+func VerifyBVNDetails(ctx *interfaces.ApplicationContext[any]) {
+	cachedBVNNumber := cache.Cache.FindOne(fmt.Sprintf("%s-bvn", ctx.GetStringContextData("OTPPhone")))
+	if cachedBVNNumber == nil {
+		logger.Error("cached BVN number not found", logger.LoggerOptions{
+			Key:  "id",
+			Data: ctx.GetStringContextData("UserID"),
+		})
+		apperrors.NotFoundError(ctx.Ctx, "BVN verification failed. Please restart verification process")
+		return
+	}
+	cachedBVN := cache.Cache.FindOne(*cachedBVNNumber)
+	if cachedBVN == nil {
+		logger.Error("cached BVN not found", logger.LoggerOptions{
+			Key:  "id",
+			Data: ctx.GetStringContextData("UserID"),
+		})
+		apperrors.NotFoundError(ctx.Ctx, "BVN verification failed. Please restart verification process")
+		return
+	}
+	userID := cache.Cache.FindOne(fmt.Sprintf("%s-bvn-user", ctx.GetStringContextData("OTPPhone")))
+	if userID == nil {
+		logger.Error("userID bvn not found", logger.LoggerOptions{
+			Key:  "id",
+			Data: userID,
+		})
+		apperrors.NotFoundError(ctx.Ctx, "BVN verification failed. Please restart verification process")
+		return
+	}
+	var bvn identity_verification_types.BVNData
+	err := json.Unmarshal([]byte(*cachedBVN), &bvn)
+	if err != nil {
+		logger.Error("failed to marshal cached bvn data", logger.LoggerOptions{
+			Key: "userID", Data: ctx.GetStringContextData("UserID"),
+		}, logger.LoggerOptions{
+			Key: "cachedBVN", Data: cachedBVN,
+		})
+		apperrors.UnknownError(ctx.Ctx, err)
+		return
+	}
+	parsedBVNDOB, err := time.Parse("02-Jan-2006", bvn.DateOfBirth)
+	if err != nil {
+		logger.Error("failed to parse BVN DOB", logger.LoggerOptions{
+			Key: "userID", Data: ctx.GetStringContextData("UserID"),
+		}, logger.LoggerOptions{Key: "cachedBVNNumber", Data: cachedBVNNumber}, logger.LoggerOptions{
+			Key: `err`, Data: err,
+		})
+		return
+	}
+	userRepo := repository.UserRepo()
+	user, _ := userRepo.FindByID(*userID)
+	payload := map[string]any{"bvn": cachedBVNNumber}
+	if user.Address == nil {
+		payload["address"] = entities.Address{
+			Value: &bvn.Address,
+		}
+	}
+	if user.FirstName == nil || !user.FirstName.Verified {
+		payload["firstName"] = entities.KYCData[string]{
+			Value:    &bvn.FirstName,
+			Verified: true,
+		}
+	}
+	if user.MiddleName == nil || !user.MiddleName.Verified {
+		payload["middleName"] = entities.KYCData[string]{
+			Value:    bvn.MiddleName,
+			Verified: true,
+		}
+	}
+	if user.LastName == nil || !user.LastName.Verified {
+		payload["lastName"] = entities.KYCData[string]{
+			Value:    &bvn.LastName,
+			Verified: true,
+		}
+	}
+	if user.Gender == nil || !user.Gender.Verified {
+		payload["gender"] = entities.KYCData[string]{
+			Value:    &bvn.Gender,
+			Verified: true,
+		}
+	}
+	if user.DOB == nil || !user.DOB.Verified {
+		payload["dob"] = entities.KYCData[time.Time]{
+			Value:    &parsedBVNDOB,
+			Verified: true,
+		}
+
+	}
+	userRepo.UpdatePartialByID(*userID, payload)
+	cache.Cache.DeleteOne(fmt.Sprintf("%s-bvn", ctx.GetStringContextData("UserID")))
+	cache.Cache.DeleteOne(*cachedBVNNumber)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "BVN Added", nil, nil, nil, nil, nil)
 }

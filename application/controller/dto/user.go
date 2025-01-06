@@ -7,3 +7,7 @@ type SetFaceDTO struct {
 type SetNINDetails struct {
 	NIN string `json:"nin" validate:"required"`
 }
+
+type SetBVNDetails struct {
+	BVN string `json:"bvn" validate:"required"`
+}

@@ -26,6 +26,15 @@ type BVNData struct {
 	Title         string  `json:"title"`
 }
 
+func (b *BVNData) MarshalBinary() ([]byte, error) {
+	return json.Marshal(b) // Serialize to JSON
+}
+
+// Implement encoding.BinaryUnmarshaler
+func (b *BVNData) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data, b) // Deserialize from JSON
+}
+
 type NINData struct {
 	Gender      string  `json:"gender"`
 	FirstName   string  `json:"first_name"`
@@ -46,18 +55,6 @@ func (n *NINData) UnmarshalBinary(data []byte) error {
 	return json.Unmarshal(data, n) // Deserialize from JSON
 }
 
-type CACResponse struct {
-	Data CompanyProfile `json:"entity"`
-}
-
-type CompanyProfile struct {
-	City       string             `json:"City"`
-	LGA        string             `json:"LGA"`
-	State      string             `json:"State"`
-	Status     string             `json:"Status"`
-	Affiliates []AffiliateProfile `json:"affiliates"`
-}
-
 type LivenessCheckResult struct {
 	Entity LivenessCheckResultEntity `json:"entity"`
 }
@@ -69,15 +66,4 @@ type LivenessCheckResultEntity struct {
 type LivenessCheckResultLiveness struct {
 	LivenessCheck       bool    `json:"liveness_check"`
 	LivenessProbability float32 `json:"liveness_probability"`
-}
-
-type AffiliateProfile struct {
-	Name          string  `json:"name"`
-	Status        string  `json:"status"`
-	IDType        string  `json:"identityType"`
-	IDNumber      string  `json:"identityNumber"`
-	AffiliateType string  `json:"affiliateType"`
-	ShareAllotted string  `json:"shareAllotted"`
-	Email         *string `json:"email"`
-	Phone         *string `json:"phone"`
 }
