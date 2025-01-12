@@ -38,11 +38,11 @@ jobs:
 
     - name: Deploy ConfigMap and Secrets
       run: |
-        kubectl apply -f ../configmap.yaml
-        kubectl apply -f ../secrets.yaml
+        kubectl apply -f .github/configmap.yaml
+        kubectl apply -f .github/secrets.yaml
 
     - name: Deploy Application
       run: |
-        kubectl apply -f ../deployment.yaml
-        kubectl apply -f ../hpa.yaml
-        kubectl apply -f ../loadbalancer.yaml
+        kubectl apply -f .github/deployment.yaml
+        kubectl apply -f .github/hpa.yaml
+        kubectl apply -f .github/loadbalancer.yaml
