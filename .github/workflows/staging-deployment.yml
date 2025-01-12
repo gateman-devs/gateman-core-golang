@@ -1,0 +1,48 @@
+name: gateman-deployment
+
+env:
+  resourceGroup: "gateman-prod"
+  kubernetesVersion: "1.19.6"
+  name: "gateman-deployment"
+
+on:
+  push:
+    branches: [staging, main]
+  pull_request:
+    branches: [staging, main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Azure Login
+      uses: Azure/login@v2.2.0
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Ensure AKS Cluster Exists
+      id: aks-check
+      run: |
+        if az aks show -g ${{ env.resourceGroup }} -n ${{ env.name }} &>/dev/null; then
+          echo "exists=true" >> $GITHUB_ENV
+        else
+          az aks create -g ${{ env.resourceGroup }} -n ${{ env.name }} --kubernetes-version ${{ env.kubernetesVersion }} --generate-ssh-keys
+          echo "exists=false" >> $GITHUB_ENV
+        fi
+
+    - name: Authenticate to AKS
+      run: |
+        az aks get-credentials -g ${{ env.resourceGroup }} -n ${{ env.name }} --overwrite-existing
+
+    - name: Deploy ConfigMap and Secrets
+      run: |
+        kubectl apply -f configmap.yaml
+        kubectl apply -f secrets.yaml
+
+    - name: Deploy Application
+      run: |
+        kubectl apply -f deployment.yaml
+        kubectl apply -f hpa.yaml
+        kubectl apply -f loadbalancer.yaml
