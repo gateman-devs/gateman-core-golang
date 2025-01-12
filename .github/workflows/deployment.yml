@@ -2,7 +2,7 @@ name: gateman-deployment
 
 env:
   resourceGroup: "gateman-prod"
-  kubernetesVersion: "1.32"
+  kubernetesVersion: "1.27"
   name: "gateman-deployment"
 
 on:
