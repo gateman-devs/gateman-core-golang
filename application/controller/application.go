@@ -268,22 +268,41 @@ func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpD
 	if err != nil {
 		return
 	}
-	appUserRepo := repository.AppUserRepo()
-	appUserExists, _ := appUserRepo.FindOneByFilter(map[string]interface{}{
-		"userID": ctx.GetStringContextData("UserID"),
-		"appID":  ctx.Body.AppID,
-	})
-	if appUserExists != nil {
-		apperrors.ClientError(ctx.Ctx, "Seems you have already signed up for this app", nil, nil)
-		return
-	}
 	userRepo := repository.UserRepo()
 	user, _ := userRepo.FindByID(ctx.GetStringContextData("UserID"))
 	if user == nil {
 		apperrors.NotFoundError(ctx.Ctx, "This user was not found")
 		return
 	}
+	appUserRepo := repository.AppUserRepo()
+	appUserExists, _ := appUserRepo.FindOneByFilter(map[string]interface{}{
+		"userID": ctx.GetStringContextData("UserID"),
+		"appID":  ctx.Body.AppID,
+	})
 	eligible := true
+	if appUserExists != nil {
+		requestedFields := map[string]any{}
+		userValue := reflect.ValueOf(*user)
+
+		for _, field := range app.RequestedFields {
+			userField := userValue.FieldByName(field.Name)
+			if !userField.IsValid() {
+				eligible = false
+				continue
+			}
+			var userFieldData entities.KYCData[any]
+			actualValue := userField.Interface()
+			jsonBytes, _ := json.Marshal(actualValue)
+			json.Unmarshal(jsonBytes, &userFieldData)
+
+			// If Verified field doesn't exist or is not true, add to results
+			if userFieldData.Value == nil || !userFieldData.Verified {
+				eligible = false
+			}
+			requestedFields[field.Name] = userFieldData.Value
+		}
+		return
+	}
 	outstandingIDs := []string{}
 	for _, id := range *app.RequiredVerifications {
 		if id == "nin" {

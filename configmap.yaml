@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateman-config
+  namespace: default # Adjust the namespace if necessary
+data:
+  APP_NAME: "Gateman Server"
+  LOG_LEVEL: "info"
+  MAX_CONNECTIONS: "100"
