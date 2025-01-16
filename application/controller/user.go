@@ -354,9 +354,29 @@ func VerifyNINDetails(ctx *interfaces.ApplicationContext[any]) {
 		}
 
 	}
+	userRepo.UpdatePartialByID(*userID, payload)
 	cache.Cache.DeleteOne(fmt.Sprintf("%s-nin", ctx.GetStringContextData("UserID")))
 	cache.Cache.DeleteOne(*cachedNINNumber)
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "NIN Added", nil, nil, nil, nil, nil)
+
+	var phone *string
+	if user.Phone != nil {
+		phone = utils.GetStringPointer(fmt.Sprintf("%s%s", user.Phone.Prefix, user.Phone.LocalNumber))
+	}
+	accessToken, err := auth.GenerateAuthToken(auth.ClaimsData{
+		UserID:          user.ID,
+		UserAgent:       user.UserAgent,
+		Email:           user.Email,
+		VerifiedAccount: user.VerifiedAccount,
+		PhoneNum:        phone,
+		DeviceID:        ctx.DeviceID,
+		TokenType:       auth.AccessToken,
+		IssuedAt:        time.Now().Unix(),
+		ExpiresAt:       time.Now().Add(time.Hour * 1).Unix(), //lasts for 1 hr
+	})
+	hashedAccessToken, _ := cryptography.CryptoHahser.HashString(*accessToken, nil)
+	hashedDeviceID, _ := cryptography.CryptoHahser.HashString(ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
+	cache.Cache.CreateEntry(fmt.Sprintf("%s-access", string(hashedDeviceID)), hashedAccessToken, time.Hour*24)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "NIN Added", nil, nil, nil, accessToken, nil)
 }
 
 func SetBVNDetails(ctx *interfaces.ApplicationContext[dto.SetBVNDetails]) {
@@ -580,5 +600,24 @@ func VerifyBVNDetails(ctx *interfaces.ApplicationContext[any]) {
 	userRepo.UpdatePartialByID(*userID, payload)
 	cache.Cache.DeleteOne(fmt.Sprintf("%s-bvn", ctx.GetStringContextData("UserID")))
 	cache.Cache.DeleteOne(*cachedBVNNumber)
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "BVN Added", nil, nil, nil, nil, nil)
+
+	var phone *string
+	if user.Phone != nil {
+		phone = utils.GetStringPointer(fmt.Sprintf("%s%s", user.Phone.Prefix, user.Phone.LocalNumber))
+	}
+	accessToken, err := auth.GenerateAuthToken(auth.ClaimsData{
+		UserID:          user.ID,
+		UserAgent:       user.UserAgent,
+		Email:           user.Email,
+		VerifiedAccount: user.VerifiedAccount,
+		PhoneNum:        phone,
+		DeviceID:        ctx.DeviceID,
+		TokenType:       auth.AccessToken,
+		IssuedAt:        time.Now().Unix(),
+		ExpiresAt:       time.Now().Add(time.Hour * 1).Unix(), //lasts for 1 hr
+	})
+	hashedAccessToken, _ := cryptography.CryptoHahser.HashString(*accessToken, nil)
+	hashedDeviceID, _ := cryptography.CryptoHahser.HashString(ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
+	cache.Cache.CreateEntry(fmt.Sprintf("%s-access", string(hashedDeviceID)), hashedAccessToken, time.Hour*24)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "BVN Added", nil, nil, nil, accessToken, nil)
 }

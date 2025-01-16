@@ -38,6 +38,7 @@ require (
 	github.com/savaki/geoip2 v0.0.0-20150727150920-9968b08fbf39 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
+	github.com/wneessen/go-mail v0.6.1 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
@@ -58,10 +59,10 @@ require (
 	github.com/andybalholm/brotli v1.0.5 // indirect
 	github.com/bytedance/sonic v1.11.6 // indirect
 	github.com/didip/tollbooth v4.0.2+incompatible
-	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
 	github.com/gin-contrib/cors v1.7.2
 	github.com/gin-contrib/sse v0.1.0 // indirect
-	github.com/gin-gonic/gin v1.9.1
+	github.com/gin-gonic/gin v1.10.0
 	github.com/go-chi/chi/v5 v5.0.10 // indirect
 	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
@@ -95,7 +96,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/oklog/ulid/v2 v2.1.0
 	github.com/oschwald/maxminddb-golang v1.12.0
-	github.com/pelletier/go-toml/v2 v2.2.1 // indirect
+	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
 	github.com/resend/resend-go/v2 v2.10.0
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
@@ -108,13 +109,13 @@ require (
 	go.mongodb.org/mongo-driver v1.15.0
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/zap v1.27.0
-	golang.org/x/arch v0.7.0 // indirect
-	golang.org/x/crypto v0.29.0 // indirect
-	golang.org/x/net v0.24.0 // indirect
+	golang.org/x/arch v0.8.0 // indirect
+	golang.org/x/crypto v0.32.0 // indirect
+	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/oauth2 v0.13.0 // indirect
-	golang.org/x/sync v0.9.0 // indirect
-	golang.org/x/sys v0.27.0 // indirect
-	golang.org/x/text v0.20.0 // indirect
+	golang.org/x/sync v0.10.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/time v0.8.0 // indirect
 	google.golang.org/api v0.150.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect

@@ -108,9 +108,8 @@ func VerifyUserAccount(ctx *interfaces.ApplicationContext[any]) {
 		Intent:          "face_verification",
 		TokenType:       auth.AccessToken,
 		VerifiedAccount: true,
-		// DeviceID:  profile.DeviceID,
-		IssuedAt:  time.Now().Unix(),
-		ExpiresAt: time.Now().Add(time.Hour * 1).Unix(), //lasts for 1 hr
+		IssuedAt:        time.Now().Unix(),
+		ExpiresAt:       time.Now().Add(time.Hour * 1).Unix(), //lasts for 1 hr
 	})
 	if err != nil {
 		logger.Error("an error occured while generating auth token after org verification", logger.LoggerOptions{
@@ -404,6 +403,10 @@ func RefreshToken(ctx *interfaces.ApplicationContext[any]) {
 	account, err := userRepo.FindByID(ctx.GetStringContextData("UserID"))
 	if err != nil {
 		apperrors.UnknownError(ctx.Ctx, err)
+		return
+	}
+	if account == nil {
+		apperrors.NotFoundError(ctx.Ctx, "this account does not exist")
 		return
 	}
 	var phone *string

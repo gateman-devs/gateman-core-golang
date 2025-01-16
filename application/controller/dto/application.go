@@ -11,8 +11,8 @@ type ApplicationDTO struct {
 }
 
 type UpdateApplications struct {
-	Name                  *string                        `json:"name" validate:"required"`
-	Description           *string                        `json:"description" validate:"required"`
+	Name                  *string                       `json:"name" validate:"required"`
+	Description           *string                       `json:"description" validate:"required"`
 	RequiredVerifications *[]string                     `json:"requiredVerifications"`
 	LocaleRestriction     *[]entities.LocaleRestriction `json:"localeRestriction"`
 }
@@ -36,4 +36,11 @@ type BlockAccountsDTO struct {
 
 type FetchAppMetrics struct {
 	ID string `json:"id"`
+}
+
+type UpdateAccessRefreshTokenTTL struct {
+	RefreshTokenTTL        *uint32 `json:"refreshTokenTTL"`
+	AccessTokenTTL         *uint16 `json:"accessTokenTTL"`
+	SandboxRefreshTokenTTL *uint32 `json:"sandboxRefreshTokenTTL"`
+	SandboxAccessTokenTTL  *uint16 `json:"sandboxAccessTokenTTL"`
 }

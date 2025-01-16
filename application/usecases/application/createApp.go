@@ -49,21 +49,23 @@ func CreateApplicationUseCase(ctx any, payload *dto.ApplicationDTO, deviceID str
 	encryptedSandboxAppSigningKey, _ := cryptography.EncryptData([]byte(sandboxAppSigningKey), nil)
 	appPriKey := utils.GenerateUULDString()
 	app, err := appRepo.CreateOne(context.TODO(), entities.Application{
-		ID:                    appPriKey,
-		Name:                  payload.Name,
-		CreatorID:             userID,
-		WorkspaceID:           workspaceID,
-		AppImg:                fmt.Sprintf("%s/%s", workspaceID, appPriKey),
-		Description:           payload.Description,
-		LocaleRestriction:     payload.LocaleRestriction,
-		RequiredVerifications: payload.RequiredVerifications,
-		RequestedFields:       payload.RequestedFields,
-		AppSigningKey:         *encryptedAppSigningKey,
-		SandboxAppSigningKey:  *encryptedSandboxAppSigningKey,
-		RefreshTokenTTL:       60 * 60 * 24 * 7, // 7 days
-		AccessTokenTTL:        60 * 60 * 2,      // 2 hours
-		SandboxAPIKey:         string(hashedSandboxAPIKey),
-		APIKey:                string(hashedAPIKey),
+		ID:                     appPriKey,
+		Name:                   payload.Name,
+		CreatorID:              userID,
+		WorkspaceID:            workspaceID,
+		AppImg:                 fmt.Sprintf("%s/%s", workspaceID, appPriKey),
+		Description:            payload.Description,
+		LocaleRestriction:      payload.LocaleRestriction,
+		RequiredVerifications:  payload.RequiredVerifications,
+		RequestedFields:        payload.RequestedFields,
+		AppSigningKey:          *encryptedAppSigningKey,
+		SandboxAppSigningKey:   *encryptedSandboxAppSigningKey,
+		RefreshTokenTTL:        60 * 60 * 24 * 7, // 7 days
+		AccessTokenTTL:         60 * 60 * 2,      // 2 hours
+		SandboxRefreshTokenTTL: 60 * 60 * 24 * 7, // 7 days
+		SandboxAccessTokenTTL:  60 * 60 * 2,      // 2 hours
+		SandboxAPIKey:          string(hashedSandboxAPIKey),
+		APIKey:                 string(hashedAPIKey),
 	})
 	if err != nil {
 		logger.Error("an error occured while creating application", logger.LoggerOptions{

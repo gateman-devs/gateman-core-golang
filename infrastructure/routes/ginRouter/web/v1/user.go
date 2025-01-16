@@ -39,8 +39,9 @@ func UserRouter(router *gin.RouterGroup) {
 		userRouter.POST("/verify-nin", middlewares.OTPTokenMiddleware("verify_nin"), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			controller.VerifyNINDetails(&interfaces.ApplicationContext[any]{
-				Ctx:  ctx,
-				Keys: appContext.Keys,
+				Ctx:      ctx,
+				Keys:     appContext.Keys,
+				DeviceID: appContext.DeviceID,
 			})
 		})
 
@@ -62,8 +63,9 @@ func UserRouter(router *gin.RouterGroup) {
 		userRouter.POST("/verify-bvn", middlewares.OTPTokenMiddleware("verify_bvn"), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			controller.VerifyBVNDetails(&interfaces.ApplicationContext[any]{
-				Ctx:  ctx,
-				Keys: appContext.Keys,
+				Ctx:      ctx,
+				Keys:     appContext.Keys,
+				DeviceID: appContext.DeviceID,
 			})
 		})
 	}

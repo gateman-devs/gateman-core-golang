@@ -14,6 +14,7 @@ type AppUser struct {
 	Blocked       bool       `bson:"blocked" json:"blocked"`
 	BlockedReason *string    `bson:"blockedReason" json:"blockedReason"`
 	BlockedUserAt *time.Time `bson:"blockedUserAt" json:"blockedUserAt"`
+	Pin           *string    `bson:"pin" json:"pin"`
 
 	ID            string     `bson:"_id" json:"id"`
 	CreatedAt     time.Time  `bson:"createdAt" json:"createdAt"`

@@ -263,6 +263,33 @@ func RefreshSandboxAppSigningKey(ctx *interfaces.ApplicationContext[any]) {
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Sandbox App Signing Key updated. This will only be displayed once", appSigningKey, nil, nil, nil, nil)
 }
 
+func UpdateAccessRefreshTokenTTL(ctx *interfaces.ApplicationContext[dto.UpdateAccessRefreshTokenTTL]) {
+	updateFields := map[string]any{}
+
+	if ctx.Body.RefreshTokenTTL != nil {
+		updateFields["refreshTokenTTL"] = ctx.Body.RefreshTokenTTL
+	}
+
+	if ctx.Body.AccessTokenTTL != nil {
+		updateFields["accessTokenTTL"] = ctx.Body.AccessTokenTTL
+	}
+
+	if ctx.Body.SandboxRefreshTokenTTL != nil {
+		updateFields["sandboxRefreshTokenTTL"] = ctx.Body.SandboxRefreshTokenTTL
+	}
+
+	if ctx.Body.SandboxAccessTokenTTL != nil {
+		updateFields["sandboxAccessTokenTTL"] = ctx.Body.SandboxAccessTokenTTL
+	}
+	fmt.Println(updateFields)
+	appRepo := repository.ApplicationRepo()
+	appRepo.UpdatePartialByFilter(map[string]interface{}{
+		"_id":       ctx.GetStringParameter("id"),
+		"workspaceID": *ctx.GetHeader("X-Workspace-Id"),
+	}, updateFields)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "TTL updated", nil, nil, nil, nil, nil)
+}
+
 func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpDTO]) {
 	app, err := application_usecase.FetchAppUseCase(ctx.Ctx, ctx.Body.AppID, ctx.DeviceID, ctx.Keys["ip"].(string))
 	if err != nil {
@@ -398,6 +425,7 @@ func BlockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
 		"_id": map[string]any{
 			"$in": ctx.Body.IDs,
 		},
+		"appID":       ctx.GetStringParameter("id"),
 		"workspaceID": ctx.GetHeader("X-Workspace-Id"),
 	}, map[string]any{
 		"blocked": true,
@@ -419,6 +447,7 @@ func UnblockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
 		"_id": map[string]any{
 			"$in": ctx.Body.IDs,
 		},
+		"appID":       ctx.GetStringParameter("id"),
 		"workspaceID": ctx.GetHeader("X-Workspace-Id"),
 	}, map[string]any{
 		"blocked": false,
