@@ -168,7 +168,7 @@ func AppRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		appRouter.PATCH("/users/block", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{
+		appRouter.PATCH("/users/block/:id", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{
 			entities.USER_BLOCK,
 		}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
@@ -182,10 +182,13 @@ func AppRouter(router *gin.RouterGroup) {
 				Body:   &body,
 				Keys:   appContext.Keys,
 				Header: ctx.Request.Header,
+				Param: map[string]any{
+					"id": ctx.Param("id"),
+				},
 			})
 		})
 
-		appRouter.PATCH("/users/unblock", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{
+		appRouter.PATCH("/users/unblock/:id", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{
 			entities.USER_BLOCK,
 		}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
@@ -199,6 +202,29 @@ func AppRouter(router *gin.RouterGroup) {
 				Body:   &body,
 				Keys:   appContext.Keys,
 				Header: ctx.Request.Header,
+				Param: map[string]any{
+					"id": ctx.Param("id"),
+				},
+			})
+		})
+
+		appRouter.PATCH("/ttl/update/:id", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{
+			entities.USER_BLOCK,
+		}, true), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			var body dto.UpdateAccessRefreshTokenTTL
+			if err := ctx.ShouldBindJSON(&body); err != nil {
+				apperrors.ErrorProcessingPayload(ctx)
+				return
+			}
+			controller.UpdateAccessRefreshTokenTTL(&interfaces.ApplicationContext[dto.UpdateAccessRefreshTokenTTL]{
+				Ctx:    ctx,
+				Body:   &body,
+				Keys:   appContext.Keys,
+				Header: ctx.Request.Header,
+				Param: map[string]any{
+					"id": ctx.Param("id"),
+				},
 			})
 		})
 

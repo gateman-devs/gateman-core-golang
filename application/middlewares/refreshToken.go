@@ -49,7 +49,7 @@ func RefreshTokenMiddleware(ctx *interfaces.ApplicationContext[any]) (*interface
 	}
 	match := cryptography.CryptoHahser.VerifyHashData(*validToken, authToken)
 	if !match {
-		apperrors.AuthenticationError(ctx.Ctx, "this session has expired 3")
+		apperrors.AuthenticationError(ctx.Ctx, "this session has expired")
 		return nil, false
 	}
 
@@ -80,12 +80,7 @@ func RefreshTokenMiddleware(ctx *interfaces.ApplicationContext[any]) (*interface
 		return nil, false
 	}
 
-	var workspaceName string
-	var workspaceID string
-
 	ctx.SetContextData("UserID", authTokenClaims["userID"])
-	ctx.SetContextData("WorkspaceID", workspaceID)
-	ctx.SetContextData("WorkspaceName", workspaceName)
 	ctx.SetContextData("Email", authTokenClaims["email"])
 	ctx.SetContextData("Phone", authTokenClaims["phone"])
 	return ctx, true

@@ -25,22 +25,25 @@ type RequestedField struct {
 }
 
 type Application struct {
-	Name                  string               `bson:"name" json:"name"`
-	Description           string               `bson:"description" json:"description"`
-	WorkspaceID           string               `bson:"workspaceID" json:"-"`
-	AppImg                string               `bson:"appImg" json:"appImg"`
-	CreatorID             string               `bson:"creatorID" json:"-"`
-	AppSigningKey         string               `bson:"appSigningKey" json:"-"`
-	SandboxAppSigningKey  string               `bson:"sandBoxAppSigningKey" json:"-"`
-	SandboxAPIKey         string               `bson:"sandBoxAPIKey" json:"-"`
-	APIKey                string               `bson:"apiKey" json:"-"`
-	VPN                   bool                 `bson:"vpn" json:"vpn"`
-	RefreshTokenTTL       uint32               `bson:"refreshTokenTTL" json:"refreshTokenTTL"`
-	AccessTokenTTL        uint16               `bson:"accessTokenTTL" json:"accessTokenTTL"`
-	RequiredVerifications *[]string            `bson:"requiredVerifications" json:"requiredVerifications"` // the verifications that must be completed before signup is approved
-	RequestedFields       []RequestedField     `bson:"requestedFields" json:"requestedFields"`             // the fields the application are interested in recieving. MUST NOT BE EMPTY
-	LocaleRestriction     *[]LocaleRestriction `bson:"localeRestriction" json:"localeRestriction"`
-	PaymentCard           *string              `bson:"paymentCard" json:"-"`
+	Name                   string               `bson:"name" json:"name"`
+	Description            string               `bson:"description" json:"description"`
+	WorkspaceID            string               `bson:"workspaceID" json:"-"`
+	AppImg                 string               `bson:"appImg" json:"appImg"`
+	PinProtected           string               `bson:"pinProtected" json:"pinProtected"`
+	CreatorID              string               `bson:"creatorID" json:"-"`
+	AppSigningKey          string               `bson:"appSigningKey" json:"-"`
+	SandboxAppSigningKey   string               `bson:"sandBoxAppSigningKey" json:"-"`
+	SandboxAPIKey          string               `bson:"sandBoxAPIKey" json:"-"`
+	APIKey                 string               `bson:"apiKey" json:"-"`
+	VPN                    bool                 `bson:"vpn" json:"vpn"`
+	RefreshTokenTTL        uint32               `bson:"refreshTokenTTL" json:"refreshTokenTTL"`
+	AccessTokenTTL         uint16               `bson:"accessTokenTTL" json:"accessTokenTTL"`
+	SandboxRefreshTokenTTL uint32               `bson:"sandboxRefreshTokenTTL" json:"sandboxRefreshTokenTTL"`
+	SandboxAccessTokenTTL  uint16               `bson:"sandboxAccessTokenTTL" json:"sandboxAccessTokenTTL"`
+	RequiredVerifications  *[]string            `bson:"requiredVerifications" json:"requiredVerifications"` // the verifications that must be completed before signup is approved
+	RequestedFields        []RequestedField     `bson:"requestedFields" json:"requestedFields"`             // the fields the application are interested in recieving. MUST NOT BE EMPTY
+	LocaleRestriction      *[]LocaleRestriction `bson:"localeRestriction" json:"localeRestriction"`
+	PaymentCard            *string              `bson:"paymentCard" json:"-"`
 
 	ID            string     `bson:"_id" json:"id"`
 	CreatedAt     time.Time  `bson:"createdAt" json:"createdAt"`
