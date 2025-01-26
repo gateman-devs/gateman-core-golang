@@ -13,8 +13,8 @@ env:
     RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP }}
     ENV: prod
     ACR_NAME: ${{ vars.ACR_NAME }} 
-    DEPLOYMENT_NAME: facial-recognition-prod
-    IMAGE: facial-recognition
+    DEPLOYMENT_NAME: gateman-server-prod
+    IMAGE: gateman-server
     REPLICA_COUNT: 4
 
 jobs:
@@ -32,14 +32,6 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Cache Pip Dependecies
-        uses: actions/cache@v4
-        with:
-          path: /root/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
 
       - name: Build and Push
         run: |
