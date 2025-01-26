@@ -19,7 +19,6 @@ import (
 	"authone.usepolymer.co/infrastructure/cryptography"
 	"authone.usepolymer.co/infrastructure/database/repository/cache"
 	fileupload "authone.usepolymer.co/infrastructure/file_upload"
-	"authone.usepolymer.co/infrastructure/file_upload/types"
 	"authone.usepolymer.co/infrastructure/logger"
 	messagequeue "authone.usepolymer.co/infrastructure/message_queue"
 	queue_tasks "authone.usepolymer.co/infrastructure/message_queue/tasks"
@@ -122,10 +121,7 @@ func VerifyUserAccount(ctx *interfaces.ApplicationContext[any]) {
 	hashedAccessToken, _ := cryptography.CryptoHahser.HashString(*token, nil)
 	hashedDeviceID, _ := cryptography.CryptoHahser.HashString(ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
 	cache.Cache.CreateEntry(fmt.Sprintf("%s-access", string(hashedDeviceID)), hashedAccessToken, time.Minute*10)
-
-	url, err := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", profile.ID, "accountimage"), types.SignedURLPermission{
-		Write: true,
-	})
+	url, err := fileupload.FileUploader.GenerateUploadURL(fmt.Sprintf("%s/%s", profile.ID, "accountimage"))
 	if err != nil {
 		logger.Error("an error occured while generating url for setting account image", logger.LoggerOptions{
 			Key:  "error",
@@ -287,9 +283,7 @@ func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) 
 		apperrors.ClientError(ctx.Ctx, "Image has not been uploaded. Request for a new url and upload image before attempting this request again.", nil, utils.GetUIntPointer(http.StatusBadRequest))
 		return
 	}
-	url, _ := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), ctx.DeviceID), types.SignedURLPermission{
-		Read: true,
-	})
+	url, _ := fileupload.FileUploader.GenerateDownloadURL(fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), ctx.DeviceID))
 	alive, err := biometric.BiometricService.LivenessCheck(url)
 	if err != nil {
 		logger.Error("something went wrong when verifying image", logger.LoggerOptions{
@@ -303,9 +297,7 @@ func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) 
 		apperrors.ClientError(ctx.Ctx, "Please make sure to take a clear picture of your face", nil, nil)
 		return
 	}
-	accountImgURL, _ := fileupload.FileUploader.GeneratedSignedURL(account.Image, types.SignedURLPermission{
-		Read: true,
-	})
+	accountImgURL, _ := fileupload.FileUploader.GenerateDownloadURL(account.Image)
 	match, err := biometric.BiometricService.FaceMatch(url, accountImgURL)
 	if err != nil {
 		logger.Error("something went wrong when match images", logger.LoggerOptions{

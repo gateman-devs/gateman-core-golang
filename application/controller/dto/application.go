@@ -15,6 +15,7 @@ type UpdateApplications struct {
 	Description           *string                       `json:"description" validate:"required"`
 	RequiredVerifications *[]string                     `json:"requiredVerifications"`
 	LocaleRestriction     *[]entities.LocaleRestriction `json:"localeRestriction"`
+	RequestedFields       []entities.RequestedField     `json:"requestedFields"`
 }
 
 type ApplicationSignUpDTO struct {

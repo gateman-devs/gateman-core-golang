@@ -1,7 +1,6 @@
 package startup
 
 import (
-	polymercore "authone.usepolymer.co/application/services/polymer-core"
 	"authone.usepolymer.co/infrastructure/biometric"
 	"authone.usepolymer.co/infrastructure/database"
 	"authone.usepolymer.co/infrastructure/database/connection/datastore"
@@ -15,7 +14,6 @@ import (
 func StartServices() {
 	logger.InitializeLogger()
 	database.SetUpDatabase()
-	polymercore.PolymerService.Initialise()
 	logger.RequestMetricMonitor.Init()
 	fileupload.InitialiseFileUploader()
 	identityverification.InitialiseIdentityVerifier()
