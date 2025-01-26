@@ -1,0 +1,71 @@
+name: Deploy to AKS
+on:
+  push:
+    branches:
+      - staging
+
+permissions:
+  id-token: write 
+  contents: read
+
+env:
+  CLUSTER_NAME: ${{ vars.CLUSTER_NAME }}
+  RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP }}
+  ENV: staging
+  ACR_NAME: ${{ vars.ACR_NAME }} #### Fix
+  DEPLOYMENT_NAME: facial-recognition-staging
+  IMAGE: facial-recognition
+  REPLICA_COUNT: 1
+
+jobs:
+  deploy:
+    name: Deploy to AKS
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure login with OIDC
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Cache Pip Dependecies
+        uses: actions/cache@v4
+        with:
+          path: /root/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Build and Push
+        run: |
+            az acr login --name ${{ env.ACR_NAME }}.azurecr.io
+            docker build -t ${{ env.ACR_NAME }}.azurecr.io/$IMAGE:$ENV-${{ github.sha }} .
+            docker push ${{ env.ACR_NAME }}.azurecr.io/$IMAGE:$ENV-${{ github.sha }}
+
+      - name: Get AKS credentials
+        uses: azure/aks-set-context@v3
+        with:
+          resource-group: ${{ env.RESOURCE_GROUP }}
+          cluster-name: ${{ env.CLUSTER_NAME }}
+
+      - name: Setup kustomize
+        uses: imranismail/setup-kustomize@v2
+          
+      - name: Deploy
+        run: |
+            sed -i -e 's/ENV/'"$ENV"'/' ./k8s/deployment.yaml
+            sed -i -e 's/REPLICA_COUNT/'"$REPLICA_COUNT"'/' ./k8s/deployment.yaml
+            sed -i -e 's/ACR_NAME/'"$ACR_NAME"'/' ./k8s/deployment.yaml
+            sed -i -e 's/IMAGE/'"$IMAGE"'/' ./k8s/deployment.yaml
+            sed -i -e 's/GITHUB_SHA/'"$GITHUB_SHA"'/' ./k8s/deployment.yaml
+            sed -i -e 's/ENV/'"$ENV"'/' ./k8s/service.yaml
+            kustomize build ./k8s | kubectl apply -f -
+            kubectl rollout status deployment/$DEPLOYMENT_NAME -n $ENV
+            kubectl get services -o wide -n $ENV
+
+            

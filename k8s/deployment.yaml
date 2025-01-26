@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateman-server-ENV
+  namespace: ENV
+spec:
+  replicas: REPLICA_COUNT
+  selector:
+    matchLabels:
+      app: "gateman-server"
+  template:
+    metadata:
+      labels:
+        app: "gateman-server"
+    spec:
+      serviceAccountName: ENV-sa
+      containers:
+        - name: gateman-server
+          image: ACR_NAME.azurecr.io/IMAGE:ENV-GITHUB_SHA
+          ports:
+          - containerPort: 1011
+          resources:
+            requests:
+              cpu: "500m"     
+              memory: "512Mi"  
+            limits:
+              cpu: "750m"      
+              memory: "1Gi" 
+          env:          
+          - name: DB_URL
+            valueFrom:
+              secretKeyRef:
+                name: gateman-server-ENV-secret
+                key: db-url
+          - name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: gateman-server-ENV-secret
+                key: redis-password
+          - name: JWT_SIGNING_KEY
+            valueFrom:
+              secretKeyRef:
+                name: gateman-server-ENV-secret
+                key: jwt-signing-key
+          - name: APITOOLKIT_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: gateman-server-ENV-secret
+                key: apitoolkit-api-key
+          - name: RESEND_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: gateman-server-ENV-secret
+                key: resend-api-key
+          - name: ENC_KEY
+            valueFrom:
+              secretKeyRef:
+                name: gateman-server-ENV-secret
+                key: enc-key
+          - name: ENC_IV
+            valueFrom:
+              secretKeyRef:
+                name: gateman-server-ENV-secret
+                key: enc-iv
+          - name: INTERSERVICE_JWT_SIGNING_KEY
+            valueFrom:
+              secretKeyRef:
+                name: gateman-server-ENV-secret
+                key: interservice-jwt-signing-key
+          - name: TERMII_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: gateman-server-ENV-secret
+                key: termii-api-key
+          - name: DOJAH_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: gateman-server-ENV-secret
+                key: dojah-api-key
+          - name: PREMBLY_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: gateman-server-ENV-secret
+                key: prembly-api-key
+          - name: HASH_FIXED_SALT
+            valueFrom:
+              secretKeyRef:
+                name: gateman-server-ENV-secret
+                key: hash-fixed-salt
+          - name: MAXMIND_LICENSE_KEY
+            valueFrom:
+              secretKeyRef:
+                name: gateman-server-ENV-secret
+                key: maxmind-license-key
+          - name: OTEL_RESOURCE_ATTRIBUTES
+            valueFrom:
+              secretKeyRef:
+                name: gateman-server-ENV-secret
+                key: otel-resource-atrributes
+          envFrom:
+          - configMapRef:
+              name: gateman-server-ENV-cm 
+          
