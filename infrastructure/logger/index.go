@@ -5,18 +5,17 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type LoggerOptions struct{
-	Key string
+type LoggerOptions struct {
+	Key  string
 	Data interface{}
 }
 
-var RequestMetricMonitor  = (&APIToolKitMonitor{})
-
+var RequestMetricMonitor = (&APIToolKitMonitor{})
 
 // This logs info level messages.
 func Info(msg string, payload ...LoggerOptions) {
 	zapFields := []zapcore.Field{}
-	for _, data := range payload{
+	for _, data := range payload {
 		zapFields = append(zapFields, zap.Any(data.Key, data.Data))
 	}
 	// MetricMonitor.Log(msg, payload, InfoLevel)
@@ -28,7 +27,7 @@ func Info(msg string, payload ...LoggerOptions) {
 // with key error
 func Error(msg string, payload ...LoggerOptions) {
 	zapFields := []zapcore.Field{}
-	for _, data := range payload{
+	for _, data := range payload {
 		zapFields = append(zapFields, zap.Any(data.Key, data.Data))
 	}
 	// MetricMonitor.ReportError(err, payload)
@@ -38,7 +37,7 @@ func Error(msg string, payload ...LoggerOptions) {
 // This logs warning messages.
 func Warning(msg string, payload ...LoggerOptions) {
 	zapFields := []zapcore.Field{}
-	for _, data := range payload{
+	for _, data := range payload {
 		zapFields = append(zapFields, zap.Any(data.Key, data.Data))
 	}
 	// MetricMonitor.Log(msg, payload, InfoLevel)

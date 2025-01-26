@@ -19,7 +19,6 @@ import (
 	"authone.usepolymer.co/infrastructure/cryptography"
 	"authone.usepolymer.co/infrastructure/database/repository/cache"
 	fileupload "authone.usepolymer.co/infrastructure/file_upload"
-	"authone.usepolymer.co/infrastructure/file_upload/types"
 	identityverification "authone.usepolymer.co/infrastructure/identity_verification"
 	identity_verification_types "authone.usepolymer.co/infrastructure/identity_verification/types"
 	"authone.usepolymer.co/infrastructure/logger"
@@ -38,9 +37,7 @@ func SetAccountImage(ctx *interfaces.ApplicationContext[any]) {
 		apperrors.ClientError(ctx.Ctx, "Image has not been uploaded. Request for a new url and upload image before attempting this request again.", nil, utils.GetUIntPointer(http.StatusBadRequest))
 		return
 	}
-	url, _ := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), "accountimage"), types.SignedURLPermission{
-		Read: true,
-	})
+	url, _ := fileupload.FileUploader.GenerateDownloadURL(fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), "accountimage"))
 	alive, err := biometric.BiometricService.LivenessCheck(url)
 	if err != nil {
 		logger.Error("something went wrong when verifying image", logger.LoggerOptions{

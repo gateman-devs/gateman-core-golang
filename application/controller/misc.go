@@ -15,7 +15,17 @@ func GeneratedSignedURL(ctx *interfaces.ApplicationContext[dto.GeneratedSignedUR
 	if ctx.Body.AccountImage {
 		ctx.Body.FilePath = fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), "accountimage")
 	}
-	url, err := fileupload.FileUploader.GeneratedSignedURL(ctx.Body.FilePath, ctx.Body.Permission)
+	var url *string
+	var err error
+	if ctx.Body.Permission.Read {
+		url, err = fileupload.FileUploader.GenerateDownloadURL(ctx.Body.FilePath)
+	} else if ctx.Body.Permission.Write {
+		url, err = fileupload.FileUploader.GenerateUploadURL(ctx.Body.FilePath)
+	} else if ctx.Body.Permission.Delete {
+	} else {
+		apperrors.ClientError(ctx.Ctx, "invalid request", nil, nil)
+		return
+	}
 	if err != nil {
 		apperrors.UnknownError(ctx.Ctx, err)
 		return

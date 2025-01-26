@@ -2,19 +2,15 @@ package auth
 
 import (
 	"crypto/rand"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"time"
 
-	"authone.usepolymer.co/application/utils"
 	"authone.usepolymer.co/infrastructure/cryptography"
 	"authone.usepolymer.co/infrastructure/database/repository/cache"
 	"authone.usepolymer.co/infrastructure/logger"
 	"github.com/golang-jwt/jwt"
-	"github.com/lestrrat-go/jwx/v2/jwa"
-	"github.com/lestrrat-go/jwx/v2/jwe"
 )
 
 const otpChars = "1234567890"
@@ -90,23 +86,19 @@ func GenerateAuthToken(claimsData ClaimsData) (*string, error) {
 	return &tokenString, nil
 }
 
-func GenerateAppUserToken(payload any, signingKey string) (*string, error) {
-	key := []byte(signingKey)
-	jsonData, err := json.Marshal(payload)
+func GenerateAppUserToken(claimsData ClaimsData, signingKey string, issuer string) (*string, error) {
+	tokenString, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"iss":       issuer,
+		"exp":       claimsData.ExpiresAt,
+		"iat":       claimsData.IssuedAt,
+		"deviceID":  claimsData.DeviceID,
+		"userAgent": claimsData.UserAgent,
+		"payload":   claimsData.Payload,
+	}).SignedString([]byte(signingKey))
 	if err != nil {
-		logger.Error("could not serialise json for GenerateAppUserToken", logger.LoggerOptions{
-			Key: "err", Data: err,
-		})
 		return nil, err
 	}
-	encrypted, err := jwe.Encrypt(jsonData, jwe.WithKey(jwa.A256GCMKW, key))
-	if err != nil {
-		logger.Error("could not encrypt json for GenerateAppUserToken", logger.LoggerOptions{
-			Key: "err", Data: err,
-		})
-		return nil, err
-	}
-	return utils.GetStringPointer(string(encrypted)), nil
+	return &tokenString, nil
 }
 
 func GenerateInterserviceAuthToken(claimsData InterserviceClaimsData) (*string, error) {

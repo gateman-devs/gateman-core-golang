@@ -41,6 +41,7 @@ func AppRouter(router *gin.RouterGroup) {
 				Param: map[string]any{
 					"id": ctx.Param("id"),
 				},
+				Header: ctx.Request.Header,
 			})
 		})
 

@@ -12,14 +12,12 @@ import (
 	"authone.usepolymer.co/application/constants"
 	"authone.usepolymer.co/application/controller/dto"
 	"authone.usepolymer.co/application/repository"
-	polymercore "authone.usepolymer.co/application/services/polymer-core"
 	"authone.usepolymer.co/application/utils"
 	"authone.usepolymer.co/entities"
 	"authone.usepolymer.co/infrastructure/auth"
 	"authone.usepolymer.co/infrastructure/cryptography"
 	"authone.usepolymer.co/infrastructure/database/repository/cache"
 	fileupload "authone.usepolymer.co/infrastructure/file_upload"
-	"authone.usepolymer.co/infrastructure/file_upload/types"
 	"authone.usepolymer.co/infrastructure/logger"
 	messagequeue "authone.usepolymer.co/infrastructure/message_queue"
 	queue_tasks "authone.usepolymer.co/infrastructure/message_queue/tasks"
@@ -205,9 +203,7 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 			apperrors.UnknownError(ctx, err)
 			return nil, nil, nil, err
 		}
-		url, err := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", account.ID, deviceID), types.SignedURLPermission{
-			Write: true,
-		})
+		url, err := fileupload.FileUploader.GenerateUploadURL(fmt.Sprintf("%s/%s", account.ID, deviceID))
 		if err != nil {
 			logger.Error("an error occured while generating url for device verification", logger.LoggerOptions{
 				Key:  "error",
@@ -221,22 +217,21 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 
 	if os.Getenv("ENV") == "prod" {
 		if payload.Email != nil {
-			found := cache.Cache.FindOne(fmt.Sprintf("%s-email-blacklist", *payload.Email))
-			if found != nil {
-				err = fmt.Errorf(`email address "%s" has been flagged as unacceptable on our system`, *payload.Email)
-				apperrors.ClientError(ctx, err.Error(), nil, nil)
-				return nil, nil, nil, err
-			}
-			result, err := polymercore.PolymerService.EmailStatus(*payload.Email)
-			if err != nil {
-				apperrors.ExternalDependencyError(ctx, "polymer-core", "500", err)
-				return nil, nil, nil, err
-			}
-			if !result {
-				apperrors.ClientError(ctx, fmt.Sprintf(`email address "%s" has been flagged as unacceptable on our system`, *payload.Email), nil, nil)
-				cache.Cache.CreateEntry(fmt.Sprintf("%s-email-blacklist", *payload.Email), payload.Email, time.Minute*0)
-				return nil, nil, nil, err
-			}
+			// found := cache.Cache.FindOne(fmt.Sprintf("%s-email-blacklist", *payload.Email))
+			// if found != nil {
+			// 	err = fmt.Errorf(`email address "%s" has been flagged as unacceptable on our system`, *payload.Email)
+			// 	apperrors.ClientError(ctx, err.Error(), nil, nil)
+			// 	return nil, nil, nil, err
+			// }
+			// if err != nil {
+			// 	apperrors.ExternalDependencyError(ctx, "polymer-core", "500", err)
+			// 	return nil, nil, nil, err
+			// }
+			// if !result {
+			// 	apperrors.ClientError(ctx, fmt.Sprintf(`email address "%s" has been flagged as unacceptable on our system`, *payload.Email), nil, nil)
+			// 	cache.Cache.CreateEntry(fmt.Sprintf("%s-email-blacklist", *payload.Email), payload.Email, time.Minute*0)
+			// 	return nil, nil, nil, err
+			// }
 		}
 	}
 

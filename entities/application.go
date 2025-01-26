@@ -44,6 +44,7 @@ type Application struct {
 	RequestedFields        []RequestedField     `bson:"requestedFields" json:"requestedFields"`             // the fields the application are interested in recieving. MUST NOT BE EMPTY
 	LocaleRestriction      *[]LocaleRestriction `bson:"localeRestriction" json:"localeRestriction"`
 	PaymentCard            *string              `bson:"paymentCard" json:"-"`
+	WhiteListedIPs         *[]string            `bson:"whiteListedIPs" json:"whiteListedIPs"`
 
 	ID            string     `bson:"_id" json:"id"`
 	CreatedAt     time.Time  `bson:"createdAt" json:"createdAt"`

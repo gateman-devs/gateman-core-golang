@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	apperrors "authone.usepolymer.co/application/appErrors"
@@ -16,6 +16,7 @@ import (
 	"authone.usepolymer.co/application/controller/dto"
 	"authone.usepolymer.co/application/interfaces"
 	"authone.usepolymer.co/application/repository"
+	services "authone.usepolymer.co/application/services/application"
 	application_usecase "authone.usepolymer.co/application/usecases/application"
 	"authone.usepolymer.co/application/utils"
 	"authone.usepolymer.co/entities"
@@ -155,8 +156,14 @@ func UpdateApplication(ctx *interfaces.ApplicationContext[dto.UpdateApplications
 	if ctx.Body.RequiredVerifications != nil {
 		payload["requiredVerifications"] = ctx.Body.RequiredVerifications
 	}
+	if ctx.Body.RequestedFields != nil {
+		payload["requestedFields"] = ctx.Body.RequestedFields
+	}
 	appRepo := repository.ApplicationRepo()
-	_, err := appRepo.UpdatePartialByID(ctx.GetStringParameter("id"), payload)
+	_, err := appRepo.UpdatePartialByFilter(map[string]interface{}{
+		"_id":         ctx.GetStringParameter("id"),
+		"workspaceID": *ctx.GetHeader("X-Workspace-Id"),
+	}, payload)
 	if err != nil {
 		logger.Error("an error occured while updating application", logger.LoggerOptions{
 			Key: "params", Data: ctx.Param,
@@ -281,10 +288,9 @@ func UpdateAccessRefreshTokenTTL(ctx *interfaces.ApplicationContext[dto.UpdateAc
 	if ctx.Body.SandboxAccessTokenTTL != nil {
 		updateFields["sandboxAccessTokenTTL"] = ctx.Body.SandboxAccessTokenTTL
 	}
-	fmt.Println(updateFields)
 	appRepo := repository.ApplicationRepo()
 	appRepo.UpdatePartialByFilter(map[string]interface{}{
-		"_id":       ctx.GetStringParameter("id"),
+		"_id":         ctx.GetStringParameter("id"),
 		"workspaceID": *ctx.GetHeader("X-Workspace-Id"),
 	}, updateFields)
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "TTL updated", nil, nil, nil, nil, nil)
@@ -308,75 +314,44 @@ func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpD
 	})
 	eligible := true
 	if appUserExists != nil {
-		requestedFields := map[string]any{}
-		userValue := reflect.ValueOf(*user)
+		eligible, _, payload, requestedFields := services.ProcessUserSignUp(app, user)
+		if eligible {
+			decryptedAppSigningKey, _ := cryptography.DecryptData(app.AppSigningKey, nil)
+			requestedFieldsBytes, _ := json.Marshal(requestedFields)
+			encrypted, _ := cryptography.EncryptData(requestedFieldsBytes, utils.GetStringPointer(string(decryptedAppSigningKey)))
+			var accessTokenTTL uint16
+			var refreshTokenTTL uint32
+			if os.Getenv("ENV") == "production" {
+				accessTokenTTL = app.AccessTokenTTL
+				refreshTokenTTL = app.RefreshTokenTTL
+			} else {
+				accessTokenTTL = app.SandboxAccessTokenTTL
+				refreshTokenTTL = app.SandboxRefreshTokenTTL
 
-		for _, field := range app.RequestedFields {
-			userField := userValue.FieldByName(field.Name)
-			if !userField.IsValid() {
-				eligible = false
-				continue
 			}
-			var userFieldData entities.KYCData[any]
-			actualValue := userField.Interface()
-			jsonBytes, _ := json.Marshal(actualValue)
-			json.Unmarshal(jsonBytes, &userFieldData)
-
-			// If Verified field doesn't exist or is not true, add to results
-			if userFieldData.Value == nil || !userFieldData.Verified {
-				eligible = false
-			}
-			requestedFields[field.Name] = userFieldData.Value
+			accessToken, _ := auth.GenerateAppUserToken(auth.ClaimsData{
+				IssuedAt:  time.Now().Unix(),
+				ExpiresAt: int64(accessTokenTTL),
+				Payload:   requestedFields,
+				UserAgent: ctx.UserAgent,
+				DeviceID:  ctx.DeviceID,
+				UserID:    ctx.GetStringContextData("UserID"),
+			}, string(decryptedAppSigningKey), strings.ToLower(app.Name))
+			refreshToken, _ := auth.GenerateAppUserToken(auth.ClaimsData{
+				IssuedAt:  time.Now().Unix(),
+				ExpiresAt: int64(refreshTokenTTL),
+				UserAgent: ctx.UserAgent,
+				DeviceID:  ctx.DeviceID,
+				UserID:    ctx.GetStringContextData("UserID"),
+			}, string(decryptedAppSigningKey), strings.ToLower(app.Name))
+			payload["encryptedData"] = encrypted
+			payload["refreshToken"] = refreshToken
+			payload["accessToken"] = accessToken
 		}
+		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "success", payload, nil, nil, nil, nil)
 		return
 	}
-	outstandingIDs := []string{}
-	for _, id := range *app.RequiredVerifications {
-		if id == "nin" {
-			if user.NIN == nil {
-				outstandingIDs = append(outstandingIDs, "nin")
-				eligible = false
-			}
-		} else {
-			if user.BVN == nil {
-				outstandingIDs = append(outstandingIDs, "bvn")
-				eligible = false
-			}
-		}
-	}
-	var results []string
-	requestedFields := map[string]any{}
-	userValue := reflect.ValueOf(*user)
-
-	for _, field := range app.RequestedFields {
-		userField := userValue.FieldByName(field.Name)
-		if !userField.IsValid() {
-			results = append(results, field.Name)
-			eligible = false
-			continue
-		}
-		var userFieldData entities.KYCData[any]
-		actualValue := userField.Interface()
-		jsonBytes, _ := json.Marshal(actualValue)
-		json.Unmarshal(jsonBytes, &userFieldData)
-
-		// If Verified field doesn't exist or is not true, add to results
-		if userFieldData.Value == nil || !userFieldData.Verified {
-			results = append(results, field.Name)
-			eligible = false
-		}
-		requestedFields[field.Name] = userFieldData.Value
-	}
-
-	payload := map[string]any{}
-	var msg string
-	if eligible {
-		msg = "Sign up successful"
-	} else {
-		msg = "Additional info is required to sign up to this app"
-		payload["missingIDs"] = outstandingIDs
-		payload["unverifiedFields"] = results
-	}
+	eligible, msg, payload, requestedFields := services.ProcessUserSignUp(app, user)
 	if eligible {
 		appUserRepo.CreateOne(context.TODO(), entities.AppUser{
 			AppID:       ctx.Body.AppID,
@@ -384,13 +359,41 @@ func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpD
 			WorkspaceID: app.WorkspaceID,
 		})
 		decryptedAppSigningKey, _ := cryptography.DecryptData(app.AppSigningKey, nil)
-		token, _ := auth.GenerateAppUserToken(auth.ClaimsData{
+		requestedFieldsBytes, _ := json.Marshal(requestedFields)
+		encrypted, err := cryptography.EncryptData(requestedFieldsBytes, utils.GetStringPointer(string(decryptedAppSigningKey)))
+		var accessTokenTTL uint16
+		var refreshTokenTTL uint32
+		if os.Getenv("ENV") == "production" {
+			accessTokenTTL = app.AccessTokenTTL
+			refreshTokenTTL = app.RefreshTokenTTL
+		} else {
+			accessTokenTTL = app.SandboxAccessTokenTTL
+			refreshTokenTTL = app.SandboxRefreshTokenTTL
+
+		}
+		fmt.Println("----")
+		fmt.Println(string(decryptedAppSigningKey))
+		fmt.Println(requestedFields)
+		fmt.Println("----")
+		fmt.Println(err)
+		accessToken, _ := auth.GenerateAppUserToken(auth.ClaimsData{
 			IssuedAt:  time.Now().Unix(),
-			ExpiresAt: time.Now().Add(time.Minute * 30).Unix(),
+			ExpiresAt: int64(accessTokenTTL),
 			Payload:   requestedFields,
-		}, string(decryptedAppSigningKey))
-		payload["token"] = token
-		payload["expiresAt"] = time.Now().Add(time.Minute * 30)
+			UserAgent: ctx.UserAgent,
+			DeviceID:  ctx.DeviceID,
+			UserID:    ctx.GetStringContextData("UserID"),
+		}, string(decryptedAppSigningKey), strings.ToLower(app.Name))
+		refreshToken, _ := auth.GenerateAppUserToken(auth.ClaimsData{
+			IssuedAt:  time.Now().Unix(),
+			ExpiresAt: int64(refreshTokenTTL),
+			UserAgent: ctx.UserAgent,
+			DeviceID:  ctx.DeviceID,
+			UserID:    ctx.GetStringContextData("UserID"),
+		}, string(decryptedAppSigningKey), strings.ToLower(app.Name))
+		payload["encryptedData"] = encrypted
+		payload["refreshToken"] = refreshToken
+		payload["accessToken"] = accessToken
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, msg, payload, nil, nil, nil, nil)
 }
