@@ -97,6 +97,11 @@ spec:
               secretKeyRef:
                 name: gateman-server-ENV-secret
                 key: otel-resource-atrributes
+          - name: CLOUDFLARE_SECRET_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: gateman-server-ENV-secret
+                key: cloudflare-secret-access-key
           envFrom:
           - configMapRef:
               name: gateman-server-ENV-cm 
