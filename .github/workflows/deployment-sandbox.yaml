@@ -9,13 +9,13 @@ permissions:
   contents: read
 
 env:
-    CLUSTER_NAME: ${{ vars.CLUSTER_NAME }}
-    RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP }}
-    ENV: sandbox
-    ACR_NAME: ${{ vars.ACR_NAME }} 
-    DEPLOYMENT_NAME: gateman-server-sandbox
-    IMAGE: gateman-server
-    REPLICA_COUNT: 2
+  CLUSTER_NAME: ${{ vars.CLUSTER_NAME }}
+  RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP }}
+  ENV: sandbox
+  ACR_NAME: ${{ vars.ACR_NAME }} 
+  DEPLOYMENT_NAME: gateman-server-sandbox
+  IMAGE: gateman-server
+  REPLICA_COUNT: 1
 
 jobs:
   deploy:
