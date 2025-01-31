@@ -7,7 +7,7 @@ on:
 permissions:
   id-token: write 
   contents: read
-
+#
 env:
   CLUSTER_NAME: ${{ vars.CLUSTER_NAME }}
   RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP }}
