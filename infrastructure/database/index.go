@@ -1,6 +1,6 @@
 package database
 
-import "authone.usepolymer.co/infrastructure/database/connection"
+import "gateman.io/infrastructure/database/connection"
 
 func SetUpDatabase() {
 	connection.ConnectToDatabase()

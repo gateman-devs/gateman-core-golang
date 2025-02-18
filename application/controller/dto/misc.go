@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"authone.usepolymer.co/infrastructure/file_upload/types"
+	"gateman.io/infrastructure/file_upload/types"
 )
 
 type GeneratedSignedURLDTO struct {

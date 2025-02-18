@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	apperrors "authone.usepolymer.co/application/appErrors"
-	"authone.usepolymer.co/application/constants"
-	"authone.usepolymer.co/application/controller/dto"
-	"authone.usepolymer.co/application/repository"
-	"authone.usepolymer.co/application/utils"
-	"authone.usepolymer.co/entities"
-	"authone.usepolymer.co/infrastructure/logger"
+	apperrors "gateman.io/application/appErrors"
+	"gateman.io/application/constants"
+	"gateman.io/application/controller/dto"
+	"gateman.io/application/repository"
+	"gateman.io/application/utils"
+	"gateman.io/entities"
+	"gateman.io/infrastructure/logger"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 

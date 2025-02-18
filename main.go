@@ -1,6 +1,7 @@
 package main
 
-import "authone.usepolymer.co/infrastructure"
+import "gateman.io/infrastructure"
+
 
 func main() {
 	infrastructure.StartServer()

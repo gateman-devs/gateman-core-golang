@@ -3,9 +3,9 @@ package identityverification
 import (
 	"os"
 
-	dojah_identity_verification "authone.usepolymer.co/infrastructure/identity_verification/dojah"
-	identity_verification_types "authone.usepolymer.co/infrastructure/identity_verification/types"
-	"authone.usepolymer.co/infrastructure/network"
+	dojah_identity_verification "gateman.io/infrastructure/identity_verification/dojah"
+	identity_verification_types "gateman.io/infrastructure/identity_verification/types"
+	"gateman.io/infrastructure/network"
 )
 
 var IdentityVerifier identity_verification_types.IdentityVerifierType

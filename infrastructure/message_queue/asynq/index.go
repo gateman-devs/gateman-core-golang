@@ -4,8 +4,8 @@ import (
 	"os"
 	"time"
 
-	queue_tasks "authone.usepolymer.co/infrastructure/message_queue/tasks"
-	mq_types "authone.usepolymer.co/infrastructure/message_queue/types"
+	queue_tasks "gateman.io/infrastructure/message_queue/tasks"
+	mq_types "gateman.io/infrastructure/message_queue/types"
 	"github.com/hibiken/asynq"
 )
 

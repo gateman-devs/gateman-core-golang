@@ -7,8 +7,8 @@ import (
 	"net/url"
 	"time"
 
-	"authone.usepolymer.co/infrastructure/file_upload/types"
-	"authone.usepolymer.co/infrastructure/logger"
+	"gateman.io/infrastructure/file_upload/types"
+	"gateman.io/infrastructure/logger"
 	_azblob "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	azblob_sas "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/sas"
 	azblob "github.com/Azure/azure-storage-blob-go/azblob"

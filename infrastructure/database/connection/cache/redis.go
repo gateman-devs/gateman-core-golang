@@ -3,7 +3,7 @@ package cache
 import (
 	"os"
 
-	"authone.usepolymer.co/infrastructure/logger"
+	"gateman.io/infrastructure/logger"
 	"github.com/go-redis/redis"
 )
 

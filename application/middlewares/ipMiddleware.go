@@ -1,10 +1,10 @@
 package middlewares
 
 import (
-	apperrors "authone.usepolymer.co/application/appErrors"
-	"authone.usepolymer.co/application/interfaces"
-	"authone.usepolymer.co/infrastructure/ipresolver"
-	"authone.usepolymer.co/infrastructure/logger"
+	apperrors "gateman.io/application/appErrors"
+	"gateman.io/application/interfaces"
+	"gateman.io/infrastructure/ipresolver"
+	"gateman.io/infrastructure/logger"
 )
 
 func IPAddressMiddleware(ctx *interfaces.ApplicationContext[any], clientIP string) (*interfaces.ApplicationContext[any], bool) {

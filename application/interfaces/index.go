@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"authone.usepolymer.co/application/utils"
+	"gateman.io/application/utils"
 )
 
 type ApplicationContext[T interface{}] struct {

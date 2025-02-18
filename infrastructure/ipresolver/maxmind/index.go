@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"os"
 
-	"authone.usepolymer.co/infrastructure/ipresolver/types"
+	"gateman.io/infrastructure/ipresolver/types"
 	"github.com/savaki/geoip2"
 )
 

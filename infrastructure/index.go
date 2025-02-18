@@ -3,7 +3,7 @@ package infrastructure
 import (
 	"sync"
 
-	messagequeue "authone.usepolymer.co/infrastructure/message_queue"
+	messagequeue "gateman.io/infrastructure/message_queue"
 )
 
 func StartServer() {

@@ -3,13 +3,13 @@ package public_controller
 import (
 	"net/http"
 
-	apperrors "authone.usepolymer.co/application/appErrors"
-	"authone.usepolymer.co/application/controller/dto"
-	"authone.usepolymer.co/application/interfaces"
-	"authone.usepolymer.co/application/repository"
-	application_usecase "authone.usepolymer.co/application/usecases/application"
-	"authone.usepolymer.co/infrastructure/logger"
-	server_response "authone.usepolymer.co/infrastructure/serverResponse"
+	apperrors "gateman.io/application/appErrors"
+	"gateman.io/application/controller/dto"
+	"gateman.io/application/interfaces"
+	"gateman.io/application/repository"
+	application_usecase "gateman.io/application/usecases/application"
+	"gateman.io/infrastructure/logger"
+	server_response "gateman.io/infrastructure/serverResponse"
 )
 
 func APIFetchAppDetails(ctx *interfaces.ApplicationContext[any]) {

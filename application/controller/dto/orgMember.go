@@ -1,6 +1,6 @@
 package dto
 
-import "authone.usepolymer.co/entities"
+import "gateman.io/entities"
 
 type AddMemberDTO struct {
 	Email       string                       `json:"email" validate:"email,max=100"`

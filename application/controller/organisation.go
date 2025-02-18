@@ -3,14 +3,14 @@ package controller
 import (
 	"net/http"
 
-	apperrors "authone.usepolymer.co/application/appErrors"
-	"authone.usepolymer.co/application/controller/dto"
-	"authone.usepolymer.co/application/interfaces"
-	"authone.usepolymer.co/application/repository"
-	org_usecases "authone.usepolymer.co/application/usecases/organisation"
-	"authone.usepolymer.co/infrastructure/logger"
-	server_response "authone.usepolymer.co/infrastructure/serverResponse"
-	"authone.usepolymer.co/infrastructure/validator"
+	apperrors "gateman.io/application/appErrors"
+	"gateman.io/application/controller/dto"
+	"gateman.io/application/interfaces"
+	"gateman.io/application/repository"
+	org_usecases "gateman.io/application/usecases/organisation"
+	"gateman.io/infrastructure/logger"
+	server_response "gateman.io/infrastructure/serverResponse"
+	"gateman.io/infrastructure/validator"
 )
 
 func CreateOrganisation(ctx *interfaces.ApplicationContext[dto.CreateOrgDTO]) {

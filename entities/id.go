@@ -3,7 +3,7 @@ package entities
 import (
 	"time"
 
-	"authone.usepolymer.co/application/utils"
+	"gateman.io/application/utils"
 )
 
 type GovID struct {

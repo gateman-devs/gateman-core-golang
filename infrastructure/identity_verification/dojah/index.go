@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	identity_verification_types "authone.usepolymer.co/infrastructure/identity_verification/types"
-	"authone.usepolymer.co/infrastructure/logger"
-	"authone.usepolymer.co/infrastructure/network"
+	identity_verification_types "gateman.io/infrastructure/identity_verification/types"
+	"gateman.io/infrastructure/logger"
+	"gateman.io/infrastructure/network"
 )
 
 type DojahIdentityVerification struct {

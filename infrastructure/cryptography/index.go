@@ -12,9 +12,9 @@ import (
 	"os"
 	"time"
 
-	"authone.usepolymer.co/application/utils"
-	"authone.usepolymer.co/infrastructure/database/repository/cache"
-	"authone.usepolymer.co/infrastructure/logger"
+	"gateman.io/application/utils"
+	"gateman.io/infrastructure/database/repository/cache"
+	"gateman.io/infrastructure/logger"
 )
 
 var CryptoHahser Hasher = argonHasher{}

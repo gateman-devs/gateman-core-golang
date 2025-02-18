@@ -5,17 +5,17 @@ import (
 	"encoding/json"
 	"fmt"
 
-	apperrors "authone.usepolymer.co/application/appErrors"
-	"authone.usepolymer.co/application/constants"
-	"authone.usepolymer.co/application/controller/dto"
-	"authone.usepolymer.co/application/repository"
-	"authone.usepolymer.co/application/utils"
-	"authone.usepolymer.co/entities"
-	"authone.usepolymer.co/infrastructure/cryptography"
-	"authone.usepolymer.co/infrastructure/logger"
-	messagequeue "authone.usepolymer.co/infrastructure/message_queue"
-	queue_tasks "authone.usepolymer.co/infrastructure/message_queue/tasks"
-	mq_types "authone.usepolymer.co/infrastructure/message_queue/types"
+	apperrors "gateman.io/application/appErrors"
+	"gateman.io/application/constants"
+	"gateman.io/application/controller/dto"
+	"gateman.io/application/repository"
+	"gateman.io/application/utils"
+	"gateman.io/entities"
+	"gateman.io/infrastructure/cryptography"
+	"gateman.io/infrastructure/logger"
+	messagequeue "gateman.io/infrastructure/message_queue"
+	queue_tasks "gateman.io/infrastructure/message_queue/tasks"
+	mq_types "gateman.io/infrastructure/message_queue/types"
 )
 
 func CreateApplicationUseCase(ctx any, payload *dto.ApplicationDTO, deviceID string, userID string, workspaceID string, email string) (*entities.Application, *string, *string, *string, *string) {

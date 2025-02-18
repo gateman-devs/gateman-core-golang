@@ -9,8 +9,8 @@ import (
 	"mime/multipart"
 	"net/http"
 
-	"authone.usepolymer.co/application/utils"
-	"authone.usepolymer.co/infrastructure/logger"
+	"gateman.io/application/utils"
+	"gateman.io/infrastructure/logger"
 )
 
 type NetworkController struct {

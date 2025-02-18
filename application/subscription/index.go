@@ -3,8 +3,8 @@ package subscription
 import (
 	"os"
 
-	"authone.usepolymer.co/application/repository"
-	"authone.usepolymer.co/entities"
+	"gateman.io/application/repository"
+	"gateman.io/entities"
 )
 
 func SeedSubscriptionData() {
