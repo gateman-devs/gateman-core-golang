@@ -5,10 +5,10 @@ import (
 	"errors"
 	"os"
 
-	"authone.usepolymer.co/application/utils"
-	"authone.usepolymer.co/infrastructure/biometric/types"
-	"authone.usepolymer.co/infrastructure/logger"
-	"authone.usepolymer.co/infrastructure/network"
+	"gateman.io/application/utils"
+	"gateman.io/infrastructure/biometric/types"
+	"gateman.io/infrastructure/logger"
+	"gateman.io/infrastructure/network"
 )
 
 type PremblyBiometricService struct {

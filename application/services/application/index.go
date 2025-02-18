@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"reflect"
 
-	"authone.usepolymer.co/entities"
+	"gateman.io/entities"
 )
 
 func ProcessUserSignUp(app *entities.Application, user *entities.User) (bool, string, map[string]any, map[string]any) {

@@ -5,8 +5,8 @@ import (
 
 	"github.com/go-redis/redis"
 
-	redisClient "authone.usepolymer.co/infrastructure/database/connection/cache"
-	"authone.usepolymer.co/infrastructure/logger"
+	redisClient "gateman.io/infrastructure/database/connection/cache"
+	"gateman.io/infrastructure/logger"
 )
 
 var (

@@ -3,9 +3,9 @@ package repository
 import (
 	"sync"
 
-	"authone.usepolymer.co/entities"
-	"authone.usepolymer.co/infrastructure/database/connection/datastore"
-	"authone.usepolymer.co/infrastructure/database/repository/mongo"
+	"gateman.io/entities"
+	"gateman.io/infrastructure/database/connection/datastore"
+	"gateman.io/infrastructure/database/repository/mongo"
 )
 
 var workspaceMemberOnce = sync.Once{}

@@ -1,10 +1,10 @@
 package routev1
 
 import (
-	apperrors "authone.usepolymer.co/application/appErrors"
-	"authone.usepolymer.co/application/controller"
-	"authone.usepolymer.co/application/controller/dto"
-	"authone.usepolymer.co/application/interfaces"
+	apperrors "gateman.io/application/appErrors"
+	"gateman.io/application/controller"
+	"gateman.io/application/controller/dto"
+	"gateman.io/application/interfaces"
 	"github.com/gin-gonic/gin"
 )
 

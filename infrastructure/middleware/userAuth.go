@@ -1,9 +1,9 @@
 package middlewares
 
 import (
-	"authone.usepolymer.co/application/interfaces"
-	"authone.usepolymer.co/application/middlewares"
-	"authone.usepolymer.co/entities"
+	"gateman.io/application/interfaces"
+	"gateman.io/application/middlewares"
+	"gateman.io/entities"
 	"github.com/gin-gonic/gin"
 )
 

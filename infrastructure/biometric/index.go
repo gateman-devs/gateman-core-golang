@@ -3,9 +3,9 @@ package biometric
 import (
 	"os"
 
-	prembly_idpass "authone.usepolymer.co/infrastructure/biometric/prembly"
-	"authone.usepolymer.co/infrastructure/biometric/types"
-	"authone.usepolymer.co/infrastructure/network"
+	prembly_idpass "gateman.io/infrastructure/biometric/prembly"
+	"gateman.io/infrastructure/biometric/types"
+	"gateman.io/infrastructure/network"
 )
 
 var BiometricService types.BiometricServiceType

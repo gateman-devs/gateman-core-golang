@@ -4,9 +4,9 @@ import (
 	"encoding/hex"
 	"io"
 
-	"authone.usepolymer.co/application/interfaces"
-	"authone.usepolymer.co/application/middlewares"
-	"authone.usepolymer.co/application/utils"
+	"gateman.io/application/interfaces"
+	"gateman.io/application/middlewares"
+	"gateman.io/application/utils"
 	"github.com/gin-gonic/gin"
 )
 

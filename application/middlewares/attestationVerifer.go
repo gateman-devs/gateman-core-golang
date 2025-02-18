@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	apperrors "authone.usepolymer.co/application/appErrors"
-	"authone.usepolymer.co/application/interfaces"
-	"authone.usepolymer.co/infrastructure/logger"
+	apperrors "gateman.io/application/appErrors"
+	"gateman.io/application/interfaces"
+	"gateman.io/infrastructure/logger"
 	"github.com/MicahParks/keyfunc"
 	"github.com/golang-jwt/jwt/v4"
 )

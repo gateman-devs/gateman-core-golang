@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"authone.usepolymer.co/infrastructure/database/repository/cache"
-	"authone.usepolymer.co/infrastructure/logger"
-	mq_types "authone.usepolymer.co/infrastructure/message_queue/types"
-	"authone.usepolymer.co/infrastructure/messaging/emails"
+	"gateman.io/infrastructure/database/repository/cache"
+	"gateman.io/infrastructure/logger"
+	mq_types "gateman.io/infrastructure/message_queue/types"
+	"gateman.io/infrastructure/messaging/emails"
 	"github.com/hibiken/asynq"
 )
 

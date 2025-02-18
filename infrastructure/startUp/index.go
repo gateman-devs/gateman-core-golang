@@ -1,13 +1,13 @@
 package startup
 
 import (
-	"authone.usepolymer.co/infrastructure/biometric"
-	"authone.usepolymer.co/infrastructure/database"
-	"authone.usepolymer.co/infrastructure/database/connection/datastore"
-	fileupload "authone.usepolymer.co/infrastructure/file_upload"
-	identityverification "authone.usepolymer.co/infrastructure/identity_verification"
-	"authone.usepolymer.co/infrastructure/logger"
-	"authone.usepolymer.co/infrastructure/messaging/sms"
+	"gateman.io/infrastructure/biometric"
+	"gateman.io/infrastructure/database"
+	"gateman.io/infrastructure/database/connection/datastore"
+	fileupload "gateman.io/infrastructure/file_upload"
+	identityverification "gateman.io/infrastructure/identity_verification"
+	"gateman.io/infrastructure/logger"
+	"gateman.io/infrastructure/messaging/sms"
 )
 
 // Used to start services such as loggers, databases, queues, etc.

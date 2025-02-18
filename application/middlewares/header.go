@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	apperrors "authone.usepolymer.co/application/appErrors"
-	"authone.usepolymer.co/application/interfaces"
-	"authone.usepolymer.co/infrastructure/useragent"
+	apperrors "gateman.io/application/appErrors"
+	"gateman.io/application/interfaces"
+	"gateman.io/infrastructure/useragent"
 )
 
 func UserAgentMiddleware(ctx *interfaces.ApplicationContext[any], minAppVersion string, clientIP string) (*interfaces.ApplicationContext[any], bool) {

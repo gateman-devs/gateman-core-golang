@@ -4,12 +4,12 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	apperrors "authone.usepolymer.co/application/appErrors"
-	"authone.usepolymer.co/application/interfaces"
-	"authone.usepolymer.co/application/utils"
-	"authone.usepolymer.co/infrastructure/cryptography"
-	"authone.usepolymer.co/infrastructure/database/repository/cache"
-	"authone.usepolymer.co/infrastructure/logger"
+	apperrors "gateman.io/application/appErrors"
+	"gateman.io/application/interfaces"
+	"gateman.io/application/utils"
+	"gateman.io/infrastructure/cryptography"
+	"gateman.io/infrastructure/database/repository/cache"
+	"gateman.io/infrastructure/logger"
 )
 
 func DecryptPayloadMiddleware(ctx *interfaces.ApplicationContext[string]) []byte {

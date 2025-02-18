@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 
-	"authone.usepolymer.co/application/repository"
-	"authone.usepolymer.co/infrastructure/logger"
-	mq_types "authone.usepolymer.co/infrastructure/message_queue/types"
+	"gateman.io/application/repository"
+	"gateman.io/infrastructure/logger"
+	mq_types "gateman.io/infrastructure/message_queue/types"
 	"github.com/hibiken/asynq"
 )
 

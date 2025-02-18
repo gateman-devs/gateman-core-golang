@@ -1,6 +1,6 @@
 package dto
 
-import "authone.usepolymer.co/entities"
+import "gateman.io/entities"
 
 type ApplicationDTO struct {
 	Name                  string                        `json:"name" validate:"required"`

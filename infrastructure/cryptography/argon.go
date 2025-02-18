@@ -1,7 +1,7 @@
 package cryptography
 
 import (
-	"authone.usepolymer.co/infrastructure/logger"
+	"gateman.io/infrastructure/logger"
 	"github.com/matthewhartstonge/argon2"
 )
 

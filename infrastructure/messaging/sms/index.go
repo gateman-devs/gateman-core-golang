@@ -3,7 +3,7 @@ package sms
 import (
 	"os"
 
-	"authone.usepolymer.co/infrastructure/network"
+	"gateman.io/infrastructure/network"
 )
 
 var SMSService SMSServiceType

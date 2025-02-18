@@ -1,8 +1,8 @@
 package connection
 
 import (
-	"authone.usepolymer.co/infrastructure/database/connection/cache"
-	"authone.usepolymer.co/infrastructure/database/connection/datastore"
+	"gateman.io/infrastructure/database/connection/cache"
+	"gateman.io/infrastructure/database/connection/datastore"
 )
 
 func ConnectToDatabase() {

@@ -1,4 +1,4 @@
-module authone.usepolymer.co
+module gateman.io
 
 go 1.22
 

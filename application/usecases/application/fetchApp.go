@@ -4,12 +4,12 @@ import (
 	"errors"
 	"strings"
 
-	apperrors "authone.usepolymer.co/application/appErrors"
-	"authone.usepolymer.co/application/repository"
-	"authone.usepolymer.co/application/utils"
-	"authone.usepolymer.co/entities"
-	"authone.usepolymer.co/infrastructure/ipresolver"
-	"authone.usepolymer.co/infrastructure/logger"
+	apperrors "gateman.io/application/appErrors"
+	"gateman.io/application/repository"
+	"gateman.io/application/utils"
+	"gateman.io/entities"
+	"gateman.io/infrastructure/ipresolver"
+	"gateman.io/infrastructure/logger"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 

@@ -7,9 +7,9 @@ import (
 	"os"
 	"time"
 
-	"authone.usepolymer.co/infrastructure/cryptography"
-	"authone.usepolymer.co/infrastructure/database/repository/cache"
-	"authone.usepolymer.co/infrastructure/logger"
+	"gateman.io/infrastructure/cryptography"
+	"gateman.io/infrastructure/database/repository/cache"
+	"gateman.io/infrastructure/logger"
 	"github.com/golang-jwt/jwt"
 )
 

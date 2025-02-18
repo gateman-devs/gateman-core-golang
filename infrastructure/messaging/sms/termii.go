@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"authone.usepolymer.co/application/utils"
-	"authone.usepolymer.co/infrastructure/logger"
-	"authone.usepolymer.co/infrastructure/network"
+	"gateman.io/application/utils"
+	"gateman.io/infrastructure/logger"
+	"gateman.io/infrastructure/network"
 )
 
 type TermiiService struct {

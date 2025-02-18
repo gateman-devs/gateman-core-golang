@@ -1,7 +1,7 @@
 package server_response
 
 import (
-	"authone.usepolymer.co/infrastructure/logger"
+	"gateman.io/infrastructure/logger"
 	"github.com/gin-gonic/gin"
 )
 

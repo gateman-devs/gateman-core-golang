@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"authone.usepolymer.co/application/utils"
+	"gateman.io/application/utils"
 )
 
 type R2SignedURLService struct {

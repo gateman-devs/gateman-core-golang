@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"authone.usepolymer.co/infrastructure/database"
-	"authone.usepolymer.co/infrastructure/logger"
+	"gateman.io/infrastructure/database"
+	"gateman.io/infrastructure/logger"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"

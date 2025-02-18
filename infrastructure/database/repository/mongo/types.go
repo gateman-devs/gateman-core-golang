@@ -1,7 +1,7 @@
 package mongo
 
 import (
-	"authone.usepolymer.co/infrastructure/database"
+	"gateman.io/infrastructure/database"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 

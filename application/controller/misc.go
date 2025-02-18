@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"net/http"
 
-	apperrors "authone.usepolymer.co/application/appErrors"
-	"authone.usepolymer.co/application/controller/dto"
-	"authone.usepolymer.co/application/interfaces"
-	fileupload "authone.usepolymer.co/infrastructure/file_upload"
-	server_response "authone.usepolymer.co/infrastructure/serverResponse"
+	apperrors "gateman.io/application/appErrors"
+	"gateman.io/application/controller/dto"
+	"gateman.io/application/interfaces"
+	fileupload "gateman.io/infrastructure/file_upload"
+	server_response "gateman.io/infrastructure/serverResponse"
 )
 
 func GeneratedSignedURL(ctx *interfaces.ApplicationContext[dto.GeneratedSignedURLDTO]) {

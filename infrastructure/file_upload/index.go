@@ -1,8 +1,8 @@
 package fileupload
 
 import (
-	"authone.usepolymer.co/infrastructure/file_upload/cloudflare"
-	"authone.usepolymer.co/infrastructure/file_upload/types"
+	"gateman.io/infrastructure/file_upload/cloudflare"
+	"gateman.io/infrastructure/file_upload/types"
 )
 
 var FileUploader types.FileUploaderType

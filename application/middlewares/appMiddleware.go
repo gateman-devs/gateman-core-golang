@@ -3,10 +3,10 @@ package middlewares
 import (
 	"os"
 
-	apperrors "authone.usepolymer.co/application/appErrors"
-	"authone.usepolymer.co/application/interfaces"
-	"authone.usepolymer.co/application/repository"
-	"authone.usepolymer.co/infrastructure/cryptography"
+	apperrors "gateman.io/application/appErrors"
+	"gateman.io/application/interfaces"
+	"gateman.io/application/repository"
+	"gateman.io/infrastructure/cryptography"
 )
 
 func AppAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], ipAddress string) (*interfaces.ApplicationContext[any], bool) {

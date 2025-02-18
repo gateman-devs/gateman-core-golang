@@ -1,6 +1,6 @@
 package dto
 
-import "authone.usepolymer.co/entities"
+import "gateman.io/entities"
 
 type CreateOrgDTO struct {
 	WorkspaceName string `json:"workspaceName" validate:"required"`

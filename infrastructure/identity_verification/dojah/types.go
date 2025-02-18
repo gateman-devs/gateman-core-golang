@@ -1,6 +1,6 @@
 package dojah_identity_verification
 
-import identity_verification_types "authone.usepolymer.co/infrastructure/identity_verification/types"
+import identity_verification_types "gateman.io/infrastructure/identity_verification/types"
 
 type DojahBVNResponse struct {
 	Data identity_verification_types.BVNData `json:"entity"`

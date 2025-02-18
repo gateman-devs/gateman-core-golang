@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"authone.usepolymer.co/infrastructure/logger"
+	"gateman.io/infrastructure/logger"
 	"github.com/resend/resend-go/v2"
 )
 

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"authone.usepolymer.co/infrastructure/logger"
-	server_response "authone.usepolymer.co/infrastructure/serverResponse"
+	"gateman.io/infrastructure/logger"
+	server_response "gateman.io/infrastructure/serverResponse"
 )
 
 func NotFoundError(ctx interface{}, message string) {

@@ -5,14 +5,14 @@ import (
 	"os"
 	"strings"
 
-	apperrors "authone.usepolymer.co/application/appErrors"
-	"authone.usepolymer.co/application/interfaces"
-	"authone.usepolymer.co/application/repository"
-	"authone.usepolymer.co/entities"
-	"authone.usepolymer.co/infrastructure/auth"
-	"authone.usepolymer.co/infrastructure/cryptography"
-	"authone.usepolymer.co/infrastructure/database/repository/cache"
-	"authone.usepolymer.co/infrastructure/logger"
+	apperrors "gateman.io/application/appErrors"
+	"gateman.io/application/interfaces"
+	"gateman.io/application/repository"
+	"gateman.io/entities"
+	"gateman.io/infrastructure/auth"
+	"gateman.io/infrastructure/cryptography"
+	"gateman.io/infrastructure/database/repository/cache"
+	"gateman.io/infrastructure/logger"
 	"github.com/golang-jwt/jwt"
 )
 

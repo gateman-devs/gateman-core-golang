@@ -1,9 +1,9 @@
 package v1
 
 import (
-	public_controller "authone.usepolymer.co/application/controller/devAPI"
-	"authone.usepolymer.co/application/interfaces"
-	middlewares "authone.usepolymer.co/infrastructure/middleware"
+	public_controller "gateman.io/application/controller/devAPI"
+	"gateman.io/application/interfaces"
+	middlewares "gateman.io/infrastructure/middleware"
 	"github.com/gin-gonic/gin"
 )
 

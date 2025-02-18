@@ -3,7 +3,7 @@ package dto
 import (
 	"crypto/ecdh"
 
-	"authone.usepolymer.co/entities"
+	"gateman.io/entities"
 )
 
 type KeyExchangeDTO struct {
