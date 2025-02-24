@@ -14,6 +14,11 @@ import (
 )
 
 func CreateOrganisation(ctx *interfaces.ApplicationContext[dto.CreateOrgDTO]) {
+	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
+	if valiedationErr != nil {
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		return
+	}
 	err := org_usecases.CreateOrgUseCase(ctx.Ctx, ctx.Body, ctx.DeviceID, ctx.UserAgent, ctx.GetStringContextData("UserID"), ctx.GetStringContextData("Email"))
 	if err != nil {
 		return

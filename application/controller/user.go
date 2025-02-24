@@ -19,11 +19,13 @@ import (
 	"gateman.io/infrastructure/cryptography"
 	"gateman.io/infrastructure/database/repository/cache"
 	fileupload "gateman.io/infrastructure/file_upload"
+	"gateman.io/infrastructure/file_upload/types"
 	identityverification "gateman.io/infrastructure/identity_verification"
 	identity_verification_types "gateman.io/infrastructure/identity_verification/types"
 	"gateman.io/infrastructure/logger"
 	sms "gateman.io/infrastructure/messaging/sms"
 	server_response "gateman.io/infrastructure/serverResponse"
+	"gateman.io/infrastructure/validator"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
@@ -37,7 +39,9 @@ func SetAccountImage(ctx *interfaces.ApplicationContext[any]) {
 		apperrors.ClientError(ctx.Ctx, "Image has not been uploaded. Request for a new url and upload image before attempting this request again.", nil, utils.GetUIntPointer(http.StatusBadRequest))
 		return
 	}
-	url, _ := fileupload.FileUploader.GenerateDownloadURL(fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), "accountimage"))
+	url, _ := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), "accountimage"), types.SignedURLPermission{
+		Read: true,
+	})
 	alive, err := biometric.BiometricService.LivenessCheck(url)
 	if err != nil {
 		logger.Error("something went wrong when verifying image", logger.LoggerOptions{
@@ -135,6 +139,11 @@ func SetAccountImage(ctx *interfaces.ApplicationContext[any]) {
 }
 
 func SetNINDetails(ctx *interfaces.ApplicationContext[dto.SetNINDetails]) {
+	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
+	if valiedationErr != nil {
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		return
+	}
 	userRepo := repository.UserRepo()
 	account, _ := userRepo.FindByID(ctx.GetStringContextData("UserID"), options.FindOne().SetProjection(map[string]any{
 		"nin": 1,
@@ -377,6 +386,11 @@ func VerifyNINDetails(ctx *interfaces.ApplicationContext[any]) {
 }
 
 func SetBVNDetails(ctx *interfaces.ApplicationContext[dto.SetBVNDetails]) {
+	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
+	if valiedationErr != nil {
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		return
+	}
 	userRepo := repository.UserRepo()
 	account, _ := userRepo.FindByID(ctx.GetStringContextData("UserID"), options.FindOne().SetProjection(map[string]any{
 		"bvn": 1,

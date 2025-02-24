@@ -27,6 +27,20 @@ func AppRouter(router *gin.RouterGroup) {
 			})
 		})
 
+		appRouter.PATCH("/ip-whitelist/update/:id", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.WORKSPACE_CREATE_APPLICATIONS}, true), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			var body dto.UpdateWhitelistIPDTO
+			if err := ctx.ShouldBindJSON(&body); err != nil {
+				apperrors.ErrorProcessingPayload(ctx)
+				return
+			}
+			controller.UpdateWhiteListedIPs(&interfaces.ApplicationContext[dto.UpdateWhitelistIPDTO]{
+				Ctx:  ctx,
+				Body: &body,
+				Keys: appContext.Keys,
+			})
+		})
+
 		appRouter.PATCH("/update/:id", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.WORKSPACE_EDIT_APPLICATIONS}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.UpdateApplications

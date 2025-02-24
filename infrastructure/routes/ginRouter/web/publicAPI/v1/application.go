@@ -10,14 +10,12 @@ import (
 func AppRouter(router *gin.RouterGroup) {
 	appRouter := router.Group("/app")
 	{
-		appRouter.GET("/fetch/:id", middlewares.AppAuthenticationMiddleware(), func(ctx *gin.Context) {
+		appRouter.GET("/fetch", middlewares.AppAuthenticationMiddleware(), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			public_controller.APIFetchAppDetails(&interfaces.ApplicationContext[any]{
-				Ctx:  ctx,
-				Keys: appContext.Keys,
-				Param: map[string]any{
-					"id": ctx.Param("id"),
-				},
+				Ctx:   ctx,
+				Keys:  appContext.Keys,
+				Param: appContext.Param,
 			})
 		})
 	}

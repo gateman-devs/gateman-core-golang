@@ -19,6 +19,7 @@ import (
 	"gateman.io/infrastructure/cryptography"
 	"gateman.io/infrastructure/database/repository/cache"
 	fileupload "gateman.io/infrastructure/file_upload"
+	"gateman.io/infrastructure/file_upload/types"
 	"gateman.io/infrastructure/logger"
 	messagequeue "gateman.io/infrastructure/message_queue"
 	queue_tasks "gateman.io/infrastructure/message_queue/tasks"
@@ -41,6 +42,10 @@ func AuthenticateUser(ctx *interfaces.ApplicationContext[dto.CreateUserDTO]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
 		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		return
+	}
+	if ctx.Body.Email == nil && ctx.Body.Phone == nil {
+		apperrors.ClientError(ctx.Ctx, "One of email or phone is required", nil, nil)
 		return
 	}
 	token, url, code, err := user_usecases.CreateUserUseCase(ctx.Ctx, ctx.Body, ctx.DeviceID, ctx.UserAgent, ctx.DeviceName)
@@ -121,7 +126,9 @@ func VerifyUserAccount(ctx *interfaces.ApplicationContext[any]) {
 	hashedAccessToken, _ := cryptography.CryptoHahser.HashString(*token, nil)
 	hashedDeviceID, _ := cryptography.CryptoHahser.HashString(ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
 	cache.Cache.CreateEntry(fmt.Sprintf("%s-access", string(hashedDeviceID)), hashedAccessToken, time.Minute*10)
-	url, err := fileupload.FileUploader.GenerateUploadURL(fmt.Sprintf("%s/%s", profile.ID, "accountimage"))
+	url, err := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", profile.ID, "accountimage"), types.SignedURLPermission{
+		Write: true,
+	})
 	if err != nil {
 		logger.Error("an error occured while generating url for setting account image", logger.LoggerOptions{
 			Key:  "error",
@@ -140,8 +147,8 @@ func VerifyOTP(ctx *interfaces.ApplicationContext[dto.VerifyOTPDTO]) {
 		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
 		return
 	}
-	if ctx.Body.Phone == nil && ctx.Body.Email == nil {
-		apperrors.ClientError(ctx.Ctx, "pass in either a phone number or email", nil, nil)
+	if ctx.Body.Email == nil && ctx.Body.Phone == nil {
+		apperrors.ClientError(ctx.Ctx, "One of email or phone is required", nil, nil)
 		return
 	}
 	var channel = ""
@@ -212,6 +219,11 @@ func VerifyOTP(ctx *interfaces.ApplicationContext[dto.VerifyOTPDTO]) {
 }
 
 func ResendOTP(ctx *interfaces.ApplicationContext[dto.ResendOTPDTO]) {
+	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
+	if valiedationErr != nil {
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		return
+	}
 	if ctx.Body.Email != nil {
 		otp, err := auth.GenerateOTP(6, *ctx.Body.Email)
 		if err != nil {
@@ -259,6 +271,11 @@ func ResendOTP(ctx *interfaces.ApplicationContext[dto.ResendOTPDTO]) {
 }
 
 func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) {
+	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
+	if valiedationErr != nil {
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		return
+	}
 	var accountSearchFilter = map[string]any{}
 	if ctx.Body.Email != nil {
 		accountSearchFilter["email"] = *ctx.Body.Email
@@ -288,7 +305,9 @@ func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) 
 		apperrors.ClientError(ctx.Ctx, "Image has not been uploaded. Request for a new url and upload image before attempting this request again.", nil, utils.GetUIntPointer(http.StatusBadRequest))
 		return
 	}
-	url, _ := fileupload.FileUploader.GenerateDownloadURL(fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), ctx.DeviceID))
+	url, _ := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), ctx.DeviceID), types.SignedURLPermission{
+		Read: true,
+	})
 	alive, err := biometric.BiometricService.LivenessCheck(url)
 	if err != nil {
 		logger.Error("something went wrong when verifying image", logger.LoggerOptions{
@@ -302,7 +321,9 @@ func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) 
 		apperrors.ClientError(ctx.Ctx, "Please make sure to take a clear picture of your face", nil, nil)
 		return
 	}
-	accountImgURL, _ := fileupload.FileUploader.GenerateDownloadURL(account.Image)
+	accountImgURL, _ := fileupload.FileUploader.GeneratedSignedURL(account.Image, types.SignedURLPermission{
+		Read: true,
+	})
 	match, err := biometric.BiometricService.FaceMatch(url, accountImgURL)
 	if err != nil {
 		logger.Error("something went wrong when match images", logger.LoggerOptions{

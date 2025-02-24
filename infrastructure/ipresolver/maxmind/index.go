@@ -12,8 +12,16 @@ import (
 type MaxMindIPResolver struct{}
 
 func (mmResolver *MaxMindIPResolver) LookUp(ipAddress string) (*types.IPResult, error) {
-	if os.Getenv("ENV") == "development" {
-		ipAddress = "102.88.111.43"
+	if os.Getenv("ENV") != "production" {
+		return &types.IPResult{
+			Longitude:     6.789,
+			Latitude:      6.543,
+			City:          "lagos",
+			CountryCode:   "ng",
+			AcuracyRadius: 0,
+			IPAddress:     ipAddress,
+			Anonymous:     false,
+		}, nil
 	}
 
 	api := geoip2.New(os.Getenv("MAXMIND_USER_ID"), os.Getenv("MAXMIND_LICENSE_KEY"))

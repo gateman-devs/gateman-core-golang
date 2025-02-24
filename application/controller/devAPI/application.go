@@ -7,14 +7,22 @@ import (
 	"gateman.io/application/controller/dto"
 	"gateman.io/application/interfaces"
 	"gateman.io/application/repository"
-	application_usecase "gateman.io/application/usecases/application"
 	"gateman.io/infrastructure/logger"
 	server_response "gateman.io/infrastructure/serverResponse"
 )
 
 func APIFetchAppDetails(ctx *interfaces.ApplicationContext[any]) {
-	app, err := application_usecase.FetchAppUseCase(ctx.Ctx, ctx.Param["id"].(string), ctx.DeviceID, ctx.Keys["ip"].(string))
+	appRepo := repository.ApplicationRepo()
+	app, err := appRepo.FindOneByFilter(map[string]interface{}{
+		"appID": ctx.GetStringContextData("AppID"),
+	})
+
 	if err != nil {
+		logger.Error("an error occured while fetching an app on APIFetchAppDetails", logger.LoggerOptions{
+			Key:  "err",
+			Data: err,
+		})
+		apperrors.UnknownError(ctx.Ctx, err)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "app fetched", app, nil, nil, nil, nil)
