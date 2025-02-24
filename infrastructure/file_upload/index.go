@@ -1,6 +1,8 @@
 package fileupload
 
 import (
+	"os"
+
 	"gateman.io/infrastructure/file_upload/cloudflare"
 	"gateman.io/infrastructure/file_upload/types"
 )
@@ -8,10 +10,11 @@ import (
 var FileUploader types.FileUploaderType
 
 func InitialiseFileUploader() {
-	FileUploader = &cloudflare.R2SignedURLService{
-		AccountID:       "f04e2cfcc01f9104510c6209b400063c",
-		AccessKeyID:     "9da6a81cc32f959faf59b6c66e50678e",
-		SecretAccessKey: "gVRw0yYvUG8CQUYzY0yiIA6OFwUCWDVycsVyOWlE",
-		Region:          "auto",
+	r2Client := &cloudflare.R2SignedURLService{
+		AccountID:       os.Getenv("CLOUDFLARE_ACCOUNT_ID"),
+		AccessKeyID:     os.Getenv("CLOUDFLARE_ACCESS_KEY_ID"),
+		SecretAccessKey: os.Getenv("CLOUDFLARE_SECRET_ACCESS_KEY"),
 	}
+	r2Client.InitialiseClient()
+	FileUploader = r2Client
 }

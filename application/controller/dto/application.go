@@ -45,3 +45,7 @@ type UpdateAccessRefreshTokenTTL struct {
 	SandboxRefreshTokenTTL *uint32 `json:"sandboxRefreshTokenTTL" validate:"min=60"`
 	SandboxAccessTokenTTL  *uint16 `json:"sandboxAccessTokenTTL" validate:"min=60"`
 }
+
+type UpdateWhitelistIPDTO struct {
+	IPs []string 	`json:"ips" validate:"required,dive,ip"`
+}

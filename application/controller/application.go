@@ -56,13 +56,14 @@ func CreateApplication(ctx *interfaces.ApplicationContext[dto.ApplicationDTO]) {
 			}
 		}
 	}
-	app, apiKey, appSigningKey, sandboxAPIKey, sandboxAppSigningKey := application_usecase.CreateApplicationUseCase(ctx.Ctx, ctx.Body, ctx.DeviceID, ctx.GetStringContextData("UserID"), ctx.GetStringContextData("WorkspaceID"), ctx.GetStringContextData("Email"))
+	app, apiKey, appID, appSigningKey, sandboxAPIKey, sandboxAppSigningKey := application_usecase.CreateApplicationUseCase(ctx.Ctx, ctx.Body, ctx.DeviceID, ctx.GetStringContextData("UserID"), ctx.GetStringContextData("WorkspaceID"), ctx.GetStringContextData("Email"))
 	if app == nil {
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "app created", map[string]any{
 		"app":                  app,
 		"apiKey":               apiKey,
+		"appID":                appID,
 		"appSigningKey":        appSigningKey,
 		"sandboxAPIKey":        sandboxAPIKey,
 		"sandboxAppSigningKey": sandboxAppSigningKey,
@@ -199,6 +200,37 @@ func RefreshAppAPIKey(ctx *interfaces.ApplicationContext[any]) {
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "API key updated. This will only be displayed once", apiKey, nil, nil, nil, nil)
 }
 
+func UpdateWhiteListedIPs(ctx *interfaces.ApplicationContext[dto.UpdateWhitelistIPDTO]) {
+	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
+	if valiedationErr != nil {
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		return
+	}
+	invalidIP := utils.ValidateIPAddresses(ctx.Body.IPs)
+	if invalidIP {
+		apperrors.ClientError(ctx.Ctx, "please enter only valid IP addresses", nil, nil)
+		return
+	}
+	appRepo := repository.ApplicationRepo()
+	app, err := appRepo.UpdatePartialByID(ctx.GetStringParameter("id"), map[string]any{
+		"whiteListedIPs": utils.MakeStringArrayUnique(ctx.Body.IPs),
+	})
+	if err != nil {
+		logger.Error("an error occured while updating whitelisted ips", logger.LoggerOptions{
+			Key: "params", Data: ctx.Param,
+		}, logger.LoggerOptions{
+			Key: "payload", Data: ctx.Body,
+		})
+		apperrors.UnknownError(ctx.Ctx, err)
+		return
+	}
+	if app == 0 {
+		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found")
+		return
+	}
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "IP Whitelist updated", nil, nil, nil, nil, nil)
+}
+
 func RefreshAppSigningKey(ctx *interfaces.ApplicationContext[any]) {
 	appSigningKey := utils.GenerateUULDString()
 	appSigningKey = fmt.Sprintf("%s%s", appSigningKey, "-g8man")
@@ -271,6 +303,11 @@ func RefreshSandboxAppSigningKey(ctx *interfaces.ApplicationContext[any]) {
 }
 
 func UpdateAccessRefreshTokenTTL(ctx *interfaces.ApplicationContext[dto.UpdateAccessRefreshTokenTTL]) {
+	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
+	if valiedationErr != nil {
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		return
+	}
 	updateFields := map[string]any{}
 
 	if ctx.Body.RefreshTokenTTL != nil {
@@ -297,6 +334,11 @@ func UpdateAccessRefreshTokenTTL(ctx *interfaces.ApplicationContext[dto.UpdateAc
 }
 
 func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpDTO]) {
+	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
+	if valiedationErr != nil {
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		return
+	}
 	app, err := application_usecase.FetchAppUseCase(ctx.Ctx, ctx.Body.AppID, ctx.DeviceID, ctx.Keys["ip"].(string))
 	if err != nil {
 		return
@@ -360,7 +402,7 @@ func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpD
 		})
 		decryptedAppSigningKey, _ := cryptography.DecryptData(app.AppSigningKey, nil)
 		requestedFieldsBytes, _ := json.Marshal(requestedFields)
-		encrypted, err := cryptography.EncryptData(requestedFieldsBytes, utils.GetStringPointer(string(decryptedAppSigningKey)))
+		encrypted, _ := cryptography.EncryptData(requestedFieldsBytes, utils.GetStringPointer(string(decryptedAppSigningKey)))
 		var accessTokenTTL uint16
 		var refreshTokenTTL uint32
 		if os.Getenv("ENV") == "production" {
@@ -371,11 +413,6 @@ func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpD
 			refreshTokenTTL = app.SandboxRefreshTokenTTL
 
 		}
-		fmt.Println("----")
-		fmt.Println(string(decryptedAppSigningKey))
-		fmt.Println(requestedFields)
-		fmt.Println("----")
-		fmt.Println(err)
 		accessToken, _ := auth.GenerateAppUserToken(auth.ClaimsData{
 			IssuedAt:  time.Now().Unix(),
 			ExpiresAt: int64(accessTokenTTL),
@@ -399,6 +436,11 @@ func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpD
 }
 
 func FetchAppUsers(ctx *interfaces.ApplicationContext[dto.FetchAppUsersDTO]) {
+	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
+	if valiedationErr != nil {
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		return
+	}
 	filter := map[string]interface{}{
 		"appID":       ctx.Body.AppID,
 		"workspaceID": ctx.GetHeader("X-Workspace-Id"),
@@ -423,6 +465,11 @@ func FetchAppUsers(ctx *interfaces.ApplicationContext[dto.FetchAppUsersDTO]) {
 }
 
 func BlockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
+	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
+	if valiedationErr != nil {
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		return
+	}
 	appUserRepo := repository.AppUserRepo()
 	_, err := appUserRepo.UpdatePartialByFilter(map[string]interface{}{
 		"_id": map[string]any{
@@ -445,6 +492,11 @@ func BlockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
 }
 
 func UnblockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
+	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
+	if valiedationErr != nil {
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		return
+	}
 	appUserRepo := repository.AppUserRepo()
 	_, err := appUserRepo.UpdatePartialByFilter(map[string]interface{}{
 		"_id": map[string]any{
@@ -483,6 +535,11 @@ func FetchUserApps(ctx *interfaces.ApplicationContext[any]) {
 }
 
 func GetAppMetrics(ctx *interfaces.ApplicationContext[dto.FetchAppMetrics]) {
+	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
+	if valiedationErr != nil {
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		return
+	}
 	appMetrics := map[string]any{}
 	appRepo := repository.ApplicationRepo()
 	app, _ := appRepo.FindByID(ctx.Body.ID, options.FindOne().SetProjection(map[string]any{

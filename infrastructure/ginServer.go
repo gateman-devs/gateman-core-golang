@@ -1,7 +1,6 @@
 package infrastructure
 
 import (
-	"crypto/ecdh"
 	"fmt"
 	"net/http"
 	"os"
@@ -9,9 +8,6 @@ import (
 	"time"
 
 	apperrors "gateman.io/application/appErrors"
-	"gateman.io/application/controller"
-	"gateman.io/application/controller/dto"
-	"gateman.io/application/interfaces"
 	"gateman.io/application/subscription"
 	"gateman.io/infrastructure/logger"
 	middlewares "gateman.io/infrastructure/middleware"
@@ -37,42 +33,29 @@ func (s *ginServer) Start() {
 
 	defer startup.CleanUpServices()
 
+	subscription.SeedSubscriptionData()
+
 	server := gin.Default()
 	origins := strings.Split(os.Getenv("ORIGINS"), ",")
 	corsConfig := cors.Config{
 		AllowOrigins:     origins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "x-device-id", "User-Agent", "x-workspace-id"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "x-device-id", "User-Agent", "x-workspace-id", "x-api-key", "x-app-id"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}
 	server.Use(cors.New(corsConfig))
-	server.Use(ratelimit.TokenBucketPerIP())
 	server.MaxMultipartMemory = 0 // 8 MiB
-	subscription.SeedSubscriptionData()
 
 	// server.Use(logger.MetricMonitor.MetricMiddleware().(gin.HandlerFunc))
 	server.Use(logger.RequestMetricMonitor.RequestMetricMiddleware().(func(*gin.Context)))
 
 	api := server.Group("/api")
-	api.Use(middlewares.UserAgentMiddleware())
-
-	// initiate key exchange for encryption
-	api.POST("/v1/auth/handshake", func(ctx *gin.Context) {
-		clientPubKeyBytes, _ := ctx.GetRawData()
-		clientPubKey, _ := ecdh.P256().NewPublicKey(clientPubKeyBytes)
-		appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
-		controller.KeyExchange(&interfaces.ApplicationContext[dto.KeyExchangeDTO]{
-			Ctx: ctx,
-			Body: &dto.KeyExchangeDTO{
-				ClientPublicKey: clientPubKey,
-			},
-			DeviceID: appContext.DeviceID,
-		})
-	})
 
 	routerV1 := api.Group("/v1")
+	routerV1.Use(ratelimit.TokenBucketPerIP())
+	routerV1.Use(middlewares.UserAgentMiddleware())
 	// routerV1.Use(middlewares.DecryptPayloadMiddleware())
 	{
 		webRoutev1.AuthRouter(routerV1)

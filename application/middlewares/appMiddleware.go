@@ -45,10 +45,8 @@ func AppAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], ipAddr
 		apperrors.ClientError(ctx.Ctx, "no ip address whitelisted", nil, nil)
 		return nil, false
 	}
-	validIP := false
-	if os.Getenv("ENV") != "production" {
-		validIP = true
-	} else {
+	if os.Getenv("ENV") == "production" {
+		validIP := false
 		for _, wIP := range *app.WhiteListedIPs {
 			if wIP == ipAddress {
 				validIP = true
@@ -61,7 +59,7 @@ func AppAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], ipAddr
 		}
 	}
 
-	ctx.SetContextData("AppID", app.ID)
+	ctx.SetContextData("AppID", appID)
 	ctx.SetContextData("Name", app.Name)
 	ctx.SetContextData("WorkspaceID", app.WorkspaceID)
 	return ctx, true

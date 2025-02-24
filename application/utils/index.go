@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"net"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/oklog/ulid/v2"
@@ -51,4 +53,38 @@ func HasItemString(arr *[]string, target string) bool {
 		}
 	}
 	return false
+}
+
+func ValidateIPAddresses(addresses []string) bool {
+	invalid := false
+
+	for _, addr := range addresses {
+		// Remove any whitespace
+		addr = strings.TrimSpace(addr)
+
+		// Try parsing as IP address
+		ip := net.ParseIP(addr)
+
+		if ip == nil {
+			invalid = true
+			break
+		}
+	}
+
+	return invalid
+}
+
+func MakeStringArrayUnique(arr []string) []string {
+	seen := make(map[string]struct{})
+	for _, str := range arr {
+		seen[str] = struct{}{}
+	}
+
+	// Convert map keys back to slice
+	result := make([]string, 0, len(seen))
+	for str := range seen {
+		result = append(result, str)
+	}
+
+	return result
 }

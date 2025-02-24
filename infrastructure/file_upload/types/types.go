@@ -1,8 +1,7 @@
 package types
 
 type FileUploaderType interface {
-	GenerateDownloadURL(fileName string) (*string, error)
-	GenerateUploadURL(fileName string) (*string, error)
+	GeneratedSignedURL(fileName string, permission SignedURLPermission) (*string, error)
 	CheckFileExists(file_name string) (bool, error)
 	DeleteFile(file_name string) error
 }

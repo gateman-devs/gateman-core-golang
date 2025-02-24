@@ -8,19 +8,30 @@ import (
 	"gateman.io/application/controller/dto"
 	"gateman.io/application/interfaces"
 	fileupload "gateman.io/infrastructure/file_upload"
+	"gateman.io/infrastructure/file_upload/types"
 	server_response "gateman.io/infrastructure/serverResponse"
+	"gateman.io/infrastructure/validator"
 )
 
 func GeneratedSignedURL(ctx *interfaces.ApplicationContext[dto.GeneratedSignedURLDTO]) {
+	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
+	if valiedationErr != nil {
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		return
+	}
 	if ctx.Body.AccountImage {
 		ctx.Body.FilePath = fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), "accountimage")
 	}
 	var url *string
 	var err error
 	if ctx.Body.Permission.Read {
-		url, err = fileupload.FileUploader.GenerateDownloadURL(ctx.Body.FilePath)
+		url, err = fileupload.FileUploader.GeneratedSignedURL(ctx.Body.FilePath, types.SignedURLPermission{
+			Read: true,
+		})
 	} else if ctx.Body.Permission.Write {
-		url, err = fileupload.FileUploader.GenerateUploadURL(ctx.Body.FilePath)
+		url, err = fileupload.FileUploader.GeneratedSignedURL(ctx.Body.FilePath, types.SignedURLPermission{
+			Write: true,
+		})
 	} else if ctx.Body.Permission.Delete {
 	} else {
 		apperrors.ClientError(ctx.Ctx, "invalid request", nil, nil)

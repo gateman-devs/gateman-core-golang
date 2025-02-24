@@ -18,6 +18,7 @@ import (
 	"gateman.io/infrastructure/cryptography"
 	"gateman.io/infrastructure/database/repository/cache"
 	fileupload "gateman.io/infrastructure/file_upload"
+	"gateman.io/infrastructure/file_upload/types"
 	"gateman.io/infrastructure/logger"
 	messagequeue "gateman.io/infrastructure/message_queue"
 	queue_tasks "gateman.io/infrastructure/message_queue/tasks"
@@ -203,7 +204,9 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 			apperrors.UnknownError(ctx, err)
 			return nil, nil, nil, err
 		}
-		url, err := fileupload.FileUploader.GenerateUploadURL(fmt.Sprintf("%s/%s", account.ID, deviceID))
+		url, err := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", account.ID, deviceID), types.SignedURLPermission{
+			Write: true,
+		})
 		if err != nil {
 			logger.Error("an error occured while generating url for device verification", logger.LoggerOptions{
 				Key:  "error",
