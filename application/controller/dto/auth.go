@@ -11,9 +11,9 @@ type KeyExchangeDTO struct {
 }
 
 type VerifyOTPDTO struct {
-	OTP   string  `json:"otp"`
-	Email *string `json:"email"`
-	Phone *string `json:"phone"`
+	OTP   string  `json:"otp" validate:"required,max=5,min=5"`
+	Email *string `json:"email" validate:"omitempty,email,max=100,min=6"`
+	Phone *string `json:"phone" validate:"omitempty,max=11,min=11"`
 }
 
 type CreateUserDTO struct {
@@ -24,32 +24,13 @@ type CreateUserDTO struct {
 	UserAgent  string                `json:"userAgent" validate:"required,max=1000"`
 }
 
-type LoginDTO struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
 type ResendOTPDTO struct {
-	Email       *string `json:"email"`
-	Phone       *string `json:"phone"`
-	PhonePrefix *string `json:"phonePrefix"`
+	Email       *string `json:"email" validate:"omitempty,email,max=100,min=6"`
+	Phone       *string `json:"phone" validate:"omitempty,eq=11"`
+	PhonePrefix *string `json:"phonePrefix" validate:"omitempty,max=3,min=1"`
 }
 
 type VerifyDeviceDTO struct {
-	Email *string `json:"email"`
-	Phone *string `json:"phone"`
-}
-
-type SetPasswordDTO struct {
-	Password string `json:"password" validate:"required,min=8"`
-}
-
-type UpdateAccountDetailsDTO struct {
-	FirstName string `json:"firstName" validate:"max=100,min=2"`
-	LastName  string `json:"lastName" validate:"max=100,min=2"`
-}
-
-type UpdatePasswordDTO struct {
-	OldPassword string `json:"oldPassword"`
-	NewPassword string `json:"newPassword" validate:"required,min=8"`
+	Email *string `json:"email" validate:"omitempty,email,max=100,min=6"`
+	Phone *string `json:"phone" validate:"omitempty,eq=11"`
 }

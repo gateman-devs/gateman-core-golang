@@ -24,7 +24,7 @@ func (rs *ResendService) SendEmail(toEmail string, subject string, templateName 
 	html := rs.loadTemplates(templateName, opts)
 
 	params := &resend.SendEmailRequest{
-		From:    os.Getenv("POLYMER_DEFAULT_EMAIL"),
+		From:    os.Getenv("RESEND_DEFAULT_EMAIL"),
 		To:      []string{toEmail},
 		Subject: subject,
 		Html:    *html,

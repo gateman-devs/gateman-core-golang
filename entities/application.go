@@ -14,13 +14,13 @@ var (
 )
 
 type LocaleRestriction struct {
-	States          *[]string       `bson:"states" json:"states"`
+	States          *[]string       `bson:"states" json:"states" validate:"dive,min=2,max=15"`
 	Country         string          `bson:"country" json:"country" validate:"required,iso3166_1_alpha2"`
-	RestrictionType RestrictionType `bson:"restrictionType" json:"restrictionType"`
+	RestrictionType RestrictionType `bson:"restrictionType" json:"restrictionType" validate:"oneof=allow restrict"`
 }
 
 type RequestedField struct {
-	Name     string `bson:"name" json:"name"`
+	Name     string `bson:"name" json:"name" validate:"required,max=50"`
 	Verified bool   `bson:"verified" json:"verified"`
 }
 
