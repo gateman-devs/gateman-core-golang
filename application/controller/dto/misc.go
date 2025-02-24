@@ -7,5 +7,5 @@ import (
 type GeneratedSignedURLDTO struct {
 	Permission   types.SignedURLPermission `json:"permission"`
 	AccountImage bool                      `json:"accountImage"`
-	FilePath     string                    `json:"filePath"`
+	FilePath     string                    `json:"filePath"  validate:"max=100,min=26"`
 }

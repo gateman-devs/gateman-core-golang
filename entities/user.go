@@ -16,8 +16,8 @@ type Device struct {
 
 type PhoneNumber struct {
 	ISOCode     string `bson:"isoCode" json:"isoCode" validate:"iso3166_1_alpha2"` // Two-letter country code (ISO 3166-1 alpha-2)
-	LocalNumber string `bson:"localNumber" json:"localNumber"`
-	Prefix      string `bson:"prefix" json:"prefix"`
+	LocalNumber string `bson:"localNumber" json:"localNumber" validate:"eq=10"`
+	Prefix      string `bson:"prefix" json:"prefix" validate:"max=3,min=1"`
 }
 
 func (pn *PhoneNumber) ParsePhoneNumber() string {

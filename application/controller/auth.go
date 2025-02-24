@@ -135,6 +135,11 @@ func VerifyUserAccount(ctx *interfaces.ApplicationContext[any]) {
 }
 
 func VerifyOTP(ctx *interfaces.ApplicationContext[dto.VerifyOTPDTO]) {
+	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
+	if valiedationErr != nil {
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		return
+	}
 	if ctx.Body.Phone == nil && ctx.Body.Email == nil {
 		apperrors.ClientError(ctx.Ctx, "pass in either a phone number or email", nil, nil)
 		return

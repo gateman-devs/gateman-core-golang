@@ -3,45 +3,45 @@ package dto
 import "gateman.io/entities"
 
 type ApplicationDTO struct {
-	Name                  string                        `json:"name" validate:"required"`
-	Description           string                        `json:"description" validate:"required"`
-	RequiredVerifications *[]string                     `json:"requiredVerifications"`
+	Name                  string                        `json:"name" validate:"required,max=100,min=2"`
+	Description           string                        `json:"description" validate:"required,max=200,min=10"`
+	RequiredVerifications *[]string                     `json:"requiredVerifications" validate:"dive,min=2,max=50"`
 	LocaleRestriction     *[]entities.LocaleRestriction `json:"localeRestriction"`
 	RequestedFields       []entities.RequestedField     `json:"requestedFields" validate:"required"`
 }
 
 type UpdateApplications struct {
-	Name                  *string                       `json:"name" validate:"required"`
-	Description           *string                       `json:"description" validate:"required"`
-	RequiredVerifications *[]string                     `json:"requiredVerifications"`
+	Name                  *string                       `json:"name" validate:"max=100,min=2"`
+	Description           *string                       `json:"description" validate:"max=200,min=10"`
+	RequiredVerifications *[]string                     `json:"requiredVerifications" validate:"dive,min=2,max=50"`
 	LocaleRestriction     *[]entities.LocaleRestriction `json:"localeRestriction"`
 	RequestedFields       []entities.RequestedField     `json:"requestedFields"`
 }
 
 type ApplicationSignUpDTO struct {
-	AppID string `json:"appID" validate:"required"`
+	AppID string `json:"appID" validate:"required, max=100"`
 }
 
 type FetchAppUsersDTO struct {
 	AppID    string  `json:"appID" validate:"required"`
 	PageSize int64   `json:"pageSize" validate:"required"`
-	LastID   *string `json:"lastID"`
+	LastID   *string `json:"lastID" validate:"eq=26"`
 	Blocked  *bool   `json:"blocked"`
 	Deleted  *bool   `json:"deleted"`
 	Sort     int8    `json:"sort"`
 }
 
 type BlockAccountsDTO struct {
-	IDs []string `json:"ids"`
+	IDs []string `json:"ids" validate:"dive,eq=26"`
 }
 
 type FetchAppMetrics struct {
-	ID string `json:"id"`
+	ID string `json:"id" validate:"max=26"`
 }
 
 type UpdateAccessRefreshTokenTTL struct {
-	RefreshTokenTTL        *uint32 `json:"refreshTokenTTL"`
-	AccessTokenTTL         *uint16 `json:"accessTokenTTL"`
-	SandboxRefreshTokenTTL *uint32 `json:"sandboxRefreshTokenTTL"`
-	SandboxAccessTokenTTL  *uint16 `json:"sandboxAccessTokenTTL"`
+	RefreshTokenTTL        *uint32 `json:"refreshTokenTTL" validate:"min=60"`
+	AccessTokenTTL         *uint16 `json:"accessTokenTTL" validate:"min=60"`
+	SandboxRefreshTokenTTL *uint32 `json:"sandboxRefreshTokenTTL" validate:"min=60"`
+	SandboxAccessTokenTTL  *uint16 `json:"sandboxAccessTokenTTL" validate:"min=60"`
 }
