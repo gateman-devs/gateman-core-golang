@@ -29,6 +29,7 @@ type Application struct {
 	Description            string               `bson:"description" json:"description"`
 	WorkspaceID            string               `bson:"workspaceID" json:"-"`
 	AppImg                 string               `bson:"appImg" json:"appImg"`
+	Email                  string               `bson:"email" json:"email"`
 	AppID                  string               `bson:"appID" json:"appID"`
 	PinProtected           string               `bson:"pinProtected" json:"pinProtected"`
 	CreatorID              string               `bson:"creatorID" json:"-"`

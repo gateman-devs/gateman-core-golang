@@ -272,6 +272,31 @@ func (repo *MongoRepository[T]) FindByID(id string, opts ...*options.FindOneOpti
 	return &result, nil
 }
 
+func (repo *MongoRepository[T]) BulkFind(id string, opts ...*options.FindOneOptions) (*T, error) {
+	c, cancel := repo.createCtx()
+
+	defer func() {
+		cancel()
+	}()
+	var result T
+	err := repo.Model.FindOne(c, bson.M{"_id": id}, opts...).Decode(&result)
+	if err != nil {
+		if err.Error() == "mongo: no documents in result" {
+			return nil, nil
+		}
+		logger.Error("mongo error occured while running FindById", logger.LoggerOptions{
+			Key:  "error",
+			Data: err,
+		}, logger.LoggerOptions{
+			Key:  "resourceID",
+			Data: id,
+		})
+		return nil, err
+	}
+	logger.Info("FindById complete")
+	return &result, nil
+}
+
 func (repo *MongoRepository[T]) CountDocs(filter map[string]interface{}, opts ...*options.CountOptions) (int64, error) {
 	c, cancel := repo.createCtx()
 

@@ -51,6 +51,7 @@ func CreateApplicationUseCase(ctx any, payload *dto.ApplicationDTO, deviceID str
 	app, err := appRepo.CreateOne(context.TODO(), entities.Application{
 		ID:                     appPriKey,
 		Name:                   payload.Name,
+		Email:                  email,
 		CreatorID:              userID,
 		AppID:                  appID,
 		WorkspaceID:            workspaceID,

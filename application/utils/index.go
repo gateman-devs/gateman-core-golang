@@ -1,6 +1,9 @@
 package utils
 
 import (
+	"crypto/hmac"
+	"crypto/sha512"
+	"encoding/hex"
 	"net"
 	"regexp"
 	"strings"
@@ -87,4 +90,10 @@ func MakeStringArrayUnique(arr []string) []string {
 	}
 
 	return result
+}
+
+func CreateHMACSHA512Hash(data []byte, secretKey string) string {
+	hmac := hmac.New(sha512.New, []byte(secretKey))
+	hmac.Write(data)
+	return hex.EncodeToString(hmac.Sum(nil))
 }

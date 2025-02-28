@@ -8,12 +8,12 @@ import (
 	"gateman.io/infrastructure/database/repository/mongo"
 )
 
-var SubscriptionPlanOnce = sync.Once{}
+var subscriptionPlanOnce = sync.Once{}
 
 var SubscriptionPlanRepository mongo.MongoRepository[entities.SubscriptionPlan]
 
 func SubscriptionPlanRepo() *mongo.MongoRepository[entities.SubscriptionPlan] {
-	SubscriptionPlanOnce.Do(func() {
+	subscriptionPlanOnce.Do(func() {
 		SubscriptionPlanRepository = mongo.MongoRepository[entities.SubscriptionPlan]{Model: datastore.SubscriptionPlanModel}
 	})
 	return &SubscriptionPlanRepository

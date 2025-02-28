@@ -7,12 +7,19 @@ import (
 )
 
 type ActiveSubscription struct {
-	Plan          string `bson:"plan" json:"plan"`
-	Active        bool   `bson:"active" json:"active"`
-	ApplicationID string `bson:"applicationID" json:"applicationID"`
-	Name          string `bson:"name" json:"name"`
-	RenewalDate   string `bson:"renewalDate" json:"renewalDate"`
-	Payment       string `bson:"payment" json:"payment"`
+	SubscriptionID string                `bson:"subscriptionID" json:"subscriptionID"`
+	Active         bool                  `bson:"active" json:"active"`
+	ActiveSubID    string                `bson:"activeSubID" json:"activeSubID"`
+	ActiveSubName  string                `bson:"activeSubName" json:"activeSubName"`
+	AutoRenew      bool                  `bson:"autoRenew" json:"autoRenew"`
+	AppID          string                `bson:"appID" json:"appID"`
+	WorkspaceID    string                `bson:"workspaceID" json:"workspaceID"`
+	Name           string                `bson:"name" json:"name"`
+	Interval       SubscriptionFrequency `bson:"interval" json:"interval"`
+	ExpiresOn      *time.Time            `bson:"expiresOn" json:"expiresOn"`
+	RenewedOn      *time.Time            `bson:"renewedOn" json:"renewedOn"`
+	CancelledOn    *time.Time            `bson:"cancelledOn" json:"cancelledOn"`
+	CardID         string                `bson:"payment" json:"payment"`
 
 	ID            string     `bson:"_id" json:"id"`
 	CreatedAt     time.Time  `bson:"createdAt" json:"createdAt"`

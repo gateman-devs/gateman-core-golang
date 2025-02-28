@@ -25,14 +25,14 @@ type ApplicationSignUpDTO struct {
 type FetchAppUsersDTO struct {
 	AppID    string  `json:"appID" validate:"required"`
 	PageSize int64   `json:"pageSize" validate:"required"`
-	LastID   *string `json:"lastID" validate:"eq=26"`
+	LastID   *string `json:"lastID" validate:"ulid"`
 	Blocked  *bool   `json:"blocked"`
 	Deleted  *bool   `json:"deleted"`
 	Sort     int8    `json:"sort"`
 }
 
 type BlockAccountsDTO struct {
-	IDs []string `json:"ids" validate:"dive,eq=26"`
+	IDs []string `json:"ids" validate:"dive,ulid"`
 }
 
 type FetchAppMetrics struct {

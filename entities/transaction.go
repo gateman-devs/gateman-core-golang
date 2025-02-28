@@ -6,16 +6,14 @@ import (
 	"gateman.io/application/utils"
 )
 
-type SubscriptionFrequency string
-
-var Monthly SubscriptionFrequency = "monthly"
-var Annually SubscriptionFrequency = "annually"
-
-type SubscriptionPlan struct {
-	Features     []string `bson:"features" json:"features"`
-	MonthlyPrice uint32   `bson:"monthlyPrice" json:"monthlyPrice"`
-	AnnualPrice  uint32   `bson:"annualPrice" json:"annualPrice"`
-	Name         string   `bson:"name" json:"name"`
+type Transaction struct {
+	Amount      uint32  `bson:"amount" json:"amount"`
+	RefID       string  `bson:"refID" json:"refID"`
+	AppID       *string `bson:"appID" json:"appID"`
+	WorkspaceID string  `bson:"workspaceID" json:"workspaceID"`
+	PlanID      *string `bson:"planID" json:"planID"`
+	Description *string `bson:"description" json:"description"`
+	Metadata    any     `bson:"metadata" json:"metadata"`
 
 	ID        string     `bson:"_id" json:"id"`
 	CreatedAt time.Time  `bson:"createdAt" json:"createdAt"`
@@ -23,7 +21,7 @@ type SubscriptionPlan struct {
 	DeletedAt *time.Time `bson:"deletedAt" json:"deletedAt"`
 }
 
-func (model SubscriptionPlan) ParseModel() any {
+func (model Transaction) ParseModel() any {
 	now := time.Now()
 	if model.CreatedAt.IsZero() {
 		model.CreatedAt = now

@@ -14,6 +14,7 @@ import (
 	"gateman.io/infrastructure/database/repository/cache"
 	"gateman.io/infrastructure/logger"
 	"github.com/golang-jwt/jwt"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func UserAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], intent string, requiredPermissions *[]entities.MemberPermissions, workspaceSpecific bool) (*interfaces.ApplicationContext[any], bool) {
@@ -89,6 +90,7 @@ func UserAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], inten
 	}
 
 	var workspaceName string
+	var workspaceEmail string
 	var workspaceID string
 	if workspaceSpecific {
 		if ctx.GetHeader("X-Workspace-Id") == nil {
@@ -130,14 +132,28 @@ func UserAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], inten
 				apperrors.AuthenticationError(ctx.Ctx, "unauthorized access7")
 				return nil, false
 			}
+			workspaceRepo := repository.WorkspaceRepository()
+			workspace, err := workspaceRepo.FindByID(ctx.Header["X-Workspace-Id"][0], options.FindOne().SetProjection(map[string]any{
+				"email": 1,
+			}))
+			if err != nil {
+				apperrors.AuthenticationError(ctx.Ctx, "unauthorized access")
+				return nil, false
+			}
+			if workspace == nil {
+				apperrors.AuthenticationError(ctx.Ctx, "unauthorized access")
+				return nil, false
+			}
 			workspaceName = orgMember.WorkspaceName
 			workspaceID = ctx.Header["X-Workspace-Id"][0]
+			workspaceEmail = workspace.Email
 		}
 	}
 
 	ctx.SetContextData("UserID", authTokenClaims["userID"])
 	ctx.SetContextData("WorkspaceID", workspaceID)
 	ctx.SetContextData("WorkspaceName", workspaceName)
+	ctx.SetContextData("WorkspaceEmail", workspaceEmail)
 	ctx.SetContextData("Email", authTokenClaims["email"])
 	ctx.SetContextData("Phone", authTokenClaims["phone"])
 	ctx.SetContextData("UserAgent", authTokenClaims["userAgent"])
