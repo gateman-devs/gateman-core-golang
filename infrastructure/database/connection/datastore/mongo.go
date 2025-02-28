@@ -12,13 +12,15 @@ import (
 )
 
 var (
-	WorkspaceModel        *mongo.Collection
-	WorkspaceMemberModel  *mongo.Collection
-	ApplicationModel      *mongo.Collection
-	AppUserModel          *mongo.Collection
-	UserModel             *mongo.Collection
-	SubscriptionPlanModel *mongo.Collection
-	WorkspaceInviteModel  *mongo.Collection
+	WorkspaceModel          *mongo.Collection
+	WorkspaceMemberModel    *mongo.Collection
+	ApplicationModel        *mongo.Collection
+	AppUserModel            *mongo.Collection
+	UserModel               *mongo.Collection
+	SubscriptionPlanModel   *mongo.Collection
+	ActiveSubscriptionModel *mongo.Collection
+	WorkspaceInviteModel    *mongo.Collection
+	TransactionModel        *mongo.Collection
 )
 
 func connectMongo() *context.CancelFunc {
@@ -86,12 +88,30 @@ func setUpIndexes(ctx context.Context, db *mongo.Database) {
 		Options: options.Index(),
 	}})
 
-	AppUserModel = db.Collection("AppUser")
+	AppUserModel = db.Collection("AppUsers")
 	AppUserModel.Indexes().CreateMany(ctx, []mongo.IndexModel{{
 		Keys:    bson.D{{Key: "appID", Value: 1}},
 		Options: options.Index(),
 	}, {
 		Keys:    bson.D{{Key: "userID", Value: 1}},
+		Options: options.Index(),
+	}})
+
+	ActiveSubscriptionModel = db.Collection("ActiveSubscriptions")
+	ActiveSubscriptionModel.Indexes().CreateMany(ctx, []mongo.IndexModel{{
+		Keys:    bson.D{{Key: "appID", Value: 1}},
+		Options: options.Index(),
+	}})
+
+	TransactionModel = db.Collection("Transactions")
+	TransactionModel.Indexes().CreateMany(ctx, []mongo.IndexModel{{
+		Keys:    bson.D{{Key: "appID", Value: 1}},
+		Options: options.Index(),
+	}, {
+		Keys:    bson.D{{Key: "refID", Value: 1}},
+		Options: options.Index(),
+	}, {
+		Keys:    bson.D{{Key: "workspaceID", Value: 1}},
 		Options: options.Index(),
 	}})
 

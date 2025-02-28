@@ -24,10 +24,10 @@ type InviteWorspaceMembersDTO struct {
 }
 
 type ResendWorspaceInviteDTO struct {
-	ID string `json:"ID" validate:"required,eq=26"`
+	ID string `json:"ID" validate:"required,ulid"`
 }
 
 type AcknowledgeWorkspaceInviteDTO struct {
-	ID       string `json:"id" validate:"required,eq=26"`
+	ID       string `json:"id" validate:"required,ulid"`
 	Accepted bool   `json:"accepted" validate:"required"`
 }

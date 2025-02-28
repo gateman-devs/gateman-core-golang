@@ -8,7 +8,7 @@ import (
 
 type Workspace struct {
 	Name               string     `bson:"name" json:"name"`
-	AdminEmail         string     `bson:"adminEmail" json:"adminEemail"`
+	Email              string     `bson:"email" json:"email"`
 	SuperMember        string     `bson:"superMember" json:"superMember"`
 	CreatedBy          string     `bson:"createdBy" json:"createdBy"`
 	Country            string     `bson:"country" json:"country"`

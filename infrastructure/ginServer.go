@@ -11,7 +11,6 @@ import (
 	"gateman.io/application/subscription"
 	"gateman.io/infrastructure/logger"
 	middlewares "gateman.io/infrastructure/middleware"
-	ratelimit "gateman.io/infrastructure/ratelimit"
 	publicRouter "gateman.io/infrastructure/routes/ginRouter/web/publicAPI/v1"
 	webRoutev1 "gateman.io/infrastructure/routes/ginRouter/web/v1"
 	server_response "gateman.io/infrastructure/serverResponse"
@@ -54,7 +53,6 @@ func (s *ginServer) Start() {
 	api := server.Group("/api")
 
 	routerV1 := api.Group("/v1")
-	routerV1.Use(ratelimit.TokenBucketPerIP())
 	routerV1.Use(middlewares.UserAgentMiddleware())
 	// routerV1.Use(middlewares.DecryptPayloadMiddleware())
 	{
@@ -62,12 +60,14 @@ func (s *ginServer) Start() {
 		webRoutev1.AppRouter(routerV1)
 		webRoutev1.UserRouter(routerV1)
 		webRoutev1.OrgRouter(routerV1)
+		webRoutev1.MiscRouter(routerV1)
 	}
 
 	publicAPI := api.Group("/public")
 	publicV1 := publicAPI.Group("/v1")
 	{
 		publicRouter.AppRouter(publicV1)
+		publicRouter.WebhookRouter(publicV1)
 	}
 
 	server.GET("/ping", func(ctx *gin.Context) {

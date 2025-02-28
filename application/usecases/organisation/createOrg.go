@@ -1,4 +1,4 @@
-package org_usecases
+package workspace_usecases
 
 import (
 	"context"
@@ -45,6 +45,7 @@ func CreateOrgUseCase(ctx any, payload *dto.CreateOrgDTO, deviceID string, userA
 			SuperMember: orgMember.ID,
 			CreatedBy:   userID,
 			ID:          workspaceID,
+			Email:       email,
 		}
 		_, trxErr := workspaceRepo.CreateOne(context.TODO(), orgData)
 		if trxErr != nil {

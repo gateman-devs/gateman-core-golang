@@ -8,6 +8,7 @@ import (
 	identityverification "gateman.io/infrastructure/identity_verification"
 	"gateman.io/infrastructure/logger"
 	"gateman.io/infrastructure/messaging/sms"
+	"gateman.io/infrastructure/payments"
 )
 
 // Used to start services such as loggers, databases, queues, etc.
@@ -19,6 +20,7 @@ func StartServices() {
 	identityverification.InitialiseIdentityVerifier()
 	biometric.InitialiseBiometricService()
 	sms.InitSMSService()
+	payments.InitialisePaymentProcessor()
 }
 
 // Used to clean up after services that have been shutdown.
