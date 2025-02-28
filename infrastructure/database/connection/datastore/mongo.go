@@ -21,6 +21,7 @@ var (
 	ActiveSubscriptionModel *mongo.Collection
 	WorkspaceInviteModel    *mongo.Collection
 	TransactionModel        *mongo.Collection
+	KYCIdentityDataModel    *mongo.Collection
 )
 
 func connectMongo() *context.CancelFunc {
@@ -100,6 +101,12 @@ func setUpIndexes(ctx context.Context, db *mongo.Database) {
 	ActiveSubscriptionModel = db.Collection("ActiveSubscriptions")
 	ActiveSubscriptionModel.Indexes().CreateMany(ctx, []mongo.IndexModel{{
 		Keys:    bson.D{{Key: "appID", Value: 1}},
+		Options: options.Index(),
+	}})
+
+	KYCIdentityDataModel = db.Collection("KYCIdentityData")
+	KYCIdentityDataModel.Indexes().CreateMany(ctx, []mongo.IndexModel{{
+		Keys:    bson.D{{Key: "userID", Value: 1}},
 		Options: options.Index(),
 	}})
 

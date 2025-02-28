@@ -45,7 +45,7 @@ type Application struct {
 	RequiredVerifications  *[]string            `bson:"requiredVerifications" json:"requiredVerifications"` // the verifications that must be completed before signup is approved
 	RequestedFields        []RequestedField     `bson:"requestedFields" json:"requestedFields"`             // the fields the application are interested in recieving. MUST NOT BE EMPTY
 	LocaleRestriction      *[]LocaleRestriction `bson:"localeRestriction" json:"localeRestriction"`
-	PaymentCard            *string              `bson:"paymentCard" json:"-"`
+	PaymentCard            *string              `bson:"paymentCard" json:"paymentCard"`
 	WhiteListedIPs         *[]string            `bson:"whiteListedIPs" json:"whiteListedIPs"`
 
 	ID            string     `bson:"_id" json:"id"`

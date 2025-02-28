@@ -49,6 +49,7 @@ type User struct {
 	Address         *Address            `bson:"address" json:"address"`
 	NIN             *string             `bson:"nin" json:"nin"`
 	BVN             *string             `bson:"bvn" json:"bvn"`
+	VoterID         *string             `bson:"voterID" json:"voterID"`
 	AllowedOrgs     []string            `bson:"allowedOrgs" json:"allowedOrgs"`
 	Email           *string             `bson:"email" json:"email,omitempty"`
 	Phone           *PhoneNumber        `bson:"phone" json:"phone,omitempty"`
