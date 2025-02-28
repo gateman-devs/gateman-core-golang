@@ -13,6 +13,7 @@ type ApplicationDTO struct {
 type UpdateApplications struct {
 	Name                  *string                       `json:"name" validate:"max=100,min=2"`
 	Description           *string                       `json:"description" validate:"max=200,min=10"`
+	PaymentCard           *string                       `json:"paymentCard" validate:"ulid"`
 	RequiredVerifications *[]string                     `json:"requiredVerifications" validate:"dive,min=2,max=50"`
 	LocaleRestriction     *[]entities.LocaleRestriction `json:"localeRestriction"`
 	RequestedFields       []entities.RequestedField     `json:"requestedFields"`
@@ -47,5 +48,5 @@ type UpdateAccessRefreshTokenTTL struct {
 }
 
 type UpdateWhitelistIPDTO struct {
-	IPs []string 	`json:"ips" validate:"required,dive,ip"`
+	IPs []string `json:"ips" validate:"required,dive,ip"`
 }

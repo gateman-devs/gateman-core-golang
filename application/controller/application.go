@@ -160,6 +160,27 @@ func UpdateApplication(ctx *interfaces.ApplicationContext[dto.UpdateApplications
 	if ctx.Body.RequestedFields != nil {
 		payload["requestedFields"] = ctx.Body.RequestedFields
 	}
+	if ctx.Body.PaymentCard != nil {
+		workspaceRepo := repository.WorkspaceRepository()
+		workspace, err := workspaceRepo.FindByID(*ctx.GetHeader("X-Workspace-Id"))
+		if err != nil {
+			apperrors.UnknownError(ctx.Ctx, err)
+			return
+		}
+		var card *entities.CardInfo
+		for _, savedCard := range workspace.PaymentDetails {
+			fmt.Println(savedCard)
+			if savedCard.ID == *ctx.Body.PaymentCard {
+				card = &savedCard
+				break
+			}
+		}
+		if card == nil {
+			apperrors.ClientError(ctx.Ctx, "Saved card not found", nil, nil)
+			return
+		}
+		payload["paymentCard"] = ctx.Body.PaymentCard
+	}
 	appRepo := repository.ApplicationRepo()
 	_, err := appRepo.UpdatePartialByFilter(map[string]interface{}{
 		"_id":         ctx.GetStringParameter("id"),
