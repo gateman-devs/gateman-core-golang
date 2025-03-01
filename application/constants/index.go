@@ -14,6 +14,7 @@ var ACCOUNT_EXISTS_UNVERIFIED uint = 9130                // take the user to the
 var ACCOUNT_EXISTS_EMAIL_OR_PHONE_UNVERIFIED uint = 9140 // take the user to the verify otp page to verify email
 
 var AVAILABLE_REQUIRED_DATA_POINTS = []string{"bvn", "nin", "address", "biometric", "email", "phone", "login_location"}
+var CUSTOM_FIELD_TYPES = []string{"long_text", "short_text", "switch", "dropdown", "number", "secret", "pin"}
 
 var MAX_ORGANISATIONS_CREATED int64 = 20
 

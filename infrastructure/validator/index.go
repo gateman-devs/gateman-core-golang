@@ -11,4 +11,8 @@ func (v *Validator) ValidateStruct(payload interface{}) *[]error {
 	return validateStruct(payload)
 }
 
+func (v *Validator) ValidateValue(value any, rules string) error {
+	return validateField(value, rules)
+}
+
 var ValidatorInstance = Validator{}

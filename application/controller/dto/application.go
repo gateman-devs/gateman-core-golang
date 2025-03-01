@@ -6,8 +6,9 @@ type ApplicationDTO struct {
 	Name                  string                        `json:"name" validate:"required,max=100,min=2"`
 	Description           string                        `json:"description" validate:"required,max=200,min=10"`
 	RequiredVerifications *[]string                     `json:"requiredVerifications" validate:"dive,min=2,max=50"`
-	LocaleRestriction     *[]entities.LocaleRestriction `json:"localeRestriction"`
-	RequestedFields       []entities.RequestedField     `json:"requestedFields" validate:"required"`
+	LocaleRestriction     *[]entities.LocaleRestriction `json:"localeRestriction" validate:"dive"`
+	RequestedFields       []entities.RequestedField     `json:"requestedFields" validate:"required,dive"`
+	CustomFormFields      *[]entities.CustomFormField   `json:"customFormFields" validate:"dive"`
 }
 
 type UpdateApplications struct {
@@ -17,10 +18,17 @@ type UpdateApplications struct {
 	RequiredVerifications *[]string                     `json:"requiredVerifications" validate:"dive,min=2,max=50"`
 	LocaleRestriction     *[]entities.LocaleRestriction `json:"localeRestriction"`
 	RequestedFields       []entities.RequestedField     `json:"requestedFields"`
+	CustomFormFields      *[]entities.CustomFormField   `json:"customFormFields" validate:"dive"`
 }
 
 type ApplicationSignUpDTO struct {
-	AppID string `json:"appID" validate:"required, max=100"`
+	AppID string `json:"appID" validate:"required,max=100"`
+}
+
+type SubmitCustomAppFormDTO struct {
+	AppID string         `json:"appID" validate:"required,max=100"`
+	Page  uint8          `json:"page" validate:"required,min=1,max=10"`
+	Data  map[string]any `json:"data" validate:"required"`
 }
 
 type FetchAppUsersDTO struct {

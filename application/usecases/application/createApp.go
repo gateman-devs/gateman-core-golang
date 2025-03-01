@@ -68,6 +68,7 @@ func CreateApplicationUseCase(ctx any, payload *dto.ApplicationDTO, deviceID str
 		SandboxAccessTokenTTL:  60 * 60 * 2,      // 2 hours
 		SandboxAPIKey:          string(hashedSandboxAPIKey),
 		APIKey:                 string(hashedAPIKey),
+		CustomFields:           payload.CustomFormFields,
 	})
 	if err != nil {
 		logger.Error("an error occured while creating application", logger.LoggerOptions{

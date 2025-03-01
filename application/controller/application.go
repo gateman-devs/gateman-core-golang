@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
 	"strconv"
@@ -71,8 +72,10 @@ func CreateApplication(ctx *interfaces.ApplicationContext[dto.ApplicationDTO]) {
 }
 
 func FetchAppCreationConfigInfo(ctx *interfaces.ApplicationContext[any]) {
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "required fields", map[string]any{
-		"requiredFields": constants.AVAILABLE_REQUIRED_DATA_POINTS,
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "config info fetched", map[string]any{
+		"requiredFields":    constants.AVAILABLE_REQUIRED_DATA_POINTS,
+		"customFieldTypes":  constants.CUSTOM_FIELD_TYPES,
+		"validationOptions": entities.ValidationRules,
 	}, nil, nil, nil, nil)
 }
 
@@ -114,7 +117,9 @@ func DeleteApplication(ctx *interfaces.ApplicationContext[any]) {
 		apperrors.NotFoundError(ctx.Ctx, "this application does not exist")
 		return
 	}
-
+	appRepo.UpdatePartialByID(ctx.GetStringParameter("id"), map[string]any{
+		"disabled": true,
+	})
 	deleteAppPayload, err := json.Marshal(queue_tasks.DeleteAppPayload{
 		ID:          ctx.GetStringParameter("id"),
 		WorkspaceID: *ctx.GetHeader("X-Workspace-Id"),
@@ -159,6 +164,9 @@ func UpdateApplication(ctx *interfaces.ApplicationContext[dto.UpdateApplications
 	}
 	if ctx.Body.RequestedFields != nil {
 		payload["requestedFields"] = ctx.Body.RequestedFields
+	}
+	if ctx.Body.RequestedFields != nil {
+		payload["customFields"] = ctx.Body.CustomFormFields
 	}
 	if ctx.Body.PaymentCard != nil {
 		workspaceRepo := repository.WorkspaceRepository()
@@ -355,11 +363,13 @@ func UpdateAccessRefreshTokenTTL(ctx *interfaces.ApplicationContext[dto.UpdateAc
 }
 
 func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpDTO]) {
+	fmt.Println("before")
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
 		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
 		return
 	}
+	fmt.Println("after")
 	app, err := application_usecase.FetchAppUseCase(ctx.Ctx, ctx.Body.AppID, ctx.DeviceID, ctx.Keys["ip"].(string))
 	if err != nil {
 		return
@@ -454,6 +464,79 @@ func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpD
 		payload["accessToken"] = accessToken
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, msg, payload, nil, nil, nil, nil)
+}
+
+func SubmitCustomAppForm(ctx *interfaces.ApplicationContext[dto.SubmitCustomAppFormDTO]) {
+	appRepo := repository.ApplicationRepo()
+	app, err := appRepo.FindByID(ctx.Body.AppID)
+	if err != nil {
+		logger.Error("an error occured while trying to fetch application for custom for submititon", logger.LoggerOptions{
+			Key: "err", Data: err,
+		})
+		apperrors.UnknownError(ctx.Ctx, err)
+		return
+	}
+	if app == nil {
+		apperrors.NotFoundError(ctx.Ctx, "App not found")
+		return
+	}
+	if app.CustomFields == nil {
+		apperrors.ClientError(ctx.Ctx, fmt.Sprintf("%s does not have a custom form", app.Name), nil, nil)
+		return
+	}
+	appUserRepo := repository.AppUserRepo()
+	appUser, err := appUserRepo.FindOneByFilter(map[string]interface{}{
+		"userID": ctx.GetStringContextData("UserID"),
+		"appID":  ctx.Body.AppID,
+	})
+	if err != nil {
+		logger.Error("an error occured while trying to fetch application user for custom for submititon", logger.LoggerOptions{
+			Key: "err", Data: err,
+		})
+		apperrors.UnknownError(ctx.Ctx, err)
+		return
+	}
+	if appUser == nil {
+		apperrors.ClientError(ctx.Ctx, "Sign up to the app before attempting to submit the form", nil, nil)
+		return
+	}
+	var validationErr []error
+	for _, customField := range *app.CustomFields {
+		if customField.Page != ctx.Body.Page {
+			continue
+		}
+		fieldValue := ctx.Body.Data[customField.Name]
+		var rulesBuilder strings.Builder
+
+		for i, rule := range customField.Rules {
+			customRule := entities.ValidationRules[rule.Name]
+			if i > 0 {
+				rulesBuilder.WriteString(",")
+			}
+			rulesBuilder.WriteString(customRule.Tag)
+			if rule.Value != nil {
+				rulesBuilder.WriteString(fmt.Sprintf("=%s", *rule.Value))
+			}
+		}
+
+		rules := rulesBuilder.String()
+		fmt.Println(rules)
+
+		if err := validator.ValidatorInstance.ValidateValue(fieldValue, rules); err != nil {
+			validationErr = append(validationErr, errors.New(strings.Replace(err.Error(), "Field", customField.Name, 1)))
+		}
+	}
+	if len(validationErr) != 0 {
+		apperrors.ValidationFailedError(ctx.Ctx, &validationErr)
+		return
+	}
+	maps.Copy(ctx.Body.Data, appUser.CustomFieldData)
+	appUserRepo.UpdatePartialByFilter(map[string]interface{}{
+		"userID": ctx.GetStringContextData("UserID"),
+		"appID":  ctx.Body.AppID}, map[string]any{
+		"customFieldData": ctx.Body.Data,
+	})
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "form submitted", nil, nil, nil, nil, nil)
 }
 
 func FetchAppUsers(ctx *interfaces.ApplicationContext[dto.FetchAppUsersDTO]) {
@@ -567,7 +650,16 @@ func GetAppMetrics(ctx *interfaces.ApplicationContext[dto.FetchAppMetrics]) {
 		"name":      1,
 		"createdAt": 1,
 		"appImg":    1,
+		"disabled":  1,
 	}))
+	if app == nil {
+		apperrors.NotFoundError(ctx.Ctx, "App not found")
+		return
+	}
+	if app.Disabled {
+		apperrors.ClientError(ctx.Ctx, "This app has been deactivated", nil, nil)
+		return
+	}
 	appMetrics["name"] = app.Name
 	appMetrics["createdAt"] = app.CreatedAt
 	appMetrics["appImg"] = app.AppImg

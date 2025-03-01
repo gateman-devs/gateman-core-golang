@@ -8,13 +8,14 @@ import (
 
 // This represents a user signed up to an app
 type AppUser struct {
-	AppID         string     `bson:"appID" json:"appID"`
-	UserID        string     `bson:"userID" json:"userID"`
-	WorkspaceID   string     `bson:"workspaceID" json:"workspaceID"`
-	Blocked       bool       `bson:"blocked" json:"blocked"`
-	BlockedReason *string    `bson:"blockedReason" json:"blockedReason"`
-	BlockedUserAt *time.Time `bson:"blockedUserAt" json:"blockedUserAt"`
-	Pin           *string    `bson:"pin" json:"pin"`
+	AppID           string         `bson:"appID" json:"appID"`
+	UserID          string         `bson:"userID" json:"userID"`
+	WorkspaceID     string         `bson:"workspaceID" json:"workspaceID"`
+	CustomFieldData map[string]any `bson:"customFieldData" json:"customFieldData"`
+	Blocked         bool           `bson:"blocked" json:"blocked"`
+	BlockedReason   *string        `bson:"blockedReason" json:"blockedReason"`
+	BlockedUserAt   *time.Time     `bson:"blockedUserAt" json:"blockedUserAt"`
+	Pin             *string        `bson:"pin" json:"pin"`
 
 	ID            string     `bson:"_id" json:"id"`
 	CreatedAt     time.Time  `bson:"createdAt" json:"createdAt"`
