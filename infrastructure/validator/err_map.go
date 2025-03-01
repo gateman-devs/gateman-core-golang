@@ -3,6 +3,9 @@ package validator
 import "fmt"
 
 func fieldErrorMap(tag string, field string, value interface{}, param interface{}) string {
+	if field == "" {
+		field = "Field"
+	}
 	err_map := map[string]string{
 		"required":         fmt.Sprintf("%s is required", field),
 		"excludes":         fmt.Sprintf(`"%s" is not allowed in %s`, value, field),
@@ -19,6 +22,8 @@ func fieldErrorMap(tag string, field string, value interface{}, param interface{
 		"numeric":          fmt.Sprintf("%s must be an number", field),
 		"boolean":          fmt.Sprintf("%s must be an boolean", field),
 		"len":              fmt.Sprintf("%s must be %s digits", field, param),
+		"uppercase":        fmt.Sprintf(`"%s" must be in uppercase only`, value),
+		"endswith":         fmt.Sprintf("%s must end with %s", field, param),
 		// custom
 		"password": fmt.Sprintf("%s should be a secret 6 digit number", field),
 	}

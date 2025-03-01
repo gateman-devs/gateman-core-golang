@@ -259,5 +259,20 @@ func AppRouter(router *gin.RouterGroup) {
 				Header: ctx.Request.Header,
 			})
 		})
+
+		appRouter.POST("/custom-form/submit", middlewares.UserAuthenticationMiddleware("", nil, false), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			var body dto.SubmitCustomAppFormDTO
+			if err := ctx.ShouldBindJSON(&body); err != nil {
+				apperrors.ErrorProcessingPayload(ctx)
+				return
+			}
+			controller.SubmitCustomAppForm(&interfaces.ApplicationContext[dto.SubmitCustomAppFormDTO]{
+				Ctx:    ctx,
+				Body:   &body,
+				Keys:   appContext.Keys,
+				Header: ctx.Request.Header,
+			})
+		})
 	}
 }
