@@ -47,7 +47,7 @@ func GeneratedSignedURL(ctx *interfaces.ApplicationContext[dto.GeneratedSignedUR
 		return
 	}
 	if err != nil {
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "account created", map[string]any{
@@ -64,7 +64,7 @@ func GetSubscriptionPlans(ctx *interfaces.ApplicationContext[any]) {
 			Key:  "err",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "plans fetched", *plans, nil, nil, nil, nil)
@@ -87,7 +87,7 @@ func GenerateLinkToAddCard(ctx *interfaces.ApplicationContext[dto.GenerateAddCar
 				Key:  "err",
 				Data: err,
 			})
-			apperrors.UnknownError(ctx.Ctx, nil)
+			apperrors.UnknownError(ctx.Ctx, nil, nil)
 			return
 		}
 		if app == nil {
@@ -124,7 +124,7 @@ func GeneratePaymentLink(ctx *interfaces.ApplicationContext[dto.GeneratePaymentL
 			Key:  "err",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx.Ctx, nil)
+		apperrors.UnknownError(ctx.Ctx, nil, nil)
 		return
 	}
 	if application == nil {
@@ -141,14 +141,14 @@ func GeneratePaymentLink(ctx *interfaces.ApplicationContext[dto.GeneratePaymentL
 			Key:  "id",
 			Data: ctx.Body.PlanID,
 		})
-		apperrors.UnknownError(ctx.Ctx, nil)
+		apperrors.UnknownError(ctx.Ctx, nil, nil)
 		return
 	}
 	if newSubscription == nil {
 		apperrors.NotFoundError(ctx.Ctx, "Invalid Subscription ID provided")
 		return
 	}
-	if newSubscription.Name == "Free" || newSubscription.MonthlyPrice == 0 || newSubscription.AnnualPrice == 0 {
+	if newSubscription.Name == entities.Free || newSubscription.MonthlyPrice == 0 || newSubscription.AnnualPrice == 0 {
 		apperrors.ClientError(ctx.Ctx, "You do not have to pay to be on the free plan", nil, nil)
 		return
 	}
@@ -164,7 +164,7 @@ func GeneratePaymentLink(ctx *interfaces.ApplicationContext[dto.GeneratePaymentL
 			Key:  "id",
 			Data: ctx.Body.PlanID,
 		})
-		apperrors.UnknownError(ctx.Ctx, nil)
+		apperrors.UnknownError(ctx.Ctx, nil, nil)
 		return
 	}
 	var activeSubAmount uint32 = 0
@@ -179,7 +179,7 @@ func GeneratePaymentLink(ctx *interfaces.ApplicationContext[dto.GeneratePaymentL
 				Key:  "id",
 				Data: ctx.Body.PlanID,
 			})
-			apperrors.UnknownError(ctx.Ctx, nil)
+			apperrors.UnknownError(ctx.Ctx, nil, nil)
 			return
 		}
 		if subscription == nil {

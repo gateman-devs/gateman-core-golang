@@ -66,7 +66,7 @@ func VerifyOTP(key string, otp string) (string, bool) {
 
 func GenerateAuthToken(claimsData ClaimsData) (*string, error) {
 	tokenString, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"iss":             os.Getenv("JWT_ISSUER"),
+		"iss":             os.Getenv("GATEMAN_ISSUER"),
 		"userID":          claimsData.UserID,
 		"exp":             claimsData.ExpiresAt,
 		"email":           claimsData.Email,
@@ -103,7 +103,7 @@ func GenerateAppUserToken(claimsData ClaimsData, signingKey string, issuer strin
 
 func GenerateInterserviceAuthToken(claimsData InterserviceClaimsData) (*string, error) {
 	tokenString, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"iss":    os.Getenv("INTERSERVICE_JWT_ISSUER"),
+		"iss":    os.Getenv("INTERSERVICE_GATEMAN_ISSUER"),
 		"exp":    claimsData.ExpiresAt,
 		"origin": claimsData.Origination,
 		"iat":    claimsData.IssuedAt,

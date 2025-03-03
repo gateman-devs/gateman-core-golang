@@ -49,14 +49,14 @@ func FatalServerError(ctx interface{}, err error) {
 		"Omo! Our service is temporarily down 😢. Our team is working to fix it. Please check back later.", nil, nil, nil, nil, nil)
 }
 
-func UnknownError(ctx interface{}, err error) {
+func UnknownError(ctx interface{}, err error, responseCode *uint) {
 	// logger.MetricMonitor.ReportError(err, nil, nil)
 	server_response.Responder.Respond(ctx, http.StatusBadRequest,
-		"Omo! Something went wrong somewhere 😭. Please check back later.", nil, nil, nil, nil, nil)
+		"Omo! Something went wrong somewhere 😭. Please check back later.", nil, nil, responseCode, nil, nil)
 }
 
-func CustomError(ctx interface{}, msg string) {
-	server_response.Responder.Respond(ctx, http.StatusBadRequest, msg, nil, nil, nil, nil, nil)
+func CustomError(ctx interface{}, msg string, responseCode *uint) {
+	server_response.Responder.Respond(ctx, http.StatusBadRequest, msg, nil, nil, responseCode, nil, nil)
 }
 
 func UnsupportedAppVersion(ctx interface{}) {
@@ -82,6 +82,6 @@ func MalformedHeader(ctx interface{}) {
 		"malformed header information 👮🏻‍♂️", nil, nil, nil, nil, nil)
 }
 
-func ClientError(ctx interface{}, msg string, errs []error, response_code *uint) {
-	server_response.Responder.Respond(ctx, http.StatusBadRequest, msg, nil, errs, response_code, nil, nil)
+func ClientError(ctx interface{}, msg string, errs []error, responseCode *uint) {
+	server_response.Responder.Respond(ctx, http.StatusBadRequest, msg, nil, errs, responseCode, nil, nil)
 }

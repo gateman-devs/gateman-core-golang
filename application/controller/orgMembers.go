@@ -82,7 +82,7 @@ func ResendInvite(ctx *interfaces.ApplicationContext[dto.ResendWorspaceInviteDTO
 			Key:  "userID",
 			Data: ctx.GetStringContextData("UserID"),
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	if invite == nil {
@@ -133,7 +133,7 @@ func AcknowledgeWorkspaceInvite(ctx *interfaces.ApplicationContext[dto.Acknowled
 			Key:  "payload",
 			Data: ctx.Body,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	if invite == nil {

@@ -28,13 +28,13 @@ func (redisRepo *RedisRepository) CreateEntry(key string, payload interface{}, t
 	redisRepo.preRequest()
 	_, err := redisRepo.Clinet.Set(key, payload, ttl).Result()
 	if err != nil {
-		// logger.Error("redis error occured while running CreateEntry", logger.LoggerOptions{
-		// 	Key:  "error",
-		// 	Data: err,
-		// }, logger.LoggerOptions{
-		// 	Key:  "key",
-		// 	Data: key,
-		// })
+		logger.Error("redis error occured while running CreateEntry", logger.LoggerOptions{
+			Key:  "error",
+			Data: err,
+		}, logger.LoggerOptions{
+			Key:  "key",
+			Data: key,
+		})
 		return false
 	}
 
@@ -111,14 +111,14 @@ func (redisRepo *RedisRepository) DeleteOne(key string) bool {
 	return true
 }
 
-func (redisRepo *RedisRepository) CreateInSet(key string, score float64, member interface{}) bool {
+func (redisRepo *RedisRepository) CreateInSortedSet(key string, score float64, member interface{}) int64 {
 	redisRepo.preRequest()
 	added := redisRepo.Clinet.ZAdd(key, redis.Z{
 		Score: score, Member: member,
 	})
 
 	if err := added.Err(); err != nil {
-		logger.Error("redis error occured while running CreateInSet", logger.LoggerOptions{
+		logger.Error("redis error occured while running CreateInSortedSet", logger.LoggerOptions{
 			Key:  "error",
 			Data: err,
 		}, logger.LoggerOptions{
@@ -131,17 +131,61 @@ func (redisRepo *RedisRepository) CreateInSet(key string, score float64, member 
 			Key:  "member",
 			Data: member,
 		})
-		return false
+		return 0
 	}
 
 	logger.Info("redis CreateInSet completed")
-	return added != nil
+	return added.Val()
+}
+
+func (redisRepo *RedisRepository) FindSortedSet(key string) *[]string {
+	redisRepo.preRequest()
+
+	result := redisRepo.Clinet.ZRange(key, 0, -1)
+	if err := result.Err(); err != nil {
+		logger.Error("redis error occured while running FindSortedSet", logger.LoggerOptions{
+			Key:  "error",
+			Data: err,
+		}, logger.LoggerOptions{
+			Key:  "key",
+			Data: key,
+		})
+		return nil
+	}
+	if result == nil {
+		return nil
+	}
+
+	logger.Info("redis FindSet completed")
+	val := result.Val()
+	return &val
+}
+
+func (redisRepo *RedisRepository) CreateInSet(key string, member interface{}, ttl time.Duration) int64 {
+	redisRepo.preRequest()
+	added := redisRepo.Clinet.SAdd(key, member, ttl)
+
+	if err := added.Err(); err != nil {
+		logger.Error("redis error occured while running CreateInSet", logger.LoggerOptions{
+			Key:  "error",
+			Data: err,
+		}, logger.LoggerOptions{
+			Key:  "key",
+			Data: key,
+		}, logger.LoggerOptions{
+			Key:  "member",
+			Data: member,
+		})
+		return 0
+	}
+	logger.Info("redis CreateInSet completed")
+	return added.Val()
 }
 
 func (redisRepo *RedisRepository) FindSet(key string) *[]string {
 	redisRepo.preRequest()
 
-	result := redisRepo.Clinet.ZRange(key, 0, -1)
+	result := redisRepo.Clinet.SMembers(key)
 	if err := result.Err(); err != nil {
 		logger.Error("redis error occured while running FindSet", logger.LoggerOptions{
 			Key:  "error",
@@ -159,4 +203,69 @@ func (redisRepo *RedisRepository) FindSet(key string) *[]string {
 	logger.Info("redis FindSet completed")
 	val := result.Val()
 	return &val
+}
+
+func (redisRepo *RedisRepository) CountSetMembers(key string) *int64 {
+	redisRepo.preRequest()
+
+	result := redisRepo.Clinet.SCard(key)
+	if err := result.Err(); err != nil {
+		logger.Error("redis error occured while running FindSet", logger.LoggerOptions{
+			Key:  "error",
+			Data: err,
+		}, logger.LoggerOptions{
+			Key:  "key",
+			Data: key,
+		})
+		return nil
+	}
+	if result == nil {
+		return nil
+	}
+
+	logger.Info("redis FindSet completed")
+	val := result.Val()
+	return &val
+}
+
+func (redisRepo *RedisRepository) DoesItemExistInSet(key string, item string) bool {
+	redisRepo.preRequest()
+
+	result := redisRepo.Clinet.SIsMember(key, item)
+	if err := result.Err(); err != nil {
+		logger.Error("redis error occured while running DoesItemExistInSet", logger.LoggerOptions{
+			Key:  "error",
+			Data: err,
+		}, logger.LoggerOptions{
+			Key:  "key",
+			Data: key,
+		})
+		return false
+	}
+	if result == nil {
+		return false
+	}
+	logger.Info("redis DoesItemExistInSet completed")
+	return result.Val()
+}
+
+func (redisRepo *RedisRepository) IncrementField(key string, amount int64) int64 {
+	redisRepo.preRequest()
+
+	result := redisRepo.Clinet.IncrBy(key, amount)
+	if err := result.Err(); err != nil {
+		logger.Error("redis error occured while running IncrementField", logger.LoggerOptions{
+			Key:  "error",
+			Data: err,
+		}, logger.LoggerOptions{
+			Key:  "key",
+			Data: key,
+		})
+		return 0
+	}
+	if result == nil {
+		return 0
+	}
+	logger.Info("redis IncrementField completed")
+	return result.Val()
 }

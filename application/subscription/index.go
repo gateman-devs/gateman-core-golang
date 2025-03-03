@@ -8,21 +8,21 @@ import (
 func SeedSubscriptionData() {
 	var subscriptionData []entities.SubscriptionPlan = []entities.SubscriptionPlan{
 		{
-			Name:         "Free",
+			Name:         entities.Free,
 			MonthlyPrice: 0,
 			AnnualPrice:  0,
-			Features:     []string{"10,000 Monthly Active Users", "Import users from your existing DB", "Passwordless authentication", "Custom validated signup form (max 3 fields)", "Access and Refresh token pair", "Basic attack protection"},
+			Features:     []string{"10,000 Monthly Active Users", "Import users from your existing DB", "Passwordless authentication", "Custom validated signup form (max 3 fields)", "User activity log 30 day retention", "Access and Refresh token pair"},
 		}, {
-			Name:         "Essential",
+			Name:         entities.Essential,
 			MonthlyPrice: 87_000_00,
 			AnnualPrice:  960_000_00,
-			Features:     []string{"Everything in Free", "15,000 Monthly Active Users", "Access to verified user data if authorized", "Access to sensitive user data if authorized", "Custom validated signup form (unlimited fields)", "Gateman MFA Authentication option", "Customized sign up and sign in pages", "Custom Email Sender"},
+			Features:     []string{"Everything in Free", "Unlimited Active Users", "Access to verified user data if authorized", "Access to sensitive user data if authorized", "User activity log 60 day retention", "Custom validated signup form (unlimited fields)", "Pin protected accounts"},
 		},
 		{
-			Name:         "Premium",
+			Name:         entities.Premium,
 			MonthlyPrice: 300_000_00,
 			AnnualPrice:  3_000_000_00,
-			Features:     []string{"Everything in Essential", "25,000 Monthly Active Users", "2FA authentication option", "User activity log", "User data updates via webhooks"},
+			Features:     []string{"Everything in Essential", "Unlimited Active Users", "MFA protected accounts", "Remove Gateman branding", "Custom email domain sender", "User activity log 90 day retention", "User data updates via webhooks"},
 		},
 	}
 	subPlanRepo := repository.SubscriptionPlanRepo()

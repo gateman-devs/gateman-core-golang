@@ -96,7 +96,7 @@ func VerifyUserAccount(ctx *interfaces.ApplicationContext[any]) {
 		return
 	}
 	if !success {
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	var phone *string
@@ -134,7 +134,7 @@ func VerifyUserAccount(ctx *interfaces.ApplicationContext[any]) {
 			Key:  "error",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 
@@ -261,7 +261,7 @@ func ResendOTP(ctx *interfaces.ApplicationContext[dto.ResendOTPDTO]) {
 		ref := sms.SMSService.SendOTP(fmt.Sprintf("%s%s", *ctx.Body.PhonePrefix, *ctx.Body.Phone), false, otp)
 		encryptedRef, err := cryptography.EncryptData([]byte(*ref), nil)
 		if err != nil {
-			apperrors.UnknownError(ctx.Ctx, err)
+			apperrors.UnknownError(ctx.Ctx, err, nil)
 			return
 		}
 		cache.Cache.CreateEntry(fmt.Sprintf("%s-sms-otp-ref", *ctx.Body.Phone), *encryptedRef, time.Minute*10)
@@ -285,7 +285,7 @@ func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) 
 	userRepo := repository.UserRepo()
 	account, err := userRepo.FindOneByFilter(accountSearchFilter)
 	if err != nil {
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	if account == nil {
@@ -314,7 +314,7 @@ func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) 
 			Key:  "error",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	if !alive {
@@ -330,7 +330,7 @@ func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) 
 			Key:  "error",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	if !match {
@@ -360,7 +360,7 @@ func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) 
 			Key:  "error",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	var phone *string
@@ -373,7 +373,7 @@ func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) 
 			Key:  "filePath",
 			Data: fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), "accountimage"),
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 
@@ -389,7 +389,7 @@ func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) 
 		ExpiresAt:       time.Now().Add(time.Hour * 1).Unix(), //lasts for 1 hr
 	})
 	if err != nil {
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	refreshToken, err := auth.GenerateAuthToken(auth.ClaimsData{
@@ -405,7 +405,7 @@ func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) 
 	})
 
 	if err != nil {
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	hashedAccessToken, _ := cryptography.CryptoHahser.HashString(*accessToken, nil)
@@ -420,7 +420,7 @@ func RefreshToken(ctx *interfaces.ApplicationContext[any]) {
 	userRepo := repository.UserRepo()
 	account, err := userRepo.FindByID(ctx.GetStringContextData("UserID"))
 	if err != nil {
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	if account == nil {
@@ -455,7 +455,7 @@ func RefreshToken(ctx *interfaces.ApplicationContext[any]) {
 	})
 
 	if err != nil {
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	hashedAccessToken, _ := cryptography.CryptoHahser.HashString(*accessToken, nil)

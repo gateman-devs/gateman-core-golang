@@ -38,7 +38,7 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 	userRepo := repository.UserRepo()
 	account, err := userRepo.FindOneByFilter(availabilityFilter)
 	if err != nil {
-		apperrors.UnknownError(ctx, err)
+		apperrors.UnknownError(ctx, err, nil)
 		return nil, nil, nil, err
 	}
 	if account != nil {
@@ -80,7 +80,7 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 				ref := sms.SMSService.SendOTP(fmt.Sprintf("%s%s", account.Phone.Prefix, account.Phone.LocalNumber), false, otp)
 				encryptedRef, err := cryptography.EncryptData([]byte(*ref), nil)
 				if err != nil {
-					apperrors.UnknownError(ctx, err)
+					apperrors.UnknownError(ctx, err, nil)
 					return nil, nil, nil, nil
 				}
 				cache.Cache.CreateEntry(fmt.Sprintf("%s-sms-otp-ref", account.Phone.LocalNumber), *encryptedRef, time.Minute*10)
@@ -107,7 +107,7 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 					Key:  "devices",
 					Data: account.Devices,
 				})
-				apperrors.UnknownError(ctx, err)
+				apperrors.UnknownError(ctx, err, nil)
 				return nil, nil, nil, err
 			}
 			return nil, nil, &constants.ACCOUNT_EXISTS_EMAIL_OR_PHONE_UNVERIFIED, nil
@@ -149,7 +149,7 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 				ref := sms.SMSService.SendOTP(fmt.Sprintf("%s%s", account.Phone.Prefix, account.Phone.LocalNumber), false, otp)
 				encryptedRef, err := cryptography.EncryptData([]byte(*ref), nil)
 				if err != nil {
-					apperrors.UnknownError(ctx, err)
+					apperrors.UnknownError(ctx, err, nil)
 					return nil, nil, nil, nil
 				}
 				cache.Cache.CreateEntry(fmt.Sprintf("%s-sms-otp-ref", account.Phone.LocalNumber), *encryptedRef, time.Minute*10)
@@ -176,7 +176,7 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 					Key:  "devices",
 					Data: account.Devices,
 				})
-				apperrors.UnknownError(ctx, err)
+				apperrors.UnknownError(ctx, err, nil)
 				return nil, nil, nil, err
 			}
 			return nil, nil, &constants.ACCOUNT_EXISTS_UNVERIFIED, nil
@@ -201,7 +201,7 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 				Key:  "devices",
 				Data: account.Devices,
 			})
-			apperrors.UnknownError(ctx, err)
+			apperrors.UnknownError(ctx, err, nil)
 			return nil, nil, nil, err
 		}
 		url, err := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", account.ID, deviceID), types.SignedURLPermission{
@@ -212,7 +212,7 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 				Key:  "error",
 				Data: err,
 			})
-			apperrors.UnknownError(ctx, err)
+			apperrors.UnknownError(ctx, err, nil)
 			return nil, nil, nil, err
 		}
 		return nil, url, &constants.ACCOUNT_EXISTS, nil
@@ -256,7 +256,7 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 			Key:  "error",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx, err)
+		apperrors.UnknownError(ctx, err, nil)
 		return nil, nil, nil, err
 	}
 
@@ -295,7 +295,7 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 		ref := sms.SMSService.SendOTP(fmt.Sprintf("%s%s", payload.Phone.Prefix, payload.Phone.LocalNumber), false, otp)
 		encryptedRef, err := cryptography.EncryptData([]byte(*ref), nil)
 		if err != nil {
-			apperrors.UnknownError(ctx, err)
+			apperrors.UnknownError(ctx, err, nil)
 			return nil, nil, nil, nil
 		}
 		cache.Cache.CreateEntry(fmt.Sprintf("%s-sms-otp-ref", payload.Phone.LocalNumber), *encryptedRef, time.Minute*10)
