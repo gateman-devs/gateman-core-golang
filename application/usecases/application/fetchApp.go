@@ -31,7 +31,7 @@ func FetchAppUseCase(ctx any, appID string, deviceID string, ip string) (*entiti
 			Key:  "error",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx, err)
+		apperrors.UnknownError(ctx, err, nil)
 		return nil, err
 	}
 	if app == nil {
@@ -45,7 +45,7 @@ func FetchAppUseCase(ctx any, appID string, deviceID string, ip string) (*entiti
 				Key:  "error",
 				Data: err,
 			})
-			apperrors.UnknownError(ctx, err)
+			apperrors.UnknownError(ctx, err, nil)
 			return nil, err
 		}
 		passed := false

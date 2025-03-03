@@ -36,7 +36,7 @@ func FetchWorkspaces(ctx *interfaces.ApplicationContext[any]) {
 			Key:  "error",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "workspaces fetched", workspaces, nil, nil, nil, nil)

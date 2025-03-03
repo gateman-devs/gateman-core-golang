@@ -32,7 +32,7 @@ func RefreshTokenMiddleware(ctx *interfaces.ApplicationContext[any]) (*interface
 		return nil, false
 	}
 	authTokenClaims := validAccessToken.Claims.(jwt.MapClaims)
-	if authTokenClaims["iss"] != os.Getenv("JWT_ISSUER") {
+	if authTokenClaims["iss"] != os.Getenv("GATEMAN_ISSUER") {
 		logger.Warning("attempt to access account with tampered jwt", logger.LoggerOptions{
 			Key:  "token claims",
 			Data: validAccessToken,

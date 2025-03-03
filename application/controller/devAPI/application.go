@@ -22,7 +22,7 @@ func APIFetchAppDetails(ctx *interfaces.ApplicationContext[any]) {
 			Key:  "err",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "app fetched", app, nil, nil, nil, nil)
@@ -40,7 +40,7 @@ func APIFetchAppUser(ctx *interfaces.ApplicationContext[any]) {
 			Key:  "userID",
 			Data: ctx.GetStringContextData("UserID"),
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "app user fetched", appUser, nil, nil, nil, nil)
@@ -64,7 +64,7 @@ func APIFetchAppUsers(ctx *interfaces.ApplicationContext[dto.FetchAppUsersDTO]) 
 			Key:  "appID",
 			Data: ctx.Body.AppID,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "users fetched", users, nil, nil, nil, nil)
@@ -86,7 +86,7 @@ func APIBlockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) 
 			Key:  "ids",
 			Data: ctx.Body.IDs,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "users blocked", nil, nil, nil, nil, nil)
@@ -108,7 +108,7 @@ func APIUnblockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]
 			Key:  "ids",
 			Data: ctx.Body.IDs,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "users unblocked", nil, nil, nil, nil, nil)

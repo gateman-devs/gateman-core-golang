@@ -24,8 +24,14 @@ type RequestedField struct {
 	Verified bool   `bson:"verified" json:"verified"`
 }
 
+type VerificationType struct {
+	Name     string `bson:"name" json:"name" validate:"required,min=2,max=50"`
+	Required bool   `bson:"required" json:"required"`
+}
+
 type CustomFormField struct {
 	Name      string                 `json:"name" bson:"name" validate:"required"`
+	DBKey     string                 `json:"dbKey" bson:"dbKey" validate:"required"`
 	FieldType string                 `json:"fieldType" bson:"fieldType" validate:"oneof=long_text short_text switch dropdown number secret pin"`
 	Rules     []CustomValidationRule `json:"rules" bson:"rules"`
 	Page      uint8                  `json:"page" bson:"page" validate:"required,min=1,max=10"`
@@ -236,18 +242,25 @@ var ValidationRules map[string]ValidationRule = map[string]ValidationRule{
 	},
 }
 
+type OverCharge struct {
+	AdditionalEssentialUsers int64 `bson:"additionalUsers" json:"additionalUsers"`
+	Amount                   int64 `bson:"amount" json:"amount"`
+}
+
 type Application struct {
 	Name                   string               `bson:"name" json:"name"`
 	Disabled               bool                 `bson:"disabled" json:"disabled"`
 	Description            string               `bson:"description" json:"description"`
 	WorkspaceID            string               `bson:"workspaceID" json:"-"`
 	AppImg                 string               `bson:"appImg" json:"appImg"`
+	OverCharge             OverCharge           `bson:"overCharge" json:"overCharge"`
 	Email                  string               `bson:"email" json:"email"`
 	AppID                  string               `bson:"appID" json:"appID"`
 	PinProtected           string               `bson:"pinProtected" json:"pinProtected"`
 	CreatorID              string               `bson:"creatorID" json:"-"`
 	AppSigningKey          string               `bson:"appSigningKey" json:"-"`
 	SandboxAppSigningKey   string               `bson:"sandBoxAppSigningKey" json:"-"`
+	RequireAppMFA          bool                 `bson:"requireAppMFA" json:"requireAppMFA"`
 	SandboxAPIKey          string               `bson:"sandBoxAPIKey" json:"-"`
 	APIKey                 string               `bson:"apiKey" json:"-"`
 	VPN                    bool                 `bson:"vpn" json:"vpn"`
@@ -255,7 +268,7 @@ type Application struct {
 	AccessTokenTTL         uint16               `bson:"accessTokenTTL" json:"accessTokenTTL"`
 	SandboxRefreshTokenTTL uint32               `bson:"sandboxRefreshTokenTTL" json:"sandboxRefreshTokenTTL"`
 	SandboxAccessTokenTTL  uint16               `bson:"sandboxAccessTokenTTL" json:"sandboxAccessTokenTTL"`
-	RequiredVerifications  *[]string            `bson:"requiredVerifications" json:"requiredVerifications"` // the verifications that must be completed before signup is approved
+	RequiredVerifications  *[]VerificationType  `bson:"requiredVerifications" json:"requiredVerifications"` // the verifications that must be completed before signup is approved
 	RequestedFields        []RequestedField     `bson:"requestedFields" json:"requestedFields"`             // the fields the application are interested in recieving. MUST NOT BE EMPTY
 	LocaleRestriction      *[]LocaleRestriction `bson:"localeRestriction" json:"localeRestriction"`
 	CustomFields           *[]CustomFormField   `bson:"customFields" json:"customFields"`

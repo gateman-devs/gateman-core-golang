@@ -21,7 +21,7 @@ func CreateOrgUseCase(ctx any, payload *dto.CreateOrgDTO, deviceID string, userA
 		"createdBy": userID,
 	})
 	if err != nil {
-		apperrors.UnknownError(ctx, err)
+		apperrors.UnknownError(ctx, err, nil)
 		return err
 	}
 	if createdWorkspaces >= constants.MAX_ORGANISATIONS_CREATED {
@@ -78,7 +78,7 @@ func CreateOrgUseCase(ctx any, payload *dto.CreateOrgDTO, deviceID string, userA
 	})
 
 	if err != nil {
-		apperrors.UnknownError(ctx, err)
+		apperrors.UnknownError(ctx, err, nil)
 		return err
 	}
 	return nil

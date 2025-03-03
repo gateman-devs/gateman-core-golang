@@ -10,11 +10,11 @@ type ActiveSubscription struct {
 	SubscriptionID string                `bson:"subscriptionID" json:"subscriptionID"`
 	Active         bool                  `bson:"active" json:"active"`
 	ActiveSubID    string                `bson:"activeSubID" json:"activeSubID"`
-	ActiveSubName  string                `bson:"activeSubName" json:"activeSubName"`
+	ActiveSubName  SubscriptionPlanName                `bson:"activeSubName" json:"activeSubName"`
 	AutoRenew      bool                  `bson:"autoRenew" json:"autoRenew"`
 	AppID          string                `bson:"appID" json:"appID"`
 	WorkspaceID    string                `bson:"workspaceID" json:"workspaceID"`
-	Name           string                `bson:"name" json:"name"`
+	Name           SubscriptionPlanName  `bson:"name" json:"name"`
 	Interval       SubscriptionFrequency `bson:"interval" json:"interval"`
 	ExpiresOn      *time.Time            `bson:"expiresOn" json:"expiresOn"`
 	RenewedOn      *time.Time            `bson:"renewedOn" json:"renewedOn"`

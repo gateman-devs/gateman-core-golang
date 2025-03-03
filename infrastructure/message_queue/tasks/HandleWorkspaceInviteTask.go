@@ -71,7 +71,7 @@ func HandleWorkspaceInviteTask(ctx context.Context, t *asynq.Task) error {
 			Key:  "invite",
 			Data: payload,
 		})
-		apperrors.UnknownError(ctx, err)
+		apperrors.UnknownError(ctx, err, nil)
 		return err
 	}
 	hashedAccessToken, _ := cryptography.CryptoHahser.HashString(*accessToken, nil)

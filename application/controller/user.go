@@ -32,7 +32,7 @@ import (
 func SetAccountImage(ctx *interfaces.ApplicationContext[any]) {
 	exists, err := fileupload.FileUploader.CheckFileExists(fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), "accountimage"))
 	if err != nil {
-		apperrors.ExternalDependencyError(ctx.Ctx, "azure", "500", err)
+		apperrors.ExternalDependencyError(ctx.Ctx, "CLOUDFLARE", "500", err)
 		return
 	}
 	if !exists {
@@ -48,7 +48,7 @@ func SetAccountImage(ctx *interfaces.ApplicationContext[any]) {
 			Key:  "error",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	if !alive {
@@ -64,7 +64,7 @@ func SetAccountImage(ctx *interfaces.ApplicationContext[any]) {
 	userRepo := repository.UserRepo()
 	account, err := userRepo.FindOneByFilter(availability_filter)
 	if err != nil {
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	var savedDevice *entities.Device
@@ -95,7 +95,7 @@ func SetAccountImage(ctx *interfaces.ApplicationContext[any]) {
 			Key:  "error",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	var phone *string
@@ -127,7 +127,7 @@ func SetAccountImage(ctx *interfaces.ApplicationContext[any]) {
 	})
 
 	if err != nil {
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	hashedAccessToken, _ := cryptography.CryptoHahser.HashString(*accessToken, nil)
@@ -257,7 +257,7 @@ func SetNINDetails(ctx *interfaces.ApplicationContext[dto.SetNINDetails]) {
 		ref := sms.SMSService.SendOTP(*nin.PhoneNumber, false, otp)
 		encryptedRef, err := cryptography.EncryptData([]byte(*ref), nil)
 		if err != nil {
-			apperrors.UnknownError(ctx.Ctx, err)
+			apperrors.UnknownError(ctx.Ctx, err, nil)
 			return
 		}
 		cache.Cache.CreateEntry(fmt.Sprintf("%s-sms-otp-ref", *nin.PhoneNumber), *encryptedRef, time.Minute*10)
@@ -269,7 +269,7 @@ func SetNINDetails(ctx *interfaces.ApplicationContext[dto.SetNINDetails]) {
 		}, logger.LoggerOptions{
 			Key: "userID", Data: ctx.GetStringContextData("UserID"),
 		})
-		apperrors.CustomError(ctx.Ctx, "Phone number not attached to NIN provided. Please reach out to support to resolve this issue")
+		apperrors.CustomError(ctx.Ctx, "Phone number not attached to NIN provided. Please reach out to support to resolve this issue", nil)
 	}
 }
 
@@ -309,7 +309,7 @@ func VerifyNINDetails(ctx *interfaces.ApplicationContext[any]) {
 		}, logger.LoggerOptions{
 			Key: "cachedNIN", Data: cachedNIN,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	parsedNINDOB, err := time.Parse("2006-01-02", "1990-01-01")
@@ -505,7 +505,7 @@ func SetBVNDetails(ctx *interfaces.ApplicationContext[dto.SetBVNDetails]) {
 		ref := sms.SMSService.SendOTP(bvn.PhoneNumber, false, otp)
 		encryptedRef, err := cryptography.EncryptData([]byte(*ref), nil)
 		if err != nil {
-			apperrors.UnknownError(ctx.Ctx, err)
+			apperrors.UnknownError(ctx.Ctx, err, nil)
 			return
 		}
 		cache.Cache.CreateEntry(fmt.Sprintf("%s-sms-otp-ref", bvn.PhoneNumber), *encryptedRef, time.Minute*10)
@@ -517,7 +517,7 @@ func SetBVNDetails(ctx *interfaces.ApplicationContext[dto.SetBVNDetails]) {
 		}, logger.LoggerOptions{
 			Key: "userID", Data: ctx.GetStringContextData("UserID"),
 		})
-		apperrors.CustomError(ctx.Ctx, "Phone number not attached to BVN provided. Please reach out to support to resolve this issue")
+		apperrors.CustomError(ctx.Ctx, "Phone number not attached to BVN provided. Please reach out to support to resolve this issue", nil)
 	}
 }
 
@@ -557,7 +557,7 @@ func VerifyBVNDetails(ctx *interfaces.ApplicationContext[any]) {
 		}, logger.LoggerOptions{
 			Key: "cachedBVN", Data: cachedBVN,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	parsedBVNDOB, err := time.Parse("02-Jan-2006", bvn.DateOfBirth)

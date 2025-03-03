@@ -10,7 +10,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	apperrors "gateman.io/application/appErrors"
 	"gateman.io/application/constants"
@@ -21,7 +20,6 @@ import (
 	application_usecase "gateman.io/application/usecases/application"
 	"gateman.io/application/utils"
 	"gateman.io/entities"
-	"gateman.io/infrastructure/auth"
 	"gateman.io/infrastructure/cryptography"
 	"gateman.io/infrastructure/logger"
 	messagequeue "gateman.io/infrastructure/message_queue"
@@ -43,8 +41,8 @@ func CreateApplication(ctx *interfaces.ApplicationContext[dto.ApplicationDTO]) {
 		return
 	}
 	for _, field := range *ctx.Body.RequiredVerifications {
-		if !utils.HasItemString(&constants.AVAILABLE_REQUIRED_DATA_POINTS, field) {
-			apperrors.ValidationFailedError(ctx.Ctx, &[]error{fmt.Errorf("%s is not allowed in requested field", field)})
+		if !utils.HasItemString(&constants.AVAILABLE_REQUIRED_DATA_POINTS, field.Name) {
+			apperrors.ValidationFailedError(ctx.Ctx, &[]error{fmt.Errorf("%s is not allowed in requested field", field.Name)})
 			return
 		}
 	}
@@ -97,7 +95,7 @@ func FetchWorkspaceApps(ctx *interfaces.ApplicationContext[any]) {
 			Key:  "error",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "apps fetched", apps, nil, nil, nil, nil)
 }
@@ -110,7 +108,7 @@ func DeleteApplication(ctx *interfaces.ApplicationContext[any]) {
 			Key:  "error",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	if deleted == 0 {
@@ -172,7 +170,7 @@ func UpdateApplication(ctx *interfaces.ApplicationContext[dto.UpdateApplications
 		workspaceRepo := repository.WorkspaceRepository()
 		workspace, err := workspaceRepo.FindByID(*ctx.GetHeader("X-Workspace-Id"))
 		if err != nil {
-			apperrors.UnknownError(ctx.Ctx, err)
+			apperrors.UnknownError(ctx.Ctx, err, nil)
 			return
 		}
 		var card *entities.CardInfo
@@ -200,7 +198,7 @@ func UpdateApplication(ctx *interfaces.ApplicationContext[dto.UpdateApplications
 		}, logger.LoggerOptions{
 			Key: "payload", Data: payload,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "app updated", nil, nil, nil, nil, nil)
@@ -219,7 +217,7 @@ func RefreshAppAPIKey(ctx *interfaces.ApplicationContext[any]) {
 		}, logger.LoggerOptions{
 			Key: "payload", Data: ctx.Body,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	if app == 0 {
@@ -250,7 +248,7 @@ func UpdateWhiteListedIPs(ctx *interfaces.ApplicationContext[dto.UpdateWhitelist
 		}, logger.LoggerOptions{
 			Key: "payload", Data: ctx.Body,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	if app == 0 {
@@ -274,7 +272,7 @@ func RefreshAppSigningKey(ctx *interfaces.ApplicationContext[any]) {
 		}, logger.LoggerOptions{
 			Key: "payload", Data: ctx.Body,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	if app == 0 {
@@ -297,7 +295,7 @@ func RefreshSandboxAppAPIKey(ctx *interfaces.ApplicationContext[any]) {
 		}, logger.LoggerOptions{
 			Key: "payload", Data: ctx.Body,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	if app == 0 {
@@ -321,7 +319,7 @@ func RefreshSandboxAppSigningKey(ctx *interfaces.ApplicationContext[any]) {
 		}, logger.LoggerOptions{
 			Key: "payload", Data: ctx.Body,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	if app == 0 {
@@ -363,19 +361,27 @@ func UpdateAccessRefreshTokenTTL(ctx *interfaces.ApplicationContext[dto.UpdateAc
 }
 
 func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpDTO]) {
-	fmt.Println("before")
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
 		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
 		return
 	}
-	fmt.Println("after")
 	app, err := application_usecase.FetchAppUseCase(ctx.Ctx, ctx.Body.AppID, ctx.DeviceID, ctx.Keys["ip"].(string))
 	if err != nil {
 		return
 	}
 	userRepo := repository.UserRepo()
-	user, _ := userRepo.FindByID(ctx.GetStringContextData("UserID"))
+	user, err := userRepo.FindByID(ctx.GetStringContextData("UserID"))
+	if err != nil {
+		logger.Error("an error occured while fetching user for app signup", logger.LoggerOptions{
+			Key: "err", Data: err,
+		}, logger.LoggerOptions{
+			Key:  "userID",
+			Data: ctx.GetStringContextData("UserID"),
+		})
+		apperrors.UnknownError(ctx.Ctx, err, nil)
+		return
+	}
 	if user == nil {
 		apperrors.NotFoundError(ctx.Ctx, "This user was not found")
 		return
@@ -385,85 +391,41 @@ func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpD
 		"userID": ctx.GetStringContextData("UserID"),
 		"appID":  ctx.Body.AppID,
 	})
-	eligible := true
 	if appUserExists != nil {
-		eligible, _, payload, requestedFields := services.ProcessUserSignUp(app, user)
+		eligible, msg, payload, requestedFields := services.ProcessUserSignUp(app, user)
 		if eligible {
-			decryptedAppSigningKey, _ := cryptography.DecryptData(app.AppSigningKey, nil)
-			requestedFieldsBytes, _ := json.Marshal(requestedFields)
-			encrypted, _ := cryptography.EncryptData(requestedFieldsBytes, utils.GetStringPointer(string(decryptedAppSigningKey)))
-			var accessTokenTTL uint16
-			var refreshTokenTTL uint32
-			if os.Getenv("ENV") == "production" {
-				accessTokenTTL = app.AccessTokenTTL
-				refreshTokenTTL = app.RefreshTokenTTL
-			} else {
-				accessTokenTTL = app.SandboxAccessTokenTTL
-				refreshTokenTTL = app.SandboxRefreshTokenTTL
-
+			block, err := services.CheckMonthlyLimit(ctx.Ctx, app.ID, appUserExists.ID)
+			if err != nil || block {
+				return
 			}
-			accessToken, _ := auth.GenerateAppUserToken(auth.ClaimsData{
-				IssuedAt:  time.Now().Unix(),
-				ExpiresAt: int64(accessTokenTTL),
-				Payload:   requestedFields,
-				UserAgent: ctx.UserAgent,
-				DeviceID:  ctx.DeviceID,
-				UserID:    ctx.GetStringContextData("UserID"),
-			}, string(decryptedAppSigningKey), strings.ToLower(app.Name))
-			refreshToken, _ := auth.GenerateAppUserToken(auth.ClaimsData{
-				IssuedAt:  time.Now().Unix(),
-				ExpiresAt: int64(refreshTokenTTL),
-				UserAgent: ctx.UserAgent,
-				DeviceID:  ctx.DeviceID,
-				UserID:    ctx.GetStringContextData("UserID"),
-			}, string(decryptedAppSigningKey), strings.ToLower(app.Name))
-			payload["encryptedData"] = encrypted
-			payload["refreshToken"] = refreshToken
-			payload["accessToken"] = accessToken
+			payload, err := services.GenerateAuthTokens(payload, app, ctx.UserAgent, ctx.DeviceID, ctx.GetStringContextData("UserID"), requestedFields)
+			if err != nil {
+				apperrors.UnknownError(ctx.Ctx, err, nil)
+			}
+			server_response.Responder.Respond(ctx.Ctx, http.StatusOK, msg, payload, nil, nil, nil, nil)
 		}
-		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "success", payload, nil, nil, nil, nil)
-		return
-	}
-	eligible, msg, payload, requestedFields := services.ProcessUserSignUp(app, user)
-	if eligible {
-		appUserRepo.CreateOne(context.TODO(), entities.AppUser{
-			AppID:       ctx.Body.AppID,
-			UserID:      ctx.GetStringContextData("UserID"),
-			WorkspaceID: app.WorkspaceID,
-		})
-		decryptedAppSigningKey, _ := cryptography.DecryptData(app.AppSigningKey, nil)
-		requestedFieldsBytes, _ := json.Marshal(requestedFields)
-		encrypted, _ := cryptography.EncryptData(requestedFieldsBytes, utils.GetStringPointer(string(decryptedAppSigningKey)))
-		var accessTokenTTL uint16
-		var refreshTokenTTL uint32
-		if os.Getenv("ENV") == "production" {
-			accessTokenTTL = app.AccessTokenTTL
-			refreshTokenTTL = app.RefreshTokenTTL
-		} else {
-			accessTokenTTL = app.SandboxAccessTokenTTL
-			refreshTokenTTL = app.SandboxRefreshTokenTTL
-
+		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, msg, payload, nil, nil, nil, nil)
+	} else {
+		eligible, msg, payload, requestedFields := services.ProcessUserSignUp(app, user)
+		if eligible {
+			block, err := services.CheckMonthlyLimit(ctx.Ctx, app.ID, appUserExists.ID)
+			if err != nil || block {
+				return
+			}
+			appUserRepo.CreateOne(context.TODO(), entities.AppUser{
+				AppID:       ctx.Body.AppID,
+				UserID:      ctx.GetStringContextData("UserID"),
+				WorkspaceID: app.WorkspaceID,
+			})
+			payload, err := services.GenerateAuthTokens(payload, app, ctx.UserAgent, ctx.DeviceID, ctx.GetStringContextData("UserID"), requestedFields)
+			if err != nil {
+				apperrors.UnknownError(ctx.Ctx, err, nil)
+			}
+			server_response.Responder.Respond(ctx.Ctx, http.StatusOK, msg, payload, nil, nil, nil, nil)
+			return
 		}
-		accessToken, _ := auth.GenerateAppUserToken(auth.ClaimsData{
-			IssuedAt:  time.Now().Unix(),
-			ExpiresAt: int64(accessTokenTTL),
-			Payload:   requestedFields,
-			UserAgent: ctx.UserAgent,
-			DeviceID:  ctx.DeviceID,
-			UserID:    ctx.GetStringContextData("UserID"),
-		}, string(decryptedAppSigningKey), strings.ToLower(app.Name))
-		refreshToken, _ := auth.GenerateAppUserToken(auth.ClaimsData{
-			IssuedAt:  time.Now().Unix(),
-			ExpiresAt: int64(refreshTokenTTL),
-			UserAgent: ctx.UserAgent,
-			DeviceID:  ctx.DeviceID,
-			UserID:    ctx.GetStringContextData("UserID"),
-		}, string(decryptedAppSigningKey), strings.ToLower(app.Name))
-		payload["encryptedData"] = encrypted
-		payload["refreshToken"] = refreshToken
-		payload["accessToken"] = accessToken
+		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, msg, payload, nil, nil, nil, nil)
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, msg, payload, nil, nil, nil, nil)
 }
 
 func SubmitCustomAppForm(ctx *interfaces.ApplicationContext[dto.SubmitCustomAppFormDTO]) {
@@ -473,7 +435,7 @@ func SubmitCustomAppForm(ctx *interfaces.ApplicationContext[dto.SubmitCustomAppF
 		logger.Error("an error occured while trying to fetch application for custom for submititon", logger.LoggerOptions{
 			Key: "err", Data: err,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	if app == nil {
@@ -493,7 +455,7 @@ func SubmitCustomAppForm(ctx *interfaces.ApplicationContext[dto.SubmitCustomAppF
 		logger.Error("an error occured while trying to fetch application user for custom for submititon", logger.LoggerOptions{
 			Key: "err", Data: err,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	if appUser == nil {
@@ -520,8 +482,6 @@ func SubmitCustomAppForm(ctx *interfaces.ApplicationContext[dto.SubmitCustomAppF
 		}
 
 		rules := rulesBuilder.String()
-		fmt.Println(rules)
-
 		if err := validator.ValidatorInstance.ValidateValue(fieldValue, rules); err != nil {
 			validationErr = append(validationErr, errors.New(strings.Replace(err.Error(), "Field", customField.Name, 1)))
 		}
@@ -562,7 +522,7 @@ func FetchAppUsers(ctx *interfaces.ApplicationContext[dto.FetchAppUsersDTO]) {
 			Key:  "appID",
 			Data: ctx.Body.AppID,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "users fetched", users, nil, nil, nil, nil)
@@ -589,7 +549,7 @@ func BlockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
 			Key:  "ids",
 			Data: ctx.Body.IDs,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "users blocked", nil, nil, nil, nil, nil)
@@ -616,7 +576,7 @@ func UnblockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
 			Key:  "ids",
 			Data: ctx.Body.IDs,
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "users unblocked", nil, nil, nil, nil, nil)
@@ -632,7 +592,7 @@ func FetchUserApps(ctx *interfaces.ApplicationContext[any]) {
 			Key:  "userID",
 			Data: ctx.GetStringContextData("UserID"),
 		})
-		apperrors.UnknownError(ctx.Ctx, err)
+		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "apps fetched", apps, nil, nil, nil, nil)

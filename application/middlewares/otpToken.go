@@ -35,7 +35,7 @@ func OTPTokenMiddleware(ctx *interfaces.ApplicationContext[any], ipAddress strin
 		return nil, false
 	}
 	authTokenClaims := validAccessToken.Claims.(jwt.MapClaims)
-	if authTokenClaims["iss"] != os.Getenv("JWT_ISSUER") {
+	if authTokenClaims["iss"] != os.Getenv("GATEMAN_ISSUER") {
 		apperrors.AuthenticationError(ctx.Ctx, "this is not an authorized access token")
 		return nil, false
 	}

@@ -82,13 +82,13 @@ func ProcessPaystackWebhook(ctx *interfaces.ApplicationContext[[]byte]) {
 			"appID": verifiedData.Metadata.AppID,
 		})
 		now := time.Now()
-		var expireAfter uint
+		var expireAfter int
 		if verifiedData.Metadata.Frequency == "monthly" {
 			expireAfter = 30
 		} else {
 			expireAfter = 365
 		}
-		expiresOn := now.AddDate(0, 0, int(expireAfter))
+		expiresOn := now.AddDate(0, 0, expireAfter)
 		if activeSub == nil {
 			subscriptionPlanRepo := repository.SubscriptionPlanRepo()
 			subscription, err := subscriptionPlanRepo.FindByID(verifiedData.Metadata.PlanID)
@@ -97,7 +97,7 @@ func ProcessPaystackWebhook(ctx *interfaces.ApplicationContext[[]byte]) {
 					Key:  "error",
 					Data: err,
 				})
-				apperrors.UnknownError(ctx.Ctx, err)
+				apperrors.UnknownError(ctx.Ctx, err, nil)
 				return
 			}
 			if subscription == nil {
@@ -130,7 +130,6 @@ func ProcessPaystackWebhook(ctx *interfaces.ApplicationContext[[]byte]) {
 				"activeSubID":    subscription.ID,
 			})
 		}
-		verifiedData.Authorization.AuthorizationCode = ""
 		workspace_usecases.SaveCardAndCreateTransaction(&ctx.Ctx, fmt.Sprintf("Gateman %s - %s", subscription.Name, verifiedData.Metadata.Frequency), verifiedData)
 	} else {
 		logger.Error("an unsupported event was sent by paystack", logger.LoggerOptions{
