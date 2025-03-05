@@ -21,6 +21,7 @@ import (
 	"gateman.io/application/utils"
 	"gateman.io/entities"
 	"gateman.io/infrastructure/cryptography"
+	"gateman.io/infrastructure/database/repository/mongo"
 	"gateman.io/infrastructure/logger"
 	messagequeue "gateman.io/infrastructure/message_queue"
 	queue_tasks "gateman.io/infrastructure/message_queue/tasks"
@@ -147,6 +148,8 @@ func UpdateApplication(ctx *interfaces.ApplicationContext[dto.UpdateApplications
 		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
 		return
 	}
+	var activeSubRepo *mongo.MongoRepository[entities.ActiveSubscription]
+	var activeSub *entities.ActiveSubscription
 	payload := map[string]any{}
 	if ctx.Body.Name != nil {
 		payload["name"] = ctx.Body.Name
@@ -163,6 +166,32 @@ func UpdateApplication(ctx *interfaces.ApplicationContext[dto.UpdateApplications
 	if ctx.Body.RequestedFields != nil {
 		payload["requestedFields"] = ctx.Body.RequestedFields
 	}
+	if ctx.Body.PinProtected {
+		activeSubRepo = repository.ActiveSubscriptionRepo()
+		activeSub, _ = activeSubRepo.FindOneByFilter(map[string]any{
+			"appID": ctx.GetStringParameter("id"),
+		})
+		if activeSub == nil || !activeSub.Active || activeSub.ActiveSubName == entities.Free {
+			apperrors.ClientError(ctx.Ctx, "Pin protection is available for only Essential and Premium customers", nil, nil)
+			return
+		}
+		payload["pinProtected"] = true
+	}
+	if ctx.Body.RequireAppMFA {
+		if activeSubRepo == nil {
+			activeSubRepo = repository.ActiveSubscriptionRepo()
+		}
+		if activeSub == nil {
+			activeSub, _ = activeSubRepo.FindOneByFilter(map[string]any{
+				"appID": ctx.GetStringParameter("id"),
+			})
+		}
+		if activeSub == nil || !activeSub.Active || activeSub.ActiveSubName == entities.Free {
+			apperrors.ClientError(ctx.Ctx, "Pin protection is available for only Essential and Premium customers", nil, nil)
+			return
+		}
+		payload["requireAppMFA"] = true
+	}
 	if ctx.Body.CustomFormFields != nil {
 		payload["customFields"] = ctx.Body.CustomFormFields
 	}
@@ -175,7 +204,6 @@ func UpdateApplication(ctx *interfaces.ApplicationContext[dto.UpdateApplications
 		}
 		var card *entities.CardInfo
 		for _, savedCard := range workspace.PaymentDetails {
-			fmt.Println(savedCard)
 			if savedCard.ID == *ctx.Body.PaymentCard {
 				card = &savedCard
 				break
