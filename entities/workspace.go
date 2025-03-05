@@ -9,11 +9,10 @@ import (
 type Workspace struct {
 	Name               string     `bson:"name" json:"name"`
 	Email              string     `bson:"email" json:"email"`
+	VerifiedEmail      bool       `bson:"verifiedEmail" json:"verifiedEmail"`
 	SuperMember        string     `bson:"superMember" json:"superMember"`
-	CreatedBy          string     `bson:"createdBy" json:"createdBy"`
 	Country            string     `bson:"country" json:"country"`
 	Sector             string     `bson:"sector" json:"sector"`
-	Verified           bool       `bson:"verified" json:"verified"`
 	DefaultPaymentCard string     `bson:"defaultPaymentCard" json:"defaultPaymentCard"`
 	PaymentDetails     []CardInfo `bson:"paymentDetails" json:"paymentDetails"`
 

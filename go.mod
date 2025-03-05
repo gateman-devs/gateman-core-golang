@@ -12,8 +12,13 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/hibiken/asynq v0.25.0
-	github.com/mileusna/useragent v1.3.4
 	github.com/savaki/geoip2 v0.0.0-20150727150920-9968b08fbf39
+	github.com/ua-parser/uap-go v0.0.0-20250213224047-9c035f085b90
+)
+
+require (
+	github.com/hashicorp/golang-lru v1.0.2 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
 require (

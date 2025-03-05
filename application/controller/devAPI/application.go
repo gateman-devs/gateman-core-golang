@@ -1,115 +1,104 @@
 package public_controller
 
-import (
-	"net/http"
+// func APIFetchAppDetails(ctx *interfaces.ApplicationContext[any]) {
+// 	appRepo := repository.ApplicationRepo()
+// 	app, err := appRepo.FindOneByFilter(map[string]interface{}{
+// 		"appID": ctx.GetStringContextData("AppID"),
+// 	})
 
-	apperrors "gateman.io/application/appErrors"
-	"gateman.io/application/controller/dto"
-	"gateman.io/application/interfaces"
-	"gateman.io/application/repository"
-	"gateman.io/infrastructure/logger"
-	server_response "gateman.io/infrastructure/serverResponse"
-)
+// 	if err != nil {
+// 		logger.Error("an error occured while fetching an app on APIFetchAppDetails", logger.LoggerOptions{
+// 			Key:  "err",
+// 			Data: err,
+// 		})
+// 		apperrors.UnknownError(ctx.Ctx, err, nil)
+// 		return
+// 	}
+// 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "app fetched", app, nil, nil)
+// }
 
-func APIFetchAppDetails(ctx *interfaces.ApplicationContext[any]) {
-	appRepo := repository.ApplicationRepo()
-	app, err := appRepo.FindOneByFilter(map[string]interface{}{
-		"appID": ctx.GetStringContextData("AppID"),
-	})
+// func APIFetchAppUser(ctx *interfaces.ApplicationContext[any]) {
+// 	appUserRepo := repository.AppUserRepo()
+// 	appUser, err := appUserRepo.FindOneByFilter(map[string]interface{}{
+// 		"_id":         ctx.GetStringContextData("UserID"),
+// 		"appID":       ctx.GetStringParameter("id"),
+// 		"workspaceID": ctx.GetStringContextData("WorkspaceID"),
+// 	})
+// 	if err != nil {
+// 		logger.Error("an error occured while fetching app user", logger.LoggerOptions{
+// 			Key:  "userID",
+// 			Data: ctx.GetStringContextData("UserID"),
+// 		})
+// 		apperrors.UnknownError(ctx.Ctx, err, nil)
+// 		return
+// 	}
+// 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "app user fetched", appUser, nil, nil)
+// }
 
-	if err != nil {
-		logger.Error("an error occured while fetching an app on APIFetchAppDetails", logger.LoggerOptions{
-			Key:  "err",
-			Data: err,
-		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
-		return
-	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "app fetched", app, nil, nil, nil, nil)
-}
+// func APIFetchAppUsers(ctx *interfaces.ApplicationContext[dto.FetchAppUsersDTO]) {
+// 	filter := map[string]interface{}{
+// 		"appID":       ctx.Body.AppID,
+// 		"workspaceID": ctx.GetStringContextData("WorkspaceID"),
+// 	}
+// 	if ctx.Body.Blocked != nil {
+// 		filter["blocked"] = ctx.Body.Blocked
+// 	}
+// 	if ctx.Body.Deleted != nil {
+// 		filter["deletedAt"] = map[string]any{"$ne": nil}
+// 	}
+// 	appUserRepo := repository.AppUserRepo()
+// 	users, err := appUserRepo.FindManyPaginated(filter, ctx.Body.PageSize, ctx.Body.LastID, int(ctx.Body.Sort))
+// 	if err != nil {
+// 		logger.Error("an error occured while fetching apps users", logger.LoggerOptions{
+// 			Key:  "appID",
+// 			Data: ctx.Body.AppID,
+// 		})
+// 		apperrors.UnknownError(ctx.Ctx, err, nil)
+// 		return
+// 	}
+// 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "users fetched", users, nil, nil)
+// }
 
-func APIFetchAppUser(ctx *interfaces.ApplicationContext[any]) {
-	appUserRepo := repository.AppUserRepo()
-	appUser, err := appUserRepo.FindOneByFilter(map[string]interface{}{
-		"_id":         ctx.GetStringContextData("UserID"),
-		"appID":       ctx.GetStringParameter("id"),
-		"workspaceID": ctx.GetHeader("X-Workspace-Id"),
-	})
-	if err != nil {
-		logger.Error("an error occured while fetching app user", logger.LoggerOptions{
-			Key:  "userID",
-			Data: ctx.GetStringContextData("UserID"),
-		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
-		return
-	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "app user fetched", appUser, nil, nil, nil, nil)
-}
+// func APIBlockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
+// 	appUserRepo := repository.AppUserRepo()
+// 	_, err := appUserRepo.UpdatePartialByFilter(map[string]interface{}{
+// 		"_id": map[string]any{
+// 			"$in": ctx.Body.IDs,
+// 		},
+// 		"appID":       ctx.GetStringParameter("id"),
+// 		"workspaceID": ctx.GetStringContextData("WorkspaceID"),
+// 	}, map[string]any{
+// 		"blocked": true,
+// 	})
+// 	if err != nil {
+// 		logger.Error("an error occured while blocking users", logger.LoggerOptions{
+// 			Key:  "ids",
+// 			Data: ctx.Body.IDs,
+// 		})
+// 		apperrors.UnknownError(ctx.Ctx, err, nil)
+// 		return
+// 	}
+// 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "users blocked", nil, nil, nil)
+// }
 
-func APIFetchAppUsers(ctx *interfaces.ApplicationContext[dto.FetchAppUsersDTO]) {
-	filter := map[string]interface{}{
-		"appID":       ctx.Body.AppID,
-		"workspaceID": ctx.GetHeader("X-Workspace-Id"),
-	}
-	if ctx.Body.Blocked != nil {
-		filter["blocked"] = ctx.Body.Blocked
-	}
-	if ctx.Body.Deleted != nil {
-		filter["deletedAt"] = map[string]any{"$ne": nil}
-	}
-	appUserRepo := repository.AppUserRepo()
-	users, err := appUserRepo.FindManyPaginated(filter, ctx.Body.PageSize, ctx.Body.LastID, int(ctx.Body.Sort))
-	if err != nil {
-		logger.Error("an error occured while fetching apps users", logger.LoggerOptions{
-			Key:  "appID",
-			Data: ctx.Body.AppID,
-		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
-		return
-	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "users fetched", users, nil, nil, nil, nil)
-}
-
-func APIBlockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
-	appUserRepo := repository.AppUserRepo()
-	_, err := appUserRepo.UpdatePartialByFilter(map[string]interface{}{
-		"_id": map[string]any{
-			"$in": ctx.Body.IDs,
-		},
-		"appID":       ctx.GetStringParameter("id"),
-		"workspaceID": ctx.GetHeader("X-Workspace-Id"),
-	}, map[string]any{
-		"blocked": true,
-	})
-	if err != nil {
-		logger.Error("an error occured while blocking users", logger.LoggerOptions{
-			Key:  "ids",
-			Data: ctx.Body.IDs,
-		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
-		return
-	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "users blocked", nil, nil, nil, nil, nil)
-}
-
-func APIUnblockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
-	appUserRepo := repository.AppUserRepo()
-	_, err := appUserRepo.UpdatePartialByFilter(map[string]interface{}{
-		"_id": map[string]any{
-			"$in": ctx.Body.IDs,
-		},
-		"appID":       ctx.GetStringParameter("id"),
-		"workspaceID": ctx.GetHeader("X-Workspace-Id"),
-	}, map[string]any{
-		"blocked": false,
-	})
-	if err != nil {
-		logger.Error("an error occured while unblocking users", logger.LoggerOptions{
-			Key:  "ids",
-			Data: ctx.Body.IDs,
-		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
-		return
-	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "users unblocked", nil, nil, nil, nil, nil)
-}
+// func APIUnblockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
+// 	appUserRepo := repository.AppUserRepo()
+// 	_, err := appUserRepo.UpdatePartialByFilter(map[string]interface{}{
+// 		"_id": map[string]any{
+// 			"$in": ctx.Body.IDs,
+// 		},
+// 		"appID":       ctx.GetStringParameter("id"),
+// 		"workspaceID": ctx.GetStringContextData("WorkspaceID"),
+// 	}, map[string]any{
+// 		"blocked": false,
+// 	})
+// 	if err != nil {
+// 		logger.Error("an error occured while unblocking users", logger.LoggerOptions{
+// 			Key:  "ids",
+// 			Data: ctx.Body.IDs,
+// 		})
+// 		apperrors.UnknownError(ctx.Ctx, err, nil)
+// 		return
+// 	}
+// 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "users unblocked", nil, nil, nil)
+// }

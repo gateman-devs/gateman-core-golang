@@ -79,6 +79,7 @@ func GenerateAuthToken(claimsData ClaimsData) (*string, error) {
 		"phone":           claimsData.PhoneNum,
 		"verifiedAccount": claimsData.VerifiedAccount,
 		"tokenType":       claimsData.TokenType,
+		"workspace":       claimsData.WorkspaceID,
 	}).SignedString([]byte(os.Getenv("JWT_SIGNING_KEY")))
 	if err != nil {
 		return nil, err

@@ -5,7 +5,6 @@ import (
 	"crypto/cipher"
 	"crypto/ecdh"
 	"crypto/rand"
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -52,9 +51,9 @@ func DecryptData(stringToDecrypt string, keyString *string) ([]byte, error) {
 		return nil, fmt.Errorf("invalid key format: %w", err)
 	}
 
-	ciphertext, err := base64.URLEncoding.DecodeString(stringToDecrypt)
+	ciphertext, err := hex.DecodeString(stringToDecrypt)
 	if err != nil {
-		return nil, fmt.Errorf("invalid base64 input: %w", err)
+		return nil, fmt.Errorf("invalid hex input: %w", err)
 	}
 
 	block, err := aes.NewCipher(key)
@@ -101,6 +100,6 @@ func EncryptData(payload []byte, keyString *string) (*string, error) {
 	stream := cipher.NewCFBEncrypter(block, iv)
 	stream.XORKeyStream(ciphertext[aes.BlockSize:], payload)
 
-	encoded := base64.URLEncoding.EncodeToString(ciphertext)
+	encoded := hex.EncodeToString(ciphertext)
 	return utils.GetStringPointer(encoded), nil
 }

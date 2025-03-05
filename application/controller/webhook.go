@@ -12,7 +12,7 @@ import (
 	"gateman.io/application/controller/dto"
 	"gateman.io/application/interfaces"
 	"gateman.io/application/repository"
-	workspace_usecases "gateman.io/application/usecases/organisation"
+	workspace_usecases "gateman.io/application/usecases/workspace"
 	"gateman.io/application/utils"
 	"gateman.io/entities"
 	"gateman.io/infrastructure/logger"
@@ -66,13 +66,13 @@ func ProcessPaystackWebhook(ctx *interfaces.ApplicationContext[[]byte]) {
 				Key:  "body",
 				Data: body,
 			})
-			server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "webhook already processed", nil, nil, nil, nil, nil)
+			server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "webhook already processed", nil, nil, nil, &ctx.DeviceID)
 			return
 		}
 		if verifiedData.Metadata.Reverse == "true" {
 			workspace_usecases.SaveCardAndCreateTransaction(&ctx.Ctx, "Card verification attempt", verifiedData)
 			payments.PaymentProcessor.ReverseTransaction(verifiedData.Reference, "Card verification charge reversal")
-			server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "processed successfully", nil, nil, nil, nil, nil)
+			server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "processed successfully", nil, nil, nil, &ctx.DeviceID)
 			return
 		}
 		subscriptionRepo := repository.SubscriptionPlanRepo()
@@ -139,5 +139,5 @@ func ProcessPaystackWebhook(ctx *interfaces.ApplicationContext[[]byte]) {
 		apperrors.ClientError(ctx.Ctx, "an unknown event was emitted", nil, nil)
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "processed successfully", nil, nil, nil, nil, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "processed successfully", nil, nil, nil, &ctx.DeviceID)
 }

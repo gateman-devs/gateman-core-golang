@@ -25,7 +25,8 @@ func fieldErrorMap(tag string, field string, value interface{}, param interface{
 		"uppercase":        fmt.Sprintf(`"%s" must be in uppercase only`, value),
 		"endswith":         fmt.Sprintf("%s must end with %s", field, param),
 		// custom
-		"password": fmt.Sprintf("%s should be a secret 6 digit number", field),
+		"pin": fmt.Sprintf("%s should be a secret 6 digit number", field),
+		"password": fmt.Sprintf("%s validation failed: at least 7 characters long, at least one uppercase letter, at least one digit, at least one special character", field),
 	}
 	return err_map[tag]
 }

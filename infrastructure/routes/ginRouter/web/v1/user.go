@@ -1,10 +1,14 @@
 package routev1
 
 import (
+	"encoding/json"
+	"os"
+
 	apperrors "gateman.io/application/appErrors"
 	"gateman.io/application/controller"
 	"gateman.io/application/controller/dto"
 	"gateman.io/application/interfaces"
+	"gateman.io/application/utils"
 	middlewares "gateman.io/infrastructure/middleware"
 	"github.com/gin-gonic/gin"
 )
@@ -12,7 +16,7 @@ import (
 func UserRouter(router *gin.RouterGroup) {
 	userRouter := router.Group("/user")
 	{
-		userRouter.POST("/set-image", middlewares.UserAuthenticationMiddleware("face_verification", nil, false), func(ctx *gin.Context) {
+		userRouter.POST("/set-image", middlewares.UserAuthenticationMiddleware(utils.GetStringPointer("face_verification")), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			controller.SetAccountImage(&interfaces.ApplicationContext[any]{
 				Ctx:      ctx,
@@ -21,12 +25,21 @@ func UserRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		userRouter.POST("/set-nin", middlewares.UserAuthenticationMiddleware("", nil, false), func(ctx *gin.Context) {
+		userRouter.POST("/set-nin", middlewares.UserAuthenticationMiddleware(nil), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.SetNINDetails
-			if err := ctx.ShouldBindJSON(&body); err != nil {
-				apperrors.ErrorProcessingPayload(ctx)
-				return
+			if os.Getenv("ENV") != "dev" {
+				decryptedPayload, exists := ctx.Get("DecryptedBody")
+				if !exists {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
+				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+			} else {
+				if err := ctx.ShouldBindJSON(&body); err != nil {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
 			}
 			controller.SetNINDetails(&interfaces.ApplicationContext[dto.SetNINDetails]{
 				Ctx:      ctx,
@@ -45,12 +58,21 @@ func UserRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		userRouter.POST("/set-bvn", middlewares.UserAuthenticationMiddleware("", nil, false), func(ctx *gin.Context) {
+		userRouter.POST("/set-bvn", middlewares.UserAuthenticationMiddleware(nil), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.SetBVNDetails
-			if err := ctx.ShouldBindJSON(&body); err != nil {
-				apperrors.ErrorProcessingPayload(ctx)
-				return
+			if os.Getenv("ENV") != "dev" {
+				decryptedPayload, exists := ctx.Get("DecryptedBody")
+				if !exists {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
+				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+			} else {
+				if err := ctx.ShouldBindJSON(&body); err != nil {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
 			}
 			controller.SetBVNDetails(&interfaces.ApplicationContext[dto.SetBVNDetails]{
 				Ctx:      ctx,

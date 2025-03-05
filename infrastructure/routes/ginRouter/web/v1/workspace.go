@@ -13,12 +13,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func MiscRouter(router *gin.RouterGroup) {
-	miscRouter := router.Group("/misc")
+func WorkspaceRouter(router *gin.RouterGroup) {
+	workspaceRouter := router.Group("/workspace")
 	{
-		miscRouter.GET("/signedurl/generate", func(ctx *gin.Context) {
+		workspaceRouter.POST("/create", func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
-			var body dto.GeneratedSignedURLDTO
+			var body dto.CreateWorkspaceDTO
 			if os.Getenv("ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
@@ -32,24 +32,22 @@ func MiscRouter(router *gin.RouterGroup) {
 					return
 				}
 			}
-			controller.GeneratedSignedURL(&interfaces.ApplicationContext[dto.GeneratedSignedURLDTO]{
-				Body: &body,
-				Keys: appContext.Keys,
-				Ctx:  ctx,
+			controller.CreateWorkspace(&interfaces.ApplicationContext[dto.CreateWorkspaceDTO]{
+				Ctx:        ctx,
+				Body:       &body,
+				DeviceID:   appContext.DeviceID,
+				DeviceName: appContext.DeviceName,
+				UserAgent:  appContext.UserAgent,
+				Keys:       appContext.Keys,
+				Param: map[string]any{
+					"ip": ctx.ClientIP(),
+				},
 			})
 		})
 
-		miscRouter.GET("/subscription-plans", func(ctx *gin.Context) {
+		workspaceRouter.POST("/invite", middlewares.WorkspaceAuthenticationMiddleware(nil, &[]entities.MemberPermissions{entities.MEMBER_INVITE}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
-			controller.GetSubscriptionPlans(&interfaces.ApplicationContext[any]{
-				Keys: appContext.Keys,
-				Ctx:  ctx,
-			})
-		})
-
-		miscRouter.POST("/subscription/link", middlewares.WorkspaceAuthenticationMiddleware(nil, &[]entities.MemberPermissions{entities.WORKSPACE_BILLING}, true), func(ctx *gin.Context) {
-			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
-			var body dto.GeneratePaymentLinkDTO
+			var body dto.InviteWorspaceMembersDTO
 			if os.Getenv("ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
@@ -63,16 +61,16 @@ func MiscRouter(router *gin.RouterGroup) {
 					return
 				}
 			}
-			controller.GeneratePaymentLink(&interfaces.ApplicationContext[dto.GeneratePaymentLinkDTO]{
+			controller.InviteWorkspaceMembers(&interfaces.ApplicationContext[dto.InviteWorspaceMembersDTO]{
 				Ctx:  ctx,
 				Body: &body,
 				Keys: appContext.Keys,
 			})
 		})
 
-		miscRouter.POST("/card/add", middlewares.WorkspaceAuthenticationMiddleware(nil, &[]entities.MemberPermissions{entities.WORKSPACE_BILLING}, true), func(ctx *gin.Context) {
+		workspaceRouter.POST("/verify", middlewares.OTPTokenMiddleware("verify_workspace"), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
-			var body dto.GenerateAddCardLinkDTO
+			var body any
 			if os.Getenv("ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
@@ -86,11 +84,17 @@ func MiscRouter(router *gin.RouterGroup) {
 					return
 				}
 			}
-			controller.GenerateLinkToAddCard(&interfaces.ApplicationContext[dto.GenerateAddCardLinkDTO]{
-				Ctx:  ctx,
-				Body: &body,
-				Keys: appContext.Keys,
+			controller.VerifyWorkspaceAccount(&interfaces.ApplicationContext[any]{
+				Ctx:        ctx,
+				Body:       &body,
+				Keys:       appContext.Keys,
+				DeviceID:   appContext.DeviceID,
+				DeviceName: appContext.DeviceName,
+				Param: map[string]any{
+					"ip": ctx.ClientIP(),
+				},
 			})
 		})
+
 	}
 }

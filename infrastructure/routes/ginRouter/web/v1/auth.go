@@ -1,6 +1,9 @@
 package routev1
 
 import (
+	"encoding/json"
+	"os"
+
 	apperrors "gateman.io/application/appErrors"
 	"gateman.io/application/controller"
 	"gateman.io/application/controller/dto"
@@ -15,9 +18,18 @@ func AuthRouter(router *gin.RouterGroup) {
 		authRouter.POST("/otp/verify", func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.VerifyOTPDTO
-			if err := ctx.ShouldBindJSON(&body); err != nil {
-				apperrors.ErrorProcessingPayload(ctx)
-				return
+			if os.Getenv("ENV") != "dev" {
+				decryptedPayload, exists := ctx.Get("DecryptedBody")
+				if !exists {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
+				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+			} else {
+				if err := ctx.ShouldBindJSON(&body); err != nil {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
 			}
 			controller.VerifyOTP(&interfaces.ApplicationContext[dto.VerifyOTPDTO]{
 				Ctx:      ctx,
@@ -39,9 +51,18 @@ func AuthRouter(router *gin.RouterGroup) {
 		authRouter.POST("/verify-device", func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.VerifyDeviceDTO
-			if err := ctx.ShouldBindJSON(&body); err != nil {
-				apperrors.ErrorProcessingPayload(ctx)
-				return
+			if os.Getenv("ENV") != "dev" {
+				decryptedPayload, exists := ctx.Get("DecryptedBody")
+				if !exists {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
+				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+			} else {
+				if err := ctx.ShouldBindJSON(&body); err != nil {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
 			}
 			controller.VeirfyDeviceImage(&interfaces.ApplicationContext[dto.VerifyDeviceDTO]{
 				Ctx:      ctx,
@@ -60,12 +81,30 @@ func AuthRouter(router *gin.RouterGroup) {
 			})
 		})
 
+		authRouter.GET("/workspace/refresh", middlewares.RefreshTokenMiddleware(), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			controller.RefreshToken(&interfaces.ApplicationContext[any]{
+				Ctx:      ctx,
+				DeviceID: appContext.DeviceID,
+				Keys:     appContext.Keys,
+			})
+		})
+
 		authRouter.POST("/user/authenticate", func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.CreateUserDTO
-			if err := ctx.ShouldBindJSON(&body); err != nil {
-				apperrors.ErrorProcessingPayload(ctx)
-				return
+			if os.Getenv("ENV") != "dev" {
+				decryptedPayload, exists := ctx.Get("DecryptedBody")
+				if !exists {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
+				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+			} else {
+				if err := ctx.ShouldBindJSON(&body); err != nil {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
 			}
 			body.UserAgent = *appContext.GetHeader("User-Agent")
 			body.DeviceID = *appContext.GetHeader("X-Device-Id")
@@ -83,9 +122,18 @@ func AuthRouter(router *gin.RouterGroup) {
 		authRouter.POST("/otp/resend", func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.ResendOTPDTO
-			if err := ctx.ShouldBindJSON(&body); err != nil {
-				apperrors.ErrorProcessingPayload(ctx)
-				return
+			if os.Getenv("ENV") != "dev" {
+				decryptedPayload, exists := ctx.Get("DecryptedBody")
+				if !exists {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
+				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+			} else {
+				if err := ctx.ShouldBindJSON(&body); err != nil {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
 			}
 			controller.ResendOTP(&interfaces.ApplicationContext[dto.ResendOTPDTO]{
 				Ctx:  ctx,

@@ -2,8 +2,6 @@ package middlewares
 
 import (
 	"errors"
-	"fmt"
-	"strings"
 
 	apperrors "gateman.io/application/appErrors"
 	"gateman.io/application/interfaces"
@@ -17,36 +15,8 @@ func UserAgentMiddleware(ctx *interfaces.ApplicationContext[any], minAppVersion 
 		return nil, false
 	}
 	agentDetails := useragent.ParseUserAgent(*agent)
-	if agentDetails.Bot {
-		apperrors.UnsupportedUserAgent(ctx.Ctx)
-		return nil, false
-	}
-
-	reqSemVers := strings.Split(agentDetails.OSVersion, ".")
-	if len(reqSemVers) < 3 {
-		apperrors.UnsupportedUserAgent(ctx.Ctx)
-		return nil, false
-	}
-	minAppVersionSemVers := strings.Split(minAppVersion, ".")
-	if len(minAppVersionSemVers) < 3 {
-		apperrors.UnsupportedUserAgent(ctx.Ctx)
-		return nil, false
-	}
-
-	if minAppVersionSemVers[0] > reqSemVers[0] {
-		apperrors.UnsupportedUserAgent(ctx.Ctx)
-		return nil, false
-	}
-	if minAppVersionSemVers[1] > reqSemVers[1] {
-		apperrors.UnsupportedUserAgent(ctx.Ctx)
-		return nil, false
-	}
-	if minAppVersionSemVers[2] > reqSemVers[2] {
-		apperrors.UnsupportedUserAgent(ctx.Ctx)
-		return nil, false
-	}
 	ctx.UserAgent = *agent
-	ctx.DeviceName = fmt.Sprintf("%s/%s", agentDetails.Device, agentDetails.Name)
+	ctx.DeviceName = agentDetails.Name
 	deviceID := ctx.GetHeader("X-Device-Id")
 	if deviceID == nil || *deviceID == "" {
 		apperrors.MalformedHeader(ctx.Ctx)

@@ -5,5 +5,5 @@ package public_controller
 // 	if err != nil {
 // 		return
 // 	}
-// 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "token verified", nil, nil, nil, nil, nil)
+// 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "token verified", nil, nil, nil)
 // }

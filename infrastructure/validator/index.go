@@ -1,6 +1,7 @@
 package validator
 
 func init() {
+	validate.RegisterValidation("pin", validatePinStrength)
 	validate.RegisterValidation("password", validatePasswordStrength)
 	validate.RegisterValidation("name_spacial_char", validateNameWithSpecialChars)
 }
