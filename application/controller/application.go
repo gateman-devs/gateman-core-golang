@@ -66,7 +66,7 @@ func CreateApplication(ctx *interfaces.ApplicationContext[dto.ApplicationDTO]) {
 		"appSigningKey":        appSigningKey,
 		"sandboxAPIKey":        sandboxAPIKey,
 		"sandboxAppSigningKey": sandboxAppSigningKey,
-	}, nil, nil, nil, nil)
+	}, nil, nil, &ctx.DeviceID)
 }
 
 func FetchAppCreationConfigInfo(ctx *interfaces.ApplicationContext[any]) {
@@ -74,7 +74,7 @@ func FetchAppCreationConfigInfo(ctx *interfaces.ApplicationContext[any]) {
 		"requiredFields":    constants.AVAILABLE_REQUIRED_DATA_POINTS,
 		"customFieldTypes":  constants.CUSTOM_FIELD_TYPES,
 		"validationOptions": entities.ValidationRules,
-	}, nil, nil, nil, nil)
+	}, nil, nil, &ctx.DeviceID)
 }
 
 func FetchAppDetails(ctx *interfaces.ApplicationContext[any]) {
@@ -82,7 +82,7 @@ func FetchAppDetails(ctx *interfaces.ApplicationContext[any]) {
 	if err != nil {
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "app fetched", app, nil, nil, nil, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "app fetched", app, nil, nil, &ctx.DeviceID)
 }
 
 func FetchWorkspaceApps(ctx *interfaces.ApplicationContext[any]) {
@@ -97,7 +97,7 @@ func FetchWorkspaceApps(ctx *interfaces.ApplicationContext[any]) {
 		})
 		apperrors.UnknownError(ctx.Ctx, err, nil)
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "apps fetched", apps, nil, nil, nil, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "apps fetched", apps, nil, nil, &ctx.DeviceID)
 }
 
 func DeleteApplication(ctx *interfaces.ApplicationContext[any]) {
@@ -120,7 +120,7 @@ func DeleteApplication(ctx *interfaces.ApplicationContext[any]) {
 	})
 	deleteAppPayload, err := json.Marshal(queue_tasks.DeleteAppPayload{
 		ID:          ctx.GetStringParameter("id"),
-		WorkspaceID: *ctx.GetHeader("X-Workspace-Id"),
+		WorkspaceID: ctx.GetStringContextData("WorkspaceID"),
 	})
 	if err != nil {
 		logger.Error("error marshalling payload for delete app queue")
@@ -138,7 +138,7 @@ func DeleteApplication(ctx *interfaces.ApplicationContext[any]) {
 		Priority:  mq_types.Low,
 		ProcessIn: uint(processIn),
 	})
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "app deleted", nil, nil, nil, nil, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "app deleted", nil, nil, nil, &ctx.DeviceID)
 }
 
 func UpdateApplication(ctx *interfaces.ApplicationContext[dto.UpdateApplications]) {
@@ -163,12 +163,12 @@ func UpdateApplication(ctx *interfaces.ApplicationContext[dto.UpdateApplications
 	if ctx.Body.RequestedFields != nil {
 		payload["requestedFields"] = ctx.Body.RequestedFields
 	}
-	if ctx.Body.RequestedFields != nil {
+	if ctx.Body.CustomFormFields != nil {
 		payload["customFields"] = ctx.Body.CustomFormFields
 	}
 	if ctx.Body.PaymentCard != nil {
 		workspaceRepo := repository.WorkspaceRepository()
-		workspace, err := workspaceRepo.FindByID(*ctx.GetHeader("X-Workspace-Id"))
+		workspace, err := workspaceRepo.FindByID(ctx.GetStringContextData("WorkspaceID"))
 		if err != nil {
 			apperrors.UnknownError(ctx.Ctx, err, nil)
 			return
@@ -190,7 +190,7 @@ func UpdateApplication(ctx *interfaces.ApplicationContext[dto.UpdateApplications
 	appRepo := repository.ApplicationRepo()
 	_, err := appRepo.UpdatePartialByFilter(map[string]interface{}{
 		"_id":         ctx.GetStringParameter("id"),
-		"workspaceID": *ctx.GetHeader("X-Workspace-Id"),
+		"workspaceID": ctx.GetStringContextData("WorkspaceID"),
 	}, payload)
 	if err != nil {
 		logger.Error("an error occured while updating application", logger.LoggerOptions{
@@ -201,7 +201,7 @@ func UpdateApplication(ctx *interfaces.ApplicationContext[dto.UpdateApplications
 		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "app updated", nil, nil, nil, nil, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "app updated", nil, nil, nil, &ctx.DeviceID)
 }
 
 func RefreshAppAPIKey(ctx *interfaces.ApplicationContext[any]) {
@@ -224,7 +224,7 @@ func RefreshAppAPIKey(ctx *interfaces.ApplicationContext[any]) {
 		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found")
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "API key updated. This will only be displayed once", apiKey, nil, nil, nil, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "API key updated. This will only be displayed once", apiKey, nil, nil, &ctx.DeviceID)
 }
 
 func UpdateWhiteListedIPs(ctx *interfaces.ApplicationContext[dto.UpdateWhitelistIPDTO]) {
@@ -255,7 +255,7 @@ func UpdateWhiteListedIPs(ctx *interfaces.ApplicationContext[dto.UpdateWhitelist
 		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found")
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "IP Whitelist updated", nil, nil, nil, nil, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "IP Whitelist updated", nil, nil, nil, &ctx.DeviceID)
 }
 
 func RefreshAppSigningKey(ctx *interfaces.ApplicationContext[any]) {
@@ -279,7 +279,75 @@ func RefreshAppSigningKey(ctx *interfaces.ApplicationContext[any]) {
 		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found")
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "App Signing Key updated. This will only be displayed once", appSigningKey, nil, nil, nil, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "App Signing Key updated. This will only be displayed once", appSigningKey, nil, nil, &ctx.DeviceID)
+}
+
+func TogglePinProtectionSetting(ctx *interfaces.ApplicationContext[dto.TogglePinProtectionSettingDTO]) {
+	activeSubRepo := repository.ActiveSubscriptionRepo()
+	activeSub, err := activeSubRepo.FindOneByFilter(map[string]interface{}{
+		"appID": ctx.GetStringParameter("id"),
+	})
+	if err != nil {
+		logger.Error("an error occured while fetching active subcription for toggle pin protected account", logger.LoggerOptions{
+			Key: "id", Data: ctx.GetStringParameter("id"),
+		})
+		apperrors.UnknownError(ctx.Ctx, err, nil)
+		return
+	}
+	if activeSub == nil || activeSub.ActiveSubName == entities.Free {
+		apperrors.ClientError(ctx.Ctx, "Your current tier does not support pin protected accounts. Please upgrade to the Gateman Essential plan to get this feature", nil, nil)
+		return
+	}
+	appRepo := repository.ApplicationRepo()
+	app, err := appRepo.UpdatePartialByID(ctx.GetStringParameter("id"), map[string]any{
+		"pinProtected": ctx.Body.Activated,
+	})
+	if err != nil {
+		logger.Error("an error occured while updating protected pin setting", logger.LoggerOptions{
+			Key: "id", Data: ctx.GetStringParameter("id"),
+		})
+		apperrors.UnknownError(ctx.Ctx, err, nil)
+		return
+	}
+	if app == 0 {
+		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found")
+		return
+	}
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Pin protection setting updated", nil, nil, nil, &ctx.DeviceID)
+}
+
+func ToggleMFAProtectionSetting(ctx *interfaces.ApplicationContext[dto.ToggleMFAProtectionSettingDTO]) {
+	activeSubRepo := repository.ActiveSubscriptionRepo()
+	activeSub, err := activeSubRepo.FindOneByFilter(map[string]interface{}{
+		"appID": ctx.GetStringParameter("id"),
+	})
+	if err != nil {
+		logger.Error("an error occured while fetching active subcription for toggle MFA protected accounts", logger.LoggerOptions{
+			Key: "id", Data: ctx.GetStringParameter("id"),
+		})
+		apperrors.UnknownError(ctx.Ctx, err, nil)
+		return
+	}
+	if activeSub == nil || activeSub.ActiveSubName != entities.Premium {
+		apperrors.ClientError(ctx.Ctx, "Your current tier does not support MFA protected accounts. Please upgrade to the Gateman Premium plan to get this feature", nil, nil)
+		return
+	}
+	appRepo := repository.ApplicationRepo()
+	app, err := appRepo.UpdatePartialByID(ctx.GetStringParameter("id"), map[string]any{
+		"requireAppMFA": ctx.Body.Activated,
+	})
+	if err != nil {
+		logger.Error("an error occured while updating mfa protected setting", logger.LoggerOptions{
+			Key: "id", Data: ctx.GetStringParameter("id"),
+		})
+		apperrors.UnknownError(ctx.Ctx, err, nil)
+		return
+	}
+	if app == 0 {
+		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found")
+		return
+	}
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "MFA protection setting updated", nil, nil, nil, &ctx.DeviceID)
 }
 
 func RefreshSandboxAppAPIKey(ctx *interfaces.ApplicationContext[any]) {
@@ -302,7 +370,7 @@ func RefreshSandboxAppAPIKey(ctx *interfaces.ApplicationContext[any]) {
 		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found")
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Sandbox API key updated. This will only be displayed once", apiKey, nil, nil, nil, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Sandbox API key updated. This will only be displayed once", apiKey, nil, nil, &ctx.DeviceID)
 }
 
 func RefreshSandboxAppSigningKey(ctx *interfaces.ApplicationContext[any]) {
@@ -326,7 +394,7 @@ func RefreshSandboxAppSigningKey(ctx *interfaces.ApplicationContext[any]) {
 		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found")
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Sandbox App Signing Key updated. This will only be displayed once", appSigningKey, nil, nil, nil, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Sandbox App Signing Key updated. This will only be displayed once", appSigningKey, nil, nil, &ctx.DeviceID)
 }
 
 func UpdateAccessRefreshTokenTTL(ctx *interfaces.ApplicationContext[dto.UpdateAccessRefreshTokenTTL]) {
@@ -355,9 +423,9 @@ func UpdateAccessRefreshTokenTTL(ctx *interfaces.ApplicationContext[dto.UpdateAc
 	appRepo := repository.ApplicationRepo()
 	appRepo.UpdatePartialByFilter(map[string]interface{}{
 		"_id":         ctx.GetStringParameter("id"),
-		"workspaceID": *ctx.GetHeader("X-Workspace-Id"),
+		"workspaceID": ctx.GetStringContextData("WorkspaceID"),
 	}, updateFields)
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "TTL updated", nil, nil, nil, nil, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "TTL updated", nil, nil, nil, &ctx.DeviceID)
 }
 
 func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpDTO]) {
@@ -402,29 +470,29 @@ func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpD
 			if err != nil {
 				apperrors.UnknownError(ctx.Ctx, err, nil)
 			}
-			server_response.Responder.Respond(ctx.Ctx, http.StatusOK, msg, payload, nil, nil, nil, nil)
+			server_response.Responder.Respond(ctx.Ctx, http.StatusOK, msg, payload, nil, nil, &ctx.DeviceID)
 		}
-		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, msg, payload, nil, nil, nil, nil)
+		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, msg, payload, nil, nil, &ctx.DeviceID)
 	} else {
 		eligible, msg, payload, requestedFields := services.ProcessUserSignUp(app, user)
 		if eligible {
-			block, err := services.CheckMonthlyLimit(ctx.Ctx, app.ID, appUserExists.ID)
-			if err != nil || block {
-				return
-			}
-			appUserRepo.CreateOne(context.TODO(), entities.AppUser{
+			appUserExists, _ := appUserRepo.CreateOne(context.TODO(), entities.AppUser{
 				AppID:       ctx.Body.AppID,
 				UserID:      ctx.GetStringContextData("UserID"),
 				WorkspaceID: app.WorkspaceID,
 			})
+			block, err := services.CheckMonthlyLimit(ctx.Ctx, app.ID, appUserExists.ID)
+			if err != nil || block {
+				return
+			}
 			payload, err := services.GenerateAuthTokens(payload, app, ctx.UserAgent, ctx.DeviceID, ctx.GetStringContextData("UserID"), requestedFields)
 			if err != nil {
 				apperrors.UnknownError(ctx.Ctx, err, nil)
 			}
-			server_response.Responder.Respond(ctx.Ctx, http.StatusOK, msg, payload, nil, nil, nil, nil)
+			server_response.Responder.Respond(ctx.Ctx, http.StatusOK, msg, payload, nil, nil, &ctx.DeviceID)
 			return
 		}
-		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, msg, payload, nil, nil, nil, nil)
+		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, msg, payload, nil, nil, &ctx.DeviceID)
 	}
 }
 
@@ -496,7 +564,7 @@ func SubmitCustomAppForm(ctx *interfaces.ApplicationContext[dto.SubmitCustomAppF
 		"appID":  ctx.Body.AppID}, map[string]any{
 		"customFieldData": ctx.Body.Data,
 	})
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "form submitted", nil, nil, nil, nil, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "form submitted", nil, nil, nil, &ctx.DeviceID)
 }
 
 func FetchAppUsers(ctx *interfaces.ApplicationContext[dto.FetchAppUsersDTO]) {
@@ -507,7 +575,7 @@ func FetchAppUsers(ctx *interfaces.ApplicationContext[dto.FetchAppUsersDTO]) {
 	}
 	filter := map[string]interface{}{
 		"appID":       ctx.Body.AppID,
-		"workspaceID": ctx.GetHeader("X-Workspace-Id"),
+		"workspaceID": ctx.GetStringContextData("WorkspaceID"),
 	}
 	if ctx.Body.Blocked != nil {
 		filter["blocked"] = ctx.Body.Blocked
@@ -525,7 +593,7 @@ func FetchAppUsers(ctx *interfaces.ApplicationContext[dto.FetchAppUsersDTO]) {
 		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "users fetched", users, nil, nil, nil, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "users fetched", users, nil, nil, &ctx.DeviceID)
 }
 
 func BlockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
@@ -540,7 +608,7 @@ func BlockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
 			"$in": ctx.Body.IDs,
 		},
 		"appID":       ctx.GetStringParameter("id"),
-		"workspaceID": ctx.GetHeader("X-Workspace-Id"),
+		"workspaceID": ctx.GetStringContextData("WorkspaceID"),
 	}, map[string]any{
 		"blocked": true,
 	})
@@ -552,7 +620,7 @@ func BlockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
 		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "users blocked", nil, nil, nil, nil, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "users blocked", nil, nil, nil, &ctx.DeviceID)
 }
 
 func UnblockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
@@ -567,7 +635,7 @@ func UnblockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
 			"$in": ctx.Body.IDs,
 		},
 		"appID":       ctx.GetStringParameter("id"),
-		"workspaceID": ctx.GetHeader("X-Workspace-Id"),
+		"workspaceID": ctx.GetStringContextData("WorkspaceID"),
 	}, map[string]any{
 		"blocked": false,
 	})
@@ -579,7 +647,7 @@ func UnblockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
 		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "users unblocked", nil, nil, nil, nil, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "users unblocked", nil, nil, nil, &ctx.DeviceID)
 }
 
 func FetchUserApps(ctx *interfaces.ApplicationContext[any]) {
@@ -595,7 +663,7 @@ func FetchUserApps(ctx *interfaces.ApplicationContext[any]) {
 		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "apps fetched", apps, nil, nil, nil, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "apps fetched", apps, nil, nil, &ctx.DeviceID)
 }
 
 func GetAppMetrics(ctx *interfaces.ApplicationContext[dto.FetchAppMetrics]) {
@@ -625,9 +693,9 @@ func GetAppMetrics(ctx *interfaces.ApplicationContext[dto.FetchAppMetrics]) {
 	appMetrics["appImg"] = app.AppImg
 	appUserRepo := repository.AppUserRepo()
 	usersCount, _ := appUserRepo.CountDocs(map[string]any{
-		"workspaceID": ctx.GetHeader("X-Workspace-Id"),
+		"workspaceID": ctx.GetStringContextData("WorkspaceID"),
 		"appID":       ctx.Body.ID,
 	})
 	appMetrics["usersCount"] = usersCount
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "metrics fetched", appMetrics, nil, nil, nil, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "metrics fetched", appMetrics, nil, nil, &ctx.DeviceID)
 }

@@ -1,14 +1,25 @@
 package useragent
 
-import "github.com/mileusna/useragent"
+import (
+	"sync"
+
+	"github.com/ua-parser/uap-go/uaparser"
+)
+
+var (
+	parser *uaparser.Parser
+)
 
 func ParseUserAgent(userAgent string) *UserAgent {
-	parsed := useragent.Parse(userAgent)
+	var initParser sync.Once
+	initParser.Do(func() {
+		parser = uaparser.NewFromSaved()
+	})
+	client := parser.Parse(userAgent)
 	return &UserAgent{
-		Bot:       parsed.Bot,
-		OS:        parsed.OS,
-		OSVersion: parsed.VersionNoFull(),
-		Device:    parsed.Device,
-		Name:      parsed.Name,
+		OS:        client.Os.ToString(),
+		OSVersion: client.Os.ToVersionString(),
+		Device:    client.Device.Model,
+		Name:      client.Device.ToString(),
 	}
 }

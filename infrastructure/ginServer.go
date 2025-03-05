@@ -1,6 +1,8 @@
 package infrastructure
 
 import (
+	"crypto/ecdh"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"os"
@@ -8,6 +10,9 @@ import (
 	"time"
 
 	apperrors "gateman.io/application/appErrors"
+	"gateman.io/application/controller"
+	"gateman.io/application/controller/dto"
+	"gateman.io/application/interfaces"
 	"gateman.io/application/subscription"
 	"gateman.io/infrastructure/logger"
 	middlewares "gateman.io/infrastructure/middleware"
@@ -54,12 +59,33 @@ func (s *ginServer) Start() {
 
 	routerV1 := api.Group("/v1")
 	routerV1.Use(middlewares.UserAgentMiddleware())
-	// routerV1.Use(middlewares.DecryptPayloadMiddleware())
+
+	routerV1.POST("/key-exchange", func(ctx *gin.Context) {
+		// clientPubKeyBytes, _ := ctx.GetRawData()
+		var body map[string]any
+		if err := ctx.ShouldBindJSON(&body); err != nil {
+			apperrors.ErrorProcessingPayload(ctx)
+			return
+		}
+		fmt.Println(body["clientPubKey"].(string))
+		it, _ := hex.DecodeString(body["clientPubKey"].(string))
+		clientPubKey, _ := ecdh.P256().NewPublicKey([]byte(it))
+		deviceID := ctx.GetHeader("X-Device-Id")
+		controller.KeyExchange(&interfaces.ApplicationContext[dto.KeyExchangeDTO]{
+			Ctx: ctx,
+			Body: &dto.KeyExchangeDTO{
+				ClientPublicKey: clientPubKey,
+			},
+			DeviceID: deviceID,
+		})
+	})
+
+	routerV1.Use(middlewares.DecryptPayloadMiddleware())
 	{
 		webRoutev1.AuthRouter(routerV1)
 		webRoutev1.AppRouter(routerV1)
 		webRoutev1.UserRouter(routerV1)
-		webRoutev1.OrgRouter(routerV1)
+		webRoutev1.WorkspaceRouter(routerV1)
 		webRoutev1.MiscRouter(routerV1)
 	}
 
@@ -71,7 +97,7 @@ func (s *ginServer) Start() {
 	}
 
 	server.GET("/ping", func(ctx *gin.Context) {
-		server_response.Responder.Respond(ctx, http.StatusOK, "pong!", nil, nil, nil, nil, nil)
+		server_response.Responder.Respond(ctx, http.StatusOK, "pong!", nil, nil, nil, nil)
 	})
 
 	server.NoRoute(func(ctx *gin.Context) {

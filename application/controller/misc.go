@@ -53,7 +53,7 @@ func GeneratedSignedURL(ctx *interfaces.ApplicationContext[dto.GeneratedSignedUR
 	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "account created", map[string]any{
 		"url":      url,
 		"filePath": ctx.Body.FilePath,
-	}, nil, nil, nil, nil)
+	}, nil, nil, &ctx.DeviceID)
 }
 
 func GetSubscriptionPlans(ctx *interfaces.ApplicationContext[any]) {
@@ -67,7 +67,7 @@ func GetSubscriptionPlans(ctx *interfaces.ApplicationContext[any]) {
 		apperrors.UnknownError(ctx.Ctx, err, nil)
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "plans fetched", *plans, nil, nil, nil, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "plans fetched", *plans, nil, nil, &ctx.DeviceID)
 }
 
 func GenerateLinkToAddCard(ctx *interfaces.ApplicationContext[dto.GenerateAddCardLinkDTO]) {
@@ -108,7 +108,7 @@ func GenerateLinkToAddCard(ctx *interfaces.ApplicationContext[dto.GenerateAddCar
 		apperrors.ExternalDependencyError(ctx.Ctx, "Paystack", "500", err)
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "link generated", link.Link, nil, nil, nil, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "link generated", link.Link, nil, nil, &ctx.DeviceID)
 }
 
 func GeneratePaymentLink(ctx *interfaces.ApplicationContext[dto.GeneratePaymentLinkDTO]) {
@@ -237,5 +237,5 @@ func GeneratePaymentLink(ctx *interfaces.ApplicationContext[dto.GeneratePaymentL
 		apperrors.ExternalDependencyError(ctx.Ctx, "Paystack", "500", err)
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "link generated", link.Link, nil, nil, nil, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "link generated", link.Link, nil, nil, &ctx.DeviceID)
 }

@@ -1,7 +1,6 @@
 package middlewares
 
 import (
-	"encoding/hex"
 	"fmt"
 
 	apperrors "gateman.io/application/appErrors"
@@ -30,7 +29,7 @@ func DecryptPayloadMiddleware(ctx *interfaces.ApplicationContext[string]) []byte
 		})
 		return nil
 	}
-	result, err := cryptography.DecryptData(*ctx.Body, utils.GetStringPointer(hex.EncodeToString(decryptedKey)))
+	result, err := cryptography.DecryptData(*ctx.Body, utils.GetStringPointer(string(decryptedKey)))
 	if err != nil {
 		logger.Error("an error occured while decrypting user payload", logger.LoggerOptions{
 			Key:  "error",

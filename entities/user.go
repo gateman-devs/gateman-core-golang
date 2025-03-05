@@ -8,10 +8,11 @@ import (
 )
 
 type Device struct {
-	LastLogin time.Time `bson:"lastLogin" json:"lastLogin"`
-	Name      string    `bson:"name" json:"name"`
-	ID        string    `bson:"id" json:"id"`
-	Verified  bool      `bson:"verified" json:"-"`
+	LastLogin         time.Time `bson:"lastLogin" json:"lastLogin"`
+	LastLoginLocation string    `bson:"lastLoginLocation" json:"lastLoginLocation"`
+	Name              string    `bson:"name" json:"name"`
+	ID                string    `bson:"id" json:"id"`
+	Verified          bool      `bson:"verified" json:"-"`
 }
 
 type PhoneNumber struct {

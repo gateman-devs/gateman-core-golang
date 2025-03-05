@@ -135,7 +135,10 @@ func SetAccountImage(ctx *interfaces.ApplicationContext[any]) {
 	hashedDeviceID, _ := cryptography.CryptoHahser.HashString(ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
 	cache.Cache.CreateEntry(fmt.Sprintf("%s-access", string(hashedDeviceID)), hashedAccessToken, time.Hour*1)        // token should last for 10 mins
 	cache.Cache.CreateEntry(fmt.Sprintf("%s-refresh", string(hashedDeviceID)), hashedRefreshToken, time.Hour*24*180) // token should last for 10 mins
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "image set", nil, nil, nil, accessToken, refreshToken)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "image set", map[string]any{
+		"accessToken":  accessToken,
+		"refreshToken": refreshToken,
+	}, nil, nil, &ctx.DeviceID)
 }
 
 func SetNINDetails(ctx *interfaces.ApplicationContext[dto.SetNINDetails]) {
@@ -149,7 +152,7 @@ func SetNINDetails(ctx *interfaces.ApplicationContext[dto.SetNINDetails]) {
 		"nin": 1,
 	}))
 	if account.NIN != nil {
-		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Seems you have verified your NIN already. You're good to go!", nil, nil, nil, nil, nil)
+		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Seems you have verified your NIN already. You're good to go!", nil, nil, nil, &ctx.DeviceID)
 		return
 	}
 	hashedNIN, _ := cryptography.CryptoHahser.HashString(ctx.Body.NIN, []byte(os.Getenv("HASH_FIXED_SALT")))
@@ -157,7 +160,7 @@ func SetNINDetails(ctx *interfaces.ApplicationContext[dto.SetNINDetails]) {
 		"nin": hashedNIN,
 	})
 	if ninExists != 0 {
-		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "This NIN is already linked to another Gateman account.", nil, nil, nil, nil, nil)
+		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "This NIN is already linked to another Gateman account.", nil, nil, nil, &ctx.DeviceID)
 		return
 	}
 	var nin identity_verification_types.NINData
@@ -242,7 +245,7 @@ func SetNINDetails(ctx *interfaces.ApplicationContext[dto.SetNINDetails]) {
 				}
 
 			}
-			server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "NIN Added", nil, nil, nil, nil, nil)
+			server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "NIN Added", nil, nil, nil, &ctx.DeviceID)
 			return
 		}
 	}
@@ -262,7 +265,7 @@ func SetNINDetails(ctx *interfaces.ApplicationContext[dto.SetNINDetails]) {
 		}
 		cache.Cache.CreateEntry(fmt.Sprintf("%s-sms-otp-ref", *nin.PhoneNumber), *encryptedRef, time.Minute*10)
 		cache.Cache.CreateEntry(fmt.Sprintf("%s-otp-intent", *nin.PhoneNumber), "verify_nin", time.Minute*10)
-		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, fmt.Sprintf("Verify OTP sent to ******%s", (*nin.PhoneNumber)[len(*nin.PhoneNumber)-4:]), nil, nil, nil, nil, nil)
+		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, fmt.Sprintf("Verify OTP sent to ******%s", (*nin.PhoneNumber)[len(*nin.PhoneNumber)-4:]), nil, nil, nil, &ctx.DeviceID)
 	} else {
 		logger.Error("Phone number not attached to NIN provided", logger.LoggerOptions{
 			Key: "nin", Data: ctx.Body.NIN,
@@ -382,7 +385,9 @@ func VerifyNINDetails(ctx *interfaces.ApplicationContext[any]) {
 	hashedAccessToken, _ := cryptography.CryptoHahser.HashString(*accessToken, nil)
 	hashedDeviceID, _ := cryptography.CryptoHahser.HashString(ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
 	cache.Cache.CreateEntry(fmt.Sprintf("%s-access", string(hashedDeviceID)), hashedAccessToken, time.Hour*24)
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "NIN Added", nil, nil, nil, accessToken, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "NIN Added", map[string]any{
+		"accessToken": accessToken,
+	}, nil, nil, &ctx.DeviceID)
 }
 
 func SetBVNDetails(ctx *interfaces.ApplicationContext[dto.SetBVNDetails]) {
@@ -396,7 +401,7 @@ func SetBVNDetails(ctx *interfaces.ApplicationContext[dto.SetBVNDetails]) {
 		"bvn": 1,
 	}))
 	if account.BVN != nil {
-		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Seems you have verified your BVN already. You're good to go!", nil, nil, nil, nil, nil)
+		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Seems you have verified your BVN already. You're good to go!", nil, nil, nil, &ctx.DeviceID)
 		return
 	}
 	hashedBVN, _ := cryptography.CryptoHahser.HashString(ctx.Body.BVN, []byte(os.Getenv("HASH_FIXED_SALT")))
@@ -404,7 +409,7 @@ func SetBVNDetails(ctx *interfaces.ApplicationContext[dto.SetBVNDetails]) {
 		"bvn": hashedBVN,
 	})
 	if bvnExists != 0 {
-		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "This BVN is already linked to another Gateman account.", nil, nil, nil, nil, nil)
+		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "This BVN is already linked to another Gateman account.", nil, nil, nil, &ctx.DeviceID)
 		return
 	}
 	var bvn identity_verification_types.BVNData
@@ -490,7 +495,7 @@ func SetBVNDetails(ctx *interfaces.ApplicationContext[dto.SetBVNDetails]) {
 				}
 
 			}
-			server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "BVN Added", nil, nil, nil, nil, nil)
+			server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "BVN Added", nil, nil, nil, &ctx.DeviceID)
 			return
 		}
 	}
@@ -510,7 +515,7 @@ func SetBVNDetails(ctx *interfaces.ApplicationContext[dto.SetBVNDetails]) {
 		}
 		cache.Cache.CreateEntry(fmt.Sprintf("%s-sms-otp-ref", bvn.PhoneNumber), *encryptedRef, time.Minute*10)
 		cache.Cache.CreateEntry(fmt.Sprintf("%s-otp-intent", bvn.PhoneNumber), "verify_bvn", time.Minute*10)
-		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, fmt.Sprintf("Verify OTP sent to ******%s", (bvn.PhoneNumber)[len(bvn.PhoneNumber)-4:]), nil, nil, nil, nil, nil)
+		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, fmt.Sprintf("Verify OTP sent to ******%s", (bvn.PhoneNumber)[len(bvn.PhoneNumber)-4:]), nil, nil, nil, &ctx.DeviceID)
 	} else {
 		logger.Error("Phone number not attached to BVN provided", logger.LoggerOptions{
 			Key: "bvn", Data: ctx.Body.BVN,
@@ -630,5 +635,7 @@ func VerifyBVNDetails(ctx *interfaces.ApplicationContext[any]) {
 	hashedAccessToken, _ := cryptography.CryptoHahser.HashString(*accessToken, nil)
 	hashedDeviceID, _ := cryptography.CryptoHahser.HashString(ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
 	cache.Cache.CreateEntry(fmt.Sprintf("%s-access", string(hashedDeviceID)), hashedAccessToken, time.Hour*24)
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "BVN Added", nil, nil, nil, accessToken, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "BVN Added", map[string]any{
+		"accessToken": accessToken,
+	}, nil, nil, &ctx.DeviceID)
 }

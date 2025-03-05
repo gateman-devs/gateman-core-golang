@@ -7,41 +7,23 @@ import (
 	"gateman.io/application/controller/dto"
 	"gateman.io/application/interfaces"
 	"gateman.io/application/repository"
-	org_usecases "gateman.io/application/usecases/organisation"
-	"gateman.io/infrastructure/logger"
+	org_usecases "gateman.io/application/usecases/workspace"
 	server_response "gateman.io/infrastructure/serverResponse"
 	"gateman.io/infrastructure/validator"
 )
 
-func CreateOrganisation(ctx *interfaces.ApplicationContext[dto.CreateOrgDTO]) {
+func CreateWorkspace(ctx *interfaces.ApplicationContext[dto.CreateWorkspaceDTO]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
 		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
 		return
 	}
-	err := org_usecases.CreateOrgUseCase(ctx.Ctx, ctx.Body, ctx.DeviceID, ctx.UserAgent, ctx.GetStringContextData("UserID"), ctx.GetStringContextData("Email"))
+	err := org_usecases.CreateWorkspaceUseCase(ctx.Ctx, ctx.Body, ctx.DeviceID, ctx.DeviceName, ctx.UserAgent, ctx.Param["ip"].(string))
 	if err != nil {
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "org created", nil, nil, nil, nil, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "org created", nil, nil, nil, &ctx.DeviceID)
 }
-
-func FetchWorkspaces(ctx *interfaces.ApplicationContext[any]) {
-	WorkspaceMemberRepo := repository.WorkspaceMemberRepo()
-	workspaces, err := WorkspaceMemberRepo.FindMany(map[string]interface{}{
-		"userID": ctx.GetStringContextData("UserID"),
-	})
-	if err != nil {
-		logger.Error("error fetching users orgs", logger.LoggerOptions{
-			Key:  "error",
-			Data: err,
-		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
-		return
-	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "workspaces fetched", workspaces, nil, nil, nil, nil)
-}
-
 func UpdateOrgDetails(ctx *interfaces.ApplicationContext[dto.UpdateOrgDTO]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
@@ -60,5 +42,5 @@ func UpdateOrgDetails(ctx *interfaces.ApplicationContext[dto.UpdateOrgDTO]) {
 			"workspaceName": ctx.Body.WorkspaceName,
 		})
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "org updated", nil, nil, nil, nil, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "org updated", nil, nil, nil, &ctx.DeviceID)
 }

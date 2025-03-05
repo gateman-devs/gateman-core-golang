@@ -60,7 +60,7 @@ func InviteWorkspaceMembers(ctx *interfaces.ApplicationContext[dto.InviteWorspac
 	}
 	wg.Wait()
 
-	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "members invited", nil, nil, nil, nil, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "members invited", nil, nil, nil, &ctx.DeviceID)
 }
 
 func ResendInvite(ctx *interfaces.ApplicationContext[dto.ResendWorspaceInviteDTO]) {
@@ -154,9 +154,10 @@ func AcknowledgeWorkspaceInvite(ctx *interfaces.ApplicationContext[dto.Acknowled
 			return
 		}
 		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "authentication complete", map[string]any{
-			"url":  url,
-			"code": code,
-		}, nil, nil, token, nil)
+			"url":         url,
+			"code":        code,
+			"accessToken": token,
+		}, nil, nil, &ctx.DeviceID)
 
 		workspaceMemberRepo.CreateOne(context.TODO(), entities.WorkspaceMember{
 			WorkspaceID:   invite.WorkspaceID,
@@ -165,5 +166,5 @@ func AcknowledgeWorkspaceInvite(ctx *interfaces.ApplicationContext[dto.Acknowled
 		})
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "acknowledgement complete", nil, nil, nil, nil, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "acknowledgement complete", nil, nil, nil, &ctx.DeviceID)
 }

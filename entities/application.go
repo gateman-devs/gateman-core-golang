@@ -242,25 +242,19 @@ var ValidationRules map[string]ValidationRule = map[string]ValidationRule{
 	},
 }
 
-type OverCharge struct {
-	AdditionalEssentialUsers int64 `bson:"additionalUsers" json:"additionalUsers"`
-	Amount                   int64 `bson:"amount" json:"amount"`
-}
-
 type Application struct {
 	Name                   string               `bson:"name" json:"name"`
 	Disabled               bool                 `bson:"disabled" json:"disabled"`
 	Description            string               `bson:"description" json:"description"`
 	WorkspaceID            string               `bson:"workspaceID" json:"-"`
 	AppImg                 string               `bson:"appImg" json:"appImg"`
-	OverCharge             OverCharge           `bson:"overCharge" json:"overCharge"`
 	Email                  string               `bson:"email" json:"email"`
 	AppID                  string               `bson:"appID" json:"appID"`
 	PinProtected           string               `bson:"pinProtected" json:"pinProtected"`
+	RequireAppMFA          bool                 `bson:"requireAppMFA" json:"requireAppMFA"`
 	CreatorID              string               `bson:"creatorID" json:"-"`
 	AppSigningKey          string               `bson:"appSigningKey" json:"-"`
 	SandboxAppSigningKey   string               `bson:"sandBoxAppSigningKey" json:"-"`
-	RequireAppMFA          bool                 `bson:"requireAppMFA" json:"requireAppMFA"`
 	SandboxAPIKey          string               `bson:"sandBoxAPIKey" json:"-"`
 	APIKey                 string               `bson:"apiKey" json:"-"`
 	VPN                    bool                 `bson:"vpn" json:"vpn"`

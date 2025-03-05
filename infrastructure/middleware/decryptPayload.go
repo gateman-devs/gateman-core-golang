@@ -1,8 +1,8 @@
 package middlewares
 
 import (
-	"encoding/hex"
 	"io"
+	"os"
 
 	"gateman.io/application/interfaces"
 	"gateman.io/application/middlewares"
@@ -12,6 +12,10 @@ import (
 
 func DecryptPayloadMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
+		if os.Getenv("ENV") == "dev" {
+			ctx.Next()
+			return
+		}
 		body, err := io.ReadAll(ctx.Request.Body)
 		if err != nil {
 			ctx.Next()
@@ -25,7 +29,7 @@ func DecryptPayloadMiddleware() gin.HandlerFunc {
 			Body:     utils.GetStringPointer(string(body)),
 			DeviceID: ctx.GetHeader("X-Device-Id"),
 		})
-		ctx.Set("DecryptedBody", utils.GetStringPointer(hex.EncodeToString(decryptedBody)))
+		ctx.Set("DecryptedBody", string(decryptedBody))
 		ctx.Next()
 	}
 }

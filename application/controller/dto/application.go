@@ -58,3 +58,11 @@ type UpdateAccessRefreshTokenTTL struct {
 type UpdateWhitelistIPDTO struct {
 	IPs []string `json:"ips" validate:"required,dive,ip"`
 }
+
+type TogglePinProtectionSettingDTO struct {
+	Activated bool `json:"activated"`
+}
+
+type ToggleMFAProtectionSettingDTO struct {
+	Activated bool `json:"activated"`
+}

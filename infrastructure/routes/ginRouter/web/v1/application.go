@@ -1,6 +1,9 @@
 package routev1
 
 import (
+	"encoding/json"
+	"os"
+
 	apperrors "gateman.io/application/appErrors"
 	"gateman.io/application/controller"
 	"gateman.io/application/controller/dto"
@@ -13,12 +16,21 @@ import (
 func AppRouter(router *gin.RouterGroup) {
 	appRouter := router.Group("/app")
 	{
-		appRouter.POST("/create", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.WORKSPACE_CREATE_APPLICATIONS}, true), func(ctx *gin.Context) {
+		appRouter.POST("/create", middlewares.WorkspaceAuthenticationMiddleware(nil, &[]entities.MemberPermissions{entities.WORKSPACE_CREATE_APPLICATIONS}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.ApplicationDTO
-			if err := ctx.ShouldBindJSON(&body); err != nil {
-				apperrors.ErrorProcessingPayload(ctx)
-				return
+			if os.Getenv("ENV") != "dev" {
+				decryptedPayload, exists := ctx.Get("DecryptedBody")
+				if !exists {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
+				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+			} else {
+				if err := ctx.ShouldBindJSON(&body); err != nil {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
 			}
 			controller.CreateApplication(&interfaces.ApplicationContext[dto.ApplicationDTO]{
 				Ctx:  ctx,
@@ -27,12 +39,21 @@ func AppRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		appRouter.PATCH("/ip-whitelist/update/:id", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.WORKSPACE_CREATE_APPLICATIONS}, true), func(ctx *gin.Context) {
+		appRouter.PATCH("/ip-whitelist/update/:id", middlewares.WorkspaceAuthenticationMiddleware(nil, &[]entities.MemberPermissions{entities.WORKSPACE_CREATE_APPLICATIONS}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.UpdateWhitelistIPDTO
-			if err := ctx.ShouldBindJSON(&body); err != nil {
-				apperrors.ErrorProcessingPayload(ctx)
-				return
+			if os.Getenv("ENV") != "dev" {
+				decryptedPayload, exists := ctx.Get("DecryptedBody")
+				if !exists {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
+				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+			} else {
+				if err := ctx.ShouldBindJSON(&body); err != nil {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
 			}
 			controller.UpdateWhiteListedIPs(&interfaces.ApplicationContext[dto.UpdateWhitelistIPDTO]{
 				Ctx:  ctx,
@@ -41,12 +62,21 @@ func AppRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		appRouter.PATCH("/update/:id", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.WORKSPACE_EDIT_APPLICATIONS}, true), func(ctx *gin.Context) {
+		appRouter.PATCH("/update/:id", middlewares.WorkspaceAuthenticationMiddleware(nil, &[]entities.MemberPermissions{entities.WORKSPACE_EDIT_APPLICATIONS}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.UpdateApplications
-			if err := ctx.ShouldBindJSON(&body); err != nil {
-				apperrors.ErrorProcessingPayload(ctx)
-				return
+			if os.Getenv("ENV") != "dev" {
+				decryptedPayload, exists := ctx.Get("DecryptedBody")
+				if !exists {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
+				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+			} else {
+				if err := ctx.ShouldBindJSON(&body); err != nil {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
 			}
 			controller.UpdateApplication(&interfaces.ApplicationContext[dto.UpdateApplications]{
 				Ctx:  ctx,
@@ -59,7 +89,7 @@ func AppRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		appRouter.PATCH("/apikey/refresh/:id", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.WORKSPACE_EDIT_APPLICATIONS}, true), func(ctx *gin.Context) {
+		appRouter.PATCH("/apikey/refresh/:id", middlewares.WorkspaceAuthenticationMiddleware(nil, &[]entities.MemberPermissions{entities.WORKSPACE_EDIT_APPLICATIONS}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			controller.RefreshAppAPIKey(&interfaces.ApplicationContext[any]{
 				Ctx:  ctx,
@@ -70,7 +100,7 @@ func AppRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		appRouter.PATCH("/sandbox-apikey/refresh/:id", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.WORKSPACE_EDIT_APPLICATIONS}, true), func(ctx *gin.Context) {
+		appRouter.PATCH("/sandbox-apikey/refresh/:id", middlewares.WorkspaceAuthenticationMiddleware(nil, &[]entities.MemberPermissions{entities.WORKSPACE_EDIT_APPLICATIONS}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			controller.RefreshSandboxAppAPIKey(&interfaces.ApplicationContext[any]{
 				Ctx:  ctx,
@@ -81,7 +111,7 @@ func AppRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		appRouter.PATCH("/app-signing-key/refresh/:id", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.WORKSPACE_EDIT_APPLICATIONS}, true), func(ctx *gin.Context) {
+		appRouter.PATCH("/app-signing-key/refresh/:id", middlewares.WorkspaceAuthenticationMiddleware(nil, &[]entities.MemberPermissions{entities.WORKSPACE_EDIT_APPLICATIONS}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			controller.RefreshAppSigningKey(&interfaces.ApplicationContext[any]{
 				Ctx:  ctx,
@@ -92,7 +122,7 @@ func AppRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		appRouter.PATCH("/sandbox-app-signing-key/refresh/:id", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.WORKSPACE_EDIT_APPLICATIONS}, true), func(ctx *gin.Context) {
+		appRouter.PATCH("/sandbox-app-signing-key/refresh/:id", middlewares.WorkspaceAuthenticationMiddleware(nil, &[]entities.MemberPermissions{entities.WORKSPACE_EDIT_APPLICATIONS}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			controller.RefreshSandboxAppSigningKey(&interfaces.ApplicationContext[any]{
 				Ctx:  ctx,
@@ -103,7 +133,7 @@ func AppRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		appRouter.GET("/workspace/fetch", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.WORKSPACE_VIEW_APPLICATIONS}, true), func(ctx *gin.Context) {
+		appRouter.GET("/workspace/fetch", middlewares.WorkspaceAuthenticationMiddleware(nil, &[]entities.MemberPermissions{entities.WORKSPACE_VIEW_APPLICATIONS}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			controller.FetchWorkspaceApps(&interfaces.ApplicationContext[any]{
 				Ctx:  ctx,
@@ -129,7 +159,7 @@ func AppRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		appRouter.DELETE("/delete/:id", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.WORKSPACE_DELETE_APPLICATIONS}, true), func(ctx *gin.Context) {
+		appRouter.DELETE("/delete/:id", middlewares.WorkspaceAuthenticationMiddleware(nil, &[]entities.MemberPermissions{entities.WORKSPACE_DELETE_APPLICATIONS}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			id, found := ctx.Params.Get("id")
 			if !found {
@@ -144,19 +174,28 @@ func AppRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		appRouter.GET("/config/fetch", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{entities.WORKSPACE_CREATE_APPLICATIONS}, true), func(ctx *gin.Context) {
+		appRouter.GET("/config/fetch", middlewares.WorkspaceAuthenticationMiddleware(nil, &[]entities.MemberPermissions{entities.WORKSPACE_CREATE_APPLICATIONS}, true), func(ctx *gin.Context) {
 			controller.FetchAppCreationConfigInfo(&interfaces.ApplicationContext[any]{
 				Ctx: ctx,
 			},
 			)
 		})
 
-		appRouter.POST("/signup", middlewares.UserAuthenticationMiddleware("", nil, false), func(ctx *gin.Context) {
+		appRouter.POST("/signup", middlewares.UserAuthenticationMiddleware(nil), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.ApplicationSignUpDTO
-			if err := ctx.ShouldBindJSON(&body); err != nil {
-				apperrors.ErrorProcessingPayload(ctx)
-				return
+			if os.Getenv("ENV") != "dev" {
+				decryptedPayload, exists := ctx.Get("DecryptedBody")
+				if !exists {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
+				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+			} else {
+				if err := ctx.ShouldBindJSON(&body); err != nil {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
 			}
 			appContext.Keys["ip"] = ctx.ClientIP()
 			controller.ApplicationSignUp(&interfaces.ApplicationContext[dto.ApplicationSignUpDTO]{
@@ -167,14 +206,23 @@ func AppRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		appRouter.POST("/users", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{
+		appRouter.POST("/users", middlewares.WorkspaceAuthenticationMiddleware(nil, &[]entities.MemberPermissions{
 			entities.USER_VIEW,
 		}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.FetchAppUsersDTO
-			if err := ctx.ShouldBindJSON(&body); err != nil {
-				apperrors.ErrorProcessingPayload(ctx)
-				return
+			if os.Getenv("ENV") != "dev" {
+				decryptedPayload, exists := ctx.Get("DecryptedBody")
+				if !exists {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
+				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+			} else {
+				if err := ctx.ShouldBindJSON(&body); err != nil {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
 			}
 			controller.FetchAppUsers(&interfaces.ApplicationContext[dto.FetchAppUsersDTO]{
 				Ctx:  ctx,
@@ -183,14 +231,23 @@ func AppRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		appRouter.PATCH("/users/block/:id", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{
+		appRouter.PATCH("/users/block/:id", middlewares.WorkspaceAuthenticationMiddleware(nil, &[]entities.MemberPermissions{
 			entities.USER_BLOCK,
 		}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.BlockAccountsDTO
-			if err := ctx.ShouldBindJSON(&body); err != nil {
-				apperrors.ErrorProcessingPayload(ctx)
-				return
+			if os.Getenv("ENV") != "dev" {
+				decryptedPayload, exists := ctx.Get("DecryptedBody")
+				if !exists {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
+				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+			} else {
+				if err := ctx.ShouldBindJSON(&body); err != nil {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
 			}
 			controller.BlockAccounts(&interfaces.ApplicationContext[dto.BlockAccountsDTO]{
 				Ctx:    ctx,
@@ -203,14 +260,23 @@ func AppRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		appRouter.PATCH("/users/unblock/:id", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{
+		appRouter.PATCH("/users/unblock/:id", middlewares.WorkspaceAuthenticationMiddleware(nil, &[]entities.MemberPermissions{
 			entities.USER_BLOCK,
 		}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.BlockAccountsDTO
-			if err := ctx.ShouldBindJSON(&body); err != nil {
-				apperrors.ErrorProcessingPayload(ctx)
-				return
+			if os.Getenv("ENV") != "dev" {
+				decryptedPayload, exists := ctx.Get("DecryptedBody")
+				if !exists {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
+				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+			} else {
+				if err := ctx.ShouldBindJSON(&body); err != nil {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
 			}
 			controller.UnblockAccounts(&interfaces.ApplicationContext[dto.BlockAccountsDTO]{
 				Ctx:    ctx,
@@ -223,14 +289,23 @@ func AppRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		appRouter.PATCH("/ttl/update/:id", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{
+		appRouter.PATCH("/ttl/update/:id", middlewares.WorkspaceAuthenticationMiddleware(nil, &[]entities.MemberPermissions{
 			entities.USER_BLOCK,
 		}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.UpdateAccessRefreshTokenTTL
-			if err := ctx.ShouldBindJSON(&body); err != nil {
-				apperrors.ErrorProcessingPayload(ctx)
-				return
+			if os.Getenv("ENV") != "dev" {
+				decryptedPayload, exists := ctx.Get("DecryptedBody")
+				if !exists {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
+				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+			} else {
+				if err := ctx.ShouldBindJSON(&body); err != nil {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
 			}
 			controller.UpdateAccessRefreshTokenTTL(&interfaces.ApplicationContext[dto.UpdateAccessRefreshTokenTTL]{
 				Ctx:    ctx,
@@ -243,14 +318,23 @@ func AppRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		appRouter.POST("/metrics", middlewares.UserAuthenticationMiddleware("", &[]entities.MemberPermissions{
+		appRouter.POST("/metrics", middlewares.WorkspaceAuthenticationMiddleware(nil, &[]entities.MemberPermissions{
 			entities.WORKSPACE_VIEW_APPLICATIONS,
 		}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.FetchAppMetrics
-			if err := ctx.ShouldBindJSON(&body); err != nil {
-				apperrors.ErrorProcessingPayload(ctx)
-				return
+			if os.Getenv("ENV") != "dev" {
+				decryptedPayload, exists := ctx.Get("DecryptedBody")
+				if !exists {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
+				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+			} else {
+				if err := ctx.ShouldBindJSON(&body); err != nil {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
 			}
 			controller.GetAppMetrics(&interfaces.ApplicationContext[dto.FetchAppMetrics]{
 				Ctx:    ctx,
@@ -260,12 +344,21 @@ func AppRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		appRouter.POST("/custom-form/submit", middlewares.UserAuthenticationMiddleware("", nil, false), func(ctx *gin.Context) {
+		appRouter.POST("/custom-form/submit", middlewares.UserAuthenticationMiddleware(nil), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.SubmitCustomAppFormDTO
-			if err := ctx.ShouldBindJSON(&body); err != nil {
-				apperrors.ErrorProcessingPayload(ctx)
-				return
+			if os.Getenv("ENV") != "dev" {
+				decryptedPayload, exists := ctx.Get("DecryptedBody")
+				if !exists {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
+				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+			} else {
+				if err := ctx.ShouldBindJSON(&body); err != nil {
+					apperrors.ErrorProcessingPayload(ctx)
+					return
+				}
 			}
 			controller.SubmitCustomAppForm(&interfaces.ApplicationContext[dto.SubmitCustomAppFormDTO]{
 				Ctx:    ctx,

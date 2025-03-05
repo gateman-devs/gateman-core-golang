@@ -1,16 +1,19 @@
 package controller
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	apperrors "gateman.io/application/appErrors"
 	"gateman.io/application/controller/dto"
 	"gateman.io/application/interfaces"
 	"gateman.io/application/repository"
+	auth_usecases "gateman.io/application/usecases/auth"
 	user_usecases "gateman.io/application/usecases/user"
 	"gateman.io/application/utils"
 	"gateman.io/entities"
@@ -20,6 +23,7 @@ import (
 	"gateman.io/infrastructure/database/repository/cache"
 	fileupload "gateman.io/infrastructure/file_upload"
 	"gateman.io/infrastructure/file_upload/types"
+	"gateman.io/infrastructure/ipresolver"
 	"gateman.io/infrastructure/logger"
 	messagequeue "gateman.io/infrastructure/message_queue"
 	queue_tasks "gateman.io/infrastructure/message_queue/tasks"
@@ -31,11 +35,11 @@ import (
 )
 
 func KeyExchange(ctx *interfaces.ApplicationContext[dto.KeyExchangeDTO]) {
-	// serverPublicKey, _ := auth_usecases.InitiateKeyExchange(ctx.Ctx, ctx.Body.ClientPublicKey)
-	// if serverPublicKey == nil {
-	// 	return
-	// }
-	// server_response.Responder.UnEncryptedRespond(ctx.Ctx, http.StatusCreated, "key exchanged", hex.EncodeToString(serverPublicKey), nil, nil)
+	serverPublicKey, _, _ := auth_usecases.InitiateKeyExchange(ctx.Ctx, ctx.DeviceID, ctx.Body.ClientPublicKey)
+	if serverPublicKey == nil {
+		return
+	}
+	server_response.Responder.UnEncryptedRespond(ctx.Ctx, http.StatusCreated, "key exchanged", hex.EncodeToString(serverPublicKey), nil, nil)
 }
 
 func AuthenticateUser(ctx *interfaces.ApplicationContext[dto.CreateUserDTO]) {
@@ -53,9 +57,10 @@ func AuthenticateUser(ctx *interfaces.ApplicationContext[dto.CreateUserDTO]) {
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "authentication complete", map[string]any{
-		"url":  url,
-		"code": code,
-	}, nil, nil, token, nil)
+		"url":         url,
+		"code":        code,
+		"accessToken": token,
+	}, nil, nil, &ctx.DeviceID)
 }
 
 func VerifyUserAccount(ctx *interfaces.ApplicationContext[any]) {
@@ -138,7 +143,142 @@ func VerifyUserAccount(ctx *interfaces.ApplicationContext[any]) {
 		return
 	}
 
-	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "email verified", url, nil, nil, token, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "email verified", map[string]any{
+		"url":         url,
+		"accessToken": token,
+	}, nil, nil, &ctx.DeviceID)
+}
+
+func VerifyWorkspaceAccount(ctx *interfaces.ApplicationContext[any]) {
+	workspaceRepo := repository.WorkspaceRepository()
+	workspace, err := workspaceRepo.FindOneByFilter(map[string]interface{}{
+		"email": ctx.GetStringContextData("OTPEmail"),
+	}, options.FindOne().SetProjection(map[string]any{
+		"_id":   1,
+		"email": 1,
+	}))
+	if err != nil {
+		logger.Error("an error occured while fetching workspace for verification", logger.LoggerOptions{
+			Key:  "error",
+			Data: err,
+		})
+		return
+	}
+	if workspace == nil {
+		apperrors.NotFoundError(ctx.Ctx, "Workspace not found")
+		return
+	}
+	if workspace.VerifiedEmail {
+		apperrors.ClientError(ctx.Ctx, "Workspace already verified", nil, nil)
+		return
+	}
+	success, err := workspaceRepo.UpdatePartialByFilter(map[string]interface{}{
+		"email": ctx.GetStringContextData("OTPEmail"),
+	}, map[string]any{
+		"verifiedEmail": true,
+	})
+	if err != nil {
+		logger.Error("an error occured while verifying org email", logger.LoggerOptions{
+			Key:  "error",
+			Data: err,
+		})
+		return
+	}
+	if !success {
+		apperrors.UnknownError(ctx.Ctx, err, nil)
+		return
+	}
+
+	workspaceMemberRepo := repository.WorkspaceMemberRepo()
+	success, err = workspaceMemberRepo.UpdatePartialByFilter(map[string]interface{}{
+		"email": ctx.GetStringContextData("OTPEmail"),
+	}, map[string]any{
+		"verifiedEmail": true,
+	})
+	if err != nil {
+		logger.Error("an error occured while verifying workspace member email", logger.LoggerOptions{
+			Key:  "error",
+			Data: err,
+		})
+		return
+	}
+	if !success {
+		apperrors.UnknownError(ctx.Ctx, err, nil)
+		return
+	}
+	superAdmin, _ := workspaceMemberRepo.FindOneByFilter(map[string]interface{}{
+		"email": ctx.GetStringContextData("OTPEmail"),
+	})
+
+	var savedDevice *entities.Device
+	for i, device := range superAdmin.Devices {
+		if device.ID == ctx.DeviceID {
+			savedDevice = &superAdmin.Devices[i]
+			superAdmin.Devices = append(superAdmin.Devices[:i], superAdmin.Devices[i+1:]...)
+			break
+		}
+	}
+	if savedDevice == nil {
+		ipLookupRes, _ := ipresolver.IPResolverInstance.LookUp(ctx.Param["ip"].(string))
+		superAdmin.Devices = append(superAdmin.Devices, entities.Device{
+			ID:                ctx.DeviceID,
+			Name:              ctx.DeviceName,
+			LastLogin:         time.Now(),
+			LastLoginLocation: fmt.Sprintf("%s, %s - (%f, %f)", strings.ToUpper(ipLookupRes.City), strings.ToUpper(ipLookupRes.CountryCode), ipLookupRes.Longitude, ipLookupRes.Latitude),
+			Verified:          true,
+		})
+	} else {
+		ipLookupRes, _ := ipresolver.IPResolverInstance.LookUp(ctx.Param["ip"].(string))
+		superAdmin.Devices = append(superAdmin.Devices, entities.Device{
+			ID:                savedDevice.ID,
+			Name:              savedDevice.Name,
+			LastLogin:         time.Now(),
+			LastLoginLocation: fmt.Sprintf("%s, %s - (%f, %f)", strings.ToUpper(ipLookupRes.City), strings.ToUpper(ipLookupRes.CountryCode), ipLookupRes.Longitude, ipLookupRes.Latitude),
+			Verified:          true,
+		})
+	}
+	workspaceMemberRepo.UpdatePartialByID(superAdmin.ID, map[string]any{
+		"devices": superAdmin.Devices,
+	})
+
+	accessToken, err := auth.GenerateAuthToken(auth.ClaimsData{
+		UserID:          superAdmin.ID,
+		UserAgent:       superAdmin.UserAgent,
+		Email:           &superAdmin.Email,
+		VerifiedAccount: superAdmin.VerifiedEmail,
+		DeviceID:        ctx.DeviceID,
+		TokenType:       auth.AccessToken,
+		IssuedAt:        time.Now().Unix(),
+		ExpiresAt:       time.Now().Add(time.Hour * 1).Unix(), //lasts for 1 hr
+	})
+	if err != nil {
+		apperrors.UnknownError(ctx.Ctx, err, nil)
+		return
+	}
+	refreshToken, err := auth.GenerateAuthToken(auth.ClaimsData{
+		UserID:          superAdmin.ID,
+		UserAgent:       superAdmin.UserAgent,
+		Email:           &superAdmin.Email,
+		VerifiedAccount: superAdmin.VerifiedEmail,
+		TokenType:       auth.RefreshToken,
+		DeviceID:        ctx.DeviceID,
+		IssuedAt:        time.Now().Unix(),
+		ExpiresAt:       time.Now().Add(time.Hour * 24 * 180).Unix(), //lasts for 180 days
+	})
+
+	if err != nil {
+		apperrors.UnknownError(ctx.Ctx, err, nil)
+		return
+	}
+	hashedAccessToken, _ := cryptography.CryptoHahser.HashString(*accessToken, nil)
+	hashedRefreshToken, _ := cryptography.CryptoHahser.HashString(*refreshToken, nil)
+	hashedDeviceID, _ := cryptography.CryptoHahser.HashString(ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
+	cache.Cache.CreateEntry(fmt.Sprintf("%s-access", string(hashedDeviceID)), hashedAccessToken, time.Hour*24)       // token should last for 10 mins
+	cache.Cache.CreateEntry(fmt.Sprintf("%s-refresh", string(hashedDeviceID)), hashedRefreshToken, time.Hour*24*180) // token should last for 100 days
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "email verified", map[string]any{
+		"accessToken":  accessToken,
+		"refreshToken": refreshToken,
+	}, nil, nil, &ctx.DeviceID)
 }
 
 func VerifyOTP(ctx *interfaces.ApplicationContext[dto.VerifyOTPDTO]) {
@@ -204,6 +344,13 @@ func VerifyOTP(ctx *interfaces.ApplicationContext[dto.VerifyOTPDTO]) {
 		apperrors.ClientError(ctx.Ctx, "otp expired", nil, nil)
 		return
 	}
+	fmt.Println(*ctx.Body.Email)
+	fmt.Println(*ctx.Body.Email)
+	fmt.Println(*ctx.Body.Email)
+	fmt.Println(*ctx.Body.Email)
+	fmt.Println(*ctx.Body.Email)
+	fmt.Println(*ctx.Body.Email)
+	fmt.Println(*ctx.Body.Email)
 	token, err := auth.GenerateAuthToken(auth.ClaimsData{
 		Email:     ctx.Body.Email,
 		PhoneNum:  ctx.Body.Phone,
@@ -215,7 +362,9 @@ func VerifyOTP(ctx *interfaces.ApplicationContext[dto.VerifyOTPDTO]) {
 		apperrors.FatalServerError(ctx.Ctx, err)
 		return
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "otp verified", nil, nil, nil, token, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "otp verified", map[string]any{
+		"accessToken": token,
+	}, nil, nil, &ctx.DeviceID)
 }
 
 func ResendOTP(ctx *interfaces.ApplicationContext[dto.ResendOTPDTO]) {
@@ -267,7 +416,7 @@ func ResendOTP(ctx *interfaces.ApplicationContext[dto.ResendOTPDTO]) {
 		cache.Cache.CreateEntry(fmt.Sprintf("%s-sms-otp-ref", *ctx.Body.Phone), *encryptedRef, time.Minute*10)
 		cache.Cache.CreateEntry(fmt.Sprintf("%s-otp-intent", *ctx.Body.Phone), "verify_account", time.Minute*10)
 	}
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "otp sent", nil, nil, nil, nil, nil)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "otp sent", nil, nil, nil, &ctx.DeviceID)
 }
 
 func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) {
@@ -413,7 +562,10 @@ func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) 
 	hashedDeviceID, _ := cryptography.CryptoHahser.HashString(ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
 	cache.Cache.CreateEntry(fmt.Sprintf("%s-access", string(hashedDeviceID)), hashedAccessToken, time.Hour*24)       // token should last for 10 mins
 	cache.Cache.CreateEntry(fmt.Sprintf("%s-refresh", string(hashedDeviceID)), hashedRefreshToken, time.Hour*24*180) // token should last for 100 days
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "device verified", nil, nil, nil, accessToken, refreshToken)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "device verified", map[string]any{
+		"accessToken":  accessToken,
+		"refreshToken": refreshToken,
+	}, nil, nil, &ctx.DeviceID)
 }
 
 func RefreshToken(ctx *interfaces.ApplicationContext[any]) {
@@ -463,5 +615,55 @@ func RefreshToken(ctx *interfaces.ApplicationContext[any]) {
 	hashedDeviceID, _ := cryptography.CryptoHahser.HashString(ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
 	cache.Cache.CreateEntry(fmt.Sprintf("%s-access", string(hashedDeviceID)), hashedAccessToken, time.Hour*24)       // token should last for 10 mins
 	cache.Cache.CreateEntry(fmt.Sprintf("%s-refresh", string(hashedDeviceID)), hashedRefreshToken, time.Hour*24*180) // token should last for 100 days
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "token refreshed", nil, nil, nil, accessToken, refreshToken)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "token refreshed", map[string]any{
+		"accessToken":  accessToken,
+		"refreshToken": refreshToken,
+	}, nil, nil, &ctx.DeviceID)
+}
+
+func WorkspaceRefreshToken(ctx *interfaces.ApplicationContext[any]) {
+	userRepo := repository.WorkspaceMemberRepo()
+	account, err := userRepo.FindByID(ctx.GetStringContextData("UserID"))
+	if err != nil {
+		apperrors.UnknownError(ctx.Ctx, err, nil)
+		return
+	}
+	if account == nil {
+		apperrors.NotFoundError(ctx.Ctx, "this account does not exist")
+		return
+	}
+	accessToken, err := auth.GenerateAuthToken(auth.ClaimsData{
+		UserID:          account.ID,
+		UserAgent:       account.UserAgent,
+		Email:           &account.Email,
+		VerifiedAccount: account.VerifiedEmail,
+		DeviceID:        ctx.DeviceID,
+		TokenType:       auth.AccessToken,
+		IssuedAt:        time.Now().Unix(),
+		ExpiresAt:       time.Now().Add(time.Hour * 1).Unix(), //lasts for 1 hr
+	})
+	refreshToken, err := auth.GenerateAuthToken(auth.ClaimsData{
+		UserID:          account.ID,
+		UserAgent:       account.UserAgent,
+		Email:           &account.Email,
+		VerifiedAccount: account.VerifiedEmail,
+		TokenType:       auth.RefreshToken,
+		DeviceID:        ctx.DeviceID,
+		IssuedAt:        time.Now().Unix(),
+		ExpiresAt:       time.Now().Add(time.Hour * 24 * 180).Unix(), //lasts for 180 days
+	})
+
+	if err != nil {
+		apperrors.UnknownError(ctx.Ctx, err, nil)
+		return
+	}
+	hashedAccessToken, _ := cryptography.CryptoHahser.HashString(*accessToken, nil)
+	hashedRefreshToken, _ := cryptography.CryptoHahser.HashString(*refreshToken, nil)
+	hashedDeviceID, _ := cryptography.CryptoHahser.HashString(ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
+	cache.Cache.CreateEntry(fmt.Sprintf("%s-access", string(hashedDeviceID)), hashedAccessToken, time.Hour*24)       // token should last for 10 mins
+	cache.Cache.CreateEntry(fmt.Sprintf("%s-refresh", string(hashedDeviceID)), hashedRefreshToken, time.Hour*24*180) // token should last for 100 days
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "token refreshed", map[string]any{
+		"accessToken":  accessToken,
+		"refreshToken": refreshToken,
+	}, nil, nil, &ctx.DeviceID)
 }

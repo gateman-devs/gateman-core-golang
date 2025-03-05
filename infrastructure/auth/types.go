@@ -18,6 +18,7 @@ type ClaimsData struct {
 	UserAgent       string
 	DeviceID        string
 	Intent          string
+	WorkspaceID     *string
 	TokenType       TokenType
 	Payload         map[string]any
 }

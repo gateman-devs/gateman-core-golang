@@ -2,10 +2,12 @@ package dto
 
 import "gateman.io/entities"
 
-type CreateOrgDTO struct {
-	WorkspaceName string `json:"workspaceName" validate:"required,min=2,max=100"`
-	Country       string `json:"country" validate:"required,iso3166_1_alpha2"`
-	Sector        string `json:"sector" validate:"required,oneof=fintech government health education other"`
+type CreateWorkspaceDTO struct {
+	Name     string `json:"name" validate:"required,min=2,max=100"`
+	Email    string `json:"email" validate:"required,email,min=6,max=100"`
+	Password string `json:"password" validate:"required,password,max=30"`
+	Country  string `json:"country" validate:"required,iso3166_1_alpha2"`
+	Sector   string `json:"sector" validate:"required,oneof=fintech government health education other"`
 }
 
 type UpdateOrgDTO struct {
