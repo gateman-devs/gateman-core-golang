@@ -3,7 +3,6 @@ package middlewares
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	apperrors "gateman.io/application/appErrors"
 	"gateman.io/application/interfaces"
@@ -13,21 +12,11 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
-func OTPTokenMiddleware(ctx *interfaces.ApplicationContext[any], ipAddress string, intent string) (*interfaces.ApplicationContext[any], bool) {
-	otpTokenPointer := ctx.GetHeader("Authorization")
-	if otpTokenPointer == nil {
+func OTPTokenMiddleware(ctx *interfaces.ApplicationContext[any], ipAddress string, intent string, otpToken string) (*interfaces.ApplicationContext[any], bool) {
+	if otpToken == "" {
 		apperrors.AuthenticationError(ctx.Ctx, "missing otp token")
 		return nil, false
 	}
-	otpToken := strings.Split(*otpTokenPointer, " ")[1]
-	fmt.Println("----")
-	fmt.Println("----")
-	fmt.Println("----")
-	fmt.Println("----")
-	fmt.Println("----")
-	// fmt.Println(authTokenClaims)
-	fmt.Println(otpToken)
-	fmt.Println("----")
 	validAccessToken, err := auth.DecodeAuthToken(otpToken)
 	if err != nil {
 		apperrors.AuthenticationError(ctx.Ctx, err.Error())
@@ -53,14 +42,6 @@ func OTPTokenMiddleware(ctx *interfaces.ApplicationContext[any], ipAddress strin
 	} else {
 		channel = authTokenClaims["phone"].(string)
 	}
-	fmt.Println("----")
-	fmt.Println("----")
-	fmt.Println("----")
-	fmt.Println("----")
-	fmt.Println("----")
-	fmt.Println(authTokenClaims)
-	fmt.Println(otpToken)
-	fmt.Println("----")
 	otpIntent := cache.Cache.FindOne(fmt.Sprintf("%s-otp-intent", channel))
 	if otpIntent == nil {
 		logger.Error("otp intent missing")
@@ -68,7 +49,6 @@ func OTPTokenMiddleware(ctx *interfaces.ApplicationContext[any], ipAddress strin
 		return nil, false
 	}
 
-	fmt.Println(*otpIntent, authTokenClaims["intent"].(string), intent)
 	if *otpIntent != authTokenClaims["intent"].(string) || authTokenClaims["intent"].(string) != intent {
 		logger.Error("wrong otp intent in token")
 		apperrors.ClientError(ctx.Ctx, "incorrect intent", nil, nil)

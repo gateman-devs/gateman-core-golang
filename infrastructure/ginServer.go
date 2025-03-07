@@ -23,6 +23,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type ginServer struct{}
@@ -40,6 +41,9 @@ func (s *ginServer) Start() {
 	subscription.SeedSubscriptionData()
 
 	server := gin.Default()
+
+	server.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
 	origins := strings.Split(os.Getenv("ORIGINS"), ",")
 	corsConfig := cors.Config{
 		AllowOrigins:     origins,
@@ -67,7 +71,6 @@ func (s *ginServer) Start() {
 			apperrors.ErrorProcessingPayload(ctx)
 			return
 		}
-		fmt.Println(body["clientPubKey"].(string))
 		it, _ := hex.DecodeString(body["clientPubKey"].(string))
 		clientPubKey, _ := ecdh.P256().NewPublicKey([]byte(it))
 		deviceID := ctx.GetHeader("X-Device-Id")

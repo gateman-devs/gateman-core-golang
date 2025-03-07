@@ -3,7 +3,6 @@ package middlewares
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	apperrors "gateman.io/application/appErrors"
 	"gateman.io/application/interfaces"
@@ -17,14 +16,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func WorkspaceAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], intent *string, requiredPermissions *[]entities.MemberPermissions) (*interfaces.ApplicationContext[any], bool) {
-	authTokenHeaderPointer := ctx.GetHeader("Authorization")
-	if authTokenHeaderPointer == nil {
-		apperrors.AuthenticationError(ctx.Ctx, "provide an auth token")
-		return nil, false
-	}
-	authTokenHeader := *authTokenHeaderPointer
-	authToken := strings.Split(authTokenHeader, " ")[1]
+func WorkspaceAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], intent *string, requiredPermissions *[]entities.MemberPermissions, authToken string) (*interfaces.ApplicationContext[any], bool) {
 	validAccessToken, err := auth.DecodeAuthToken(authToken)
 	if err != nil {
 		apperrors.AuthenticationError(ctx.Ctx, "this session has expired")

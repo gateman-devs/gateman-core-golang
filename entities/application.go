@@ -250,7 +250,7 @@ type Application struct {
 	AppImg                 string               `bson:"appImg" json:"appImg"`
 	Email                  string               `bson:"email" json:"email"`
 	AppID                  string               `bson:"appID" json:"appID"`
-	PinProtected           string               `bson:"pinProtected" json:"pinProtected"`
+	PinProtected           bool                 `bson:"pinProtected" json:"pinProtected"`
 	RequireAppMFA          bool                 `bson:"requireAppMFA" json:"requireAppMFA"`
 	CreatorID              string               `bson:"creatorID" json:"-"`
 	AppSigningKey          string               `bson:"appSigningKey" json:"-"`
@@ -262,8 +262,8 @@ type Application struct {
 	AccessTokenTTL         uint16               `bson:"accessTokenTTL" json:"accessTokenTTL"`
 	SandboxRefreshTokenTTL uint32               `bson:"sandboxRefreshTokenTTL" json:"sandboxRefreshTokenTTL"`
 	SandboxAccessTokenTTL  uint16               `bson:"sandboxAccessTokenTTL" json:"sandboxAccessTokenTTL"`
-	RequiredVerifications  *[]VerificationType  `bson:"requiredVerifications" json:"requiredVerifications"` // the verifications that must be completed before signup is approved
-	RequestedFields        []RequestedField     `bson:"requestedFields" json:"requestedFields"`             // the fields the application are interested in recieving. MUST NOT BE EMPTY
+	Verifications          *[]VerificationType  `bson:"verifications" json:"verifications"`     // the verifications that must be completed before signup is approved
+	RequestedFields        []RequestedField     `bson:"requestedFields" json:"requestedFields"` // the fields the application are interested in recieving. MUST NOT BE EMPTY
 	LocaleRestriction      *[]LocaleRestriction `bson:"localeRestriction" json:"localeRestriction"`
 	CustomFields           *[]CustomFormField   `bson:"customFields" json:"customFields"`
 	PaymentCard            *string              `bson:"paymentCard" json:"paymentCard"`

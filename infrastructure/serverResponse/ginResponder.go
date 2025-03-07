@@ -5,6 +5,9 @@ import (
 
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"os"
+	"time"
 
 	"gateman.io/application/constants"
 	"gateman.io/application/utils"
@@ -17,7 +20,11 @@ import (
 type ginResponder struct{}
 
 // Sends an encrypted payload to the client
-func (gr ginResponder) Respond(ctx interface{}, code int, message string, payload interface{}, errs []error, responseCode *uint, deviceID *string) {
+func (gr ginResponder) Respond(ctx interface{}, code int, message string, payload any, errs []error, responseCode *uint, deviceID *string) {
+	if os.Getenv("ENV") == "dev" {
+		gr.UnEncryptedRespond(ctx, code, message, payload, errs, responseCode)
+		return
+	}
 	ginCtx, ok := (ctx).(*gin.Context)
 	if !ok {
 		logger.Error("could not transform *interface{} to gin.Context in serverResponse package", logger.LoggerOptions{
@@ -27,6 +34,26 @@ func (gr ginResponder) Respond(ctx interface{}, code int, message string, payloa
 		return
 	}
 	ginCtx.Abort()
+
+	if payload != nil {
+		switch p := payload.(type) {
+		case map[string]any:
+			if value, ok := p["accessToken"]; ok && value.(*string) != nil {
+				http.SetCookie(ginCtx.Writer, &http.Cookie{
+					Name:     "accessToken",
+					Value:    value.(string),
+					Domain:   os.Getenv("CLIENT_URL"),
+					HttpOnly: true,
+					Secure:   true,
+					SameSite: http.SameSiteStrictMode,
+					Expires:  time.Now().Add(time.Hour * 1),
+					MaxAge:   3600,
+				})
+			}
+			delete(payload.(map[string]any), "accessToken")
+		}
+	}
+
 	response := map[string]any{
 		"message": message,
 		"body":    payload,
@@ -75,8 +102,7 @@ func (gr ginResponder) Respond(ctx interface{}, code int, message string, payloa
 	ginCtx.Abort()
 }
 
-// Sends a response to the client using plain JSON
-func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message string, payload interface{}, errs []error, responseCode *uint) {
+func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message string, payload any, errs []error, responseCode *uint) {
 	ginCtx, ok := (ctx).(*gin.Context)
 	if !ok {
 		logger.Error("could not transform *interface{} to gin.Context in serverResponse package", logger.LoggerOptions{
@@ -86,13 +112,80 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 		return
 	}
 	ginCtx.Abort()
+
+	if payload != nil {
+		fmt.Println(payload)
+		switch p := payload.(type) {
+		case map[string]any:
+			if value, ok := p["accessToken"]; ok && value.(*string) != nil {
+				fmt.Println("access", *value.(*string))
+				http.SetCookie(ginCtx.Writer, &http.Cookie{
+					Name:     "accessToken",
+					Value:    *value.(*string),
+					Domain:   os.Getenv("CLIENT_URL"),
+					HttpOnly: true,
+					Secure:   true,
+					Path:     "/",
+					SameSite: http.SameSiteStrictMode,
+					Expires:  time.Now().Add(time.Hour * 1),
+					MaxAge:   3600,
+				})
+			}
+			if value, ok := p["refreshToken"]; ok && value.(*string) != nil {
+				fmt.Println("refresh", *value.(*string))
+				http.SetCookie(ginCtx.Writer, &http.Cookie{
+					Name:     "refreshToken",
+					Value:    *value.(*string),
+					Domain:   os.Getenv("CLIENT_URL"),
+					HttpOnly: true,
+					Secure:   true,
+					Path:     "/api/v1/auth/refresh",
+					SameSite: http.SameSiteStrictMode,
+					Expires:  time.Now().Add(time.Hour * 24 * 183),
+					MaxAge:   15768000 ,
+				})
+			}
+			if value, ok := p["workspaceAccessToken"]; ok && value.(*string) != nil {
+				http.SetCookie(ginCtx.Writer, &http.Cookie{
+					Name:     "workspaceAccessToken",
+					Value:    *value.(*string),
+					Domain:   os.Getenv("CLIENT_URL"),
+					HttpOnly: true,
+					Secure:   true,
+					SameSite: http.SameSiteStrictMode,
+					Expires:  time.Now().Add(time.Hour * 1),
+					MaxAge:   3600,
+				})
+			}
+			if value, ok := p["workspaceRefreshToken"]; ok && value.(*string) != nil {
+				http.SetCookie(ginCtx.Writer, &http.Cookie{
+					Name:     "workspaceRefreshToken",
+					Value:    *value.(*string),
+					Domain:   os.Getenv("CLIENT_URL"),
+					HttpOnly: true,
+					Secure:   true,
+					Path:     "/api/v1/auth/refresh",
+					SameSite: http.SameSiteStrictMode,
+					Expires:  time.Now().Add(time.Hour * 24 * 183),
+					MaxAge:   15768000 ,
+				})
+			}
+			delete(payload.(map[string]any), "accessToken")
+			delete(payload.(map[string]any), "refreshToken")
+			delete(payload.(map[string]any), "workspaceAccessToken")
+			delete(payload.(map[string]any), "workspaceRefreshToken")
+		}
+	}
+
 	response := map[string]any{
 		"message": message,
 		"body":    payload,
 	}
+
 	if responseCode != nil {
 		response["responseCode"] = responseCode
 	}
+
 	if errs != nil {
 		errMsgs := []string{}
 		for _, err := range errs {
@@ -100,5 +193,6 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 		}
 		response["errors"] = errMsgs
 	}
+
 	ginCtx.JSON(code, response)
 }

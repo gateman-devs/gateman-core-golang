@@ -276,8 +276,8 @@ func VerifyWorkspaceAccount(ctx *interfaces.ApplicationContext[any]) {
 	cache.Cache.CreateEntry(fmt.Sprintf("%s-access", string(hashedDeviceID)), hashedAccessToken, time.Hour*24)       // token should last for 10 mins
 	cache.Cache.CreateEntry(fmt.Sprintf("%s-refresh", string(hashedDeviceID)), hashedRefreshToken, time.Hour*24*180) // token should last for 100 days
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "email verified", map[string]any{
-		"accessToken":  accessToken,
-		"refreshToken": refreshToken,
+		"workspaceAccessToken":  accessToken,
+		"workspaceRefreshToken": refreshToken,
 	}, nil, nil, &ctx.DeviceID)
 }
 
@@ -344,13 +344,6 @@ func VerifyOTP(ctx *interfaces.ApplicationContext[dto.VerifyOTPDTO]) {
 		apperrors.ClientError(ctx.Ctx, "otp expired", nil, nil)
 		return
 	}
-	fmt.Println(*ctx.Body.Email)
-	fmt.Println(*ctx.Body.Email)
-	fmt.Println(*ctx.Body.Email)
-	fmt.Println(*ctx.Body.Email)
-	fmt.Println(*ctx.Body.Email)
-	fmt.Println(*ctx.Body.Email)
-	fmt.Println(*ctx.Body.Email)
 	token, err := auth.GenerateAuthToken(auth.ClaimsData{
 		Email:     ctx.Body.Email,
 		PhoneNum:  ctx.Body.Phone,

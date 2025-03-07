@@ -13,6 +13,7 @@ var ACCOUNT_EXISTS uint = 9120                           // take the user to the
 var ACCOUNT_EXISTS_UNVERIFIED uint = 9130                // take the user to the face match page to register the device
 var ACCOUNT_EXISTS_EMAIL_OR_PHONE_UNVERIFIED uint = 9140 // take the user to the verify otp page to verify email
 var FREE_TIER_ACCOUNT_LIMIT_HIT uint = 5243              // display a page telling the user the limit has been hit
+var SET_APP_PIN uint = 1433                              // display a page telling the user the limit has been hit
 
 var AVAILABLE_REQUIRED_DATA_POINTS = []string{"bvn", "nin", "address", "biometric", "email", "phone", "login_location"}
 var CUSTOM_FIELD_TYPES = []string{"long_text", "short_text", "switch", "dropdown", "number", "secret", "pin"}

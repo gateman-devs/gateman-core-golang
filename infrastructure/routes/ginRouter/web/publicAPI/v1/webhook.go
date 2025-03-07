@@ -1,8 +1,6 @@
 package v1
 
 import (
-	"fmt"
-
 	apperrors "gateman.io/application/appErrors"
 	"gateman.io/application/controller"
 	"gateman.io/application/interfaces"
@@ -18,7 +16,6 @@ func WebhookRouter(router *gin.RouterGroup) {
 				apperrors.ErrorProcessingPayload(ctx)
 				return
 			}
-			fmt.Println(body)
 			controller.ProcessPaystackWebhook(&interfaces.ApplicationContext[[]byte]{
 				Ctx:    ctx,
 				Body:   &body,

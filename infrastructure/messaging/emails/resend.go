@@ -22,7 +22,6 @@ func (rs *ResendService) SendEmail(toEmail string, subject string, templateName 
 	client := resend.NewClient(apiKey)
 
 	html := rs.loadTemplates(templateName, opts)
-	fmt.Println(opts)
 
 	params := &resend.SendEmailRequest{
 		From:    os.Getenv("RESEND_DEFAULT_EMAIL"),
