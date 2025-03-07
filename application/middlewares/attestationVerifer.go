@@ -21,7 +21,7 @@ func AttestationVerifier(ctx *interfaces.ApplicationContext[any]) (*interfaces.A
 		apperrors.AuthenticationError(ctx.Ctx, "attestation token missing")
 		return nil, false
 	}
-	if os.Getenv("ENV") == "development" {
+	if os.Getenv("ENV") == "dev" {
 		return ctx, true
 	}
 	options := keyfunc.Options{

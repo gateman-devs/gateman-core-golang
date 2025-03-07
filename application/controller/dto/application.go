@@ -12,19 +12,18 @@ type ApplicationDTO struct {
 }
 
 type UpdateApplications struct {
-	Name                  *string                       `json:"name" validate:"max=100,min=2"`
-	Description           *string                       `json:"description" validate:"max=200,min=10"`
-	PinProtected          bool                          `json:"pinProtected"`
-	RequireAppMFA         bool                          `json:"requireAppMFA"`
-	PaymentCard           *string                       `json:"paymentCard" validate:"ulid"`
-	RequiredVerifications *[]string                     `json:"requiredVerifications" validate:"dive,min=2,max=50"`
-	LocaleRestriction     *[]entities.LocaleRestriction `json:"localeRestriction"`
-	RequestedFields       []entities.RequestedField     `json:"requestedFields"`
-	CustomFormFields      *[]entities.CustomFormField   `json:"customFormFields" validate:"dive,max=20"`
+	Name              *string                       `json:"name" validate:"max=100,min=2"`
+	Description       *string                       `json:"description" validate:"max=200,min=10"`
+	PaymentCard       *string                       `json:"paymentCard" validate:"ulid"`
+	Verifications     *[]entities.VerificationType  `json:"verifications" validate:"dive,min=2,max=50"`
+	LocaleRestriction *[]entities.LocaleRestriction `json:"localeRestriction"`
+	RequestedFields   []entities.RequestedField     `json:"requestedFields"`
+	CustomFormFields  *[]entities.CustomFormField   `json:"customFormFields" validate:"dive,max=20"`
 }
 
 type ApplicationSignUpDTO struct {
-	AppID string `json:"appID" validate:"required,max=100"`
+	AppID string  `json:"appID" validate:"required,max=100"`
+	Pin   *string `json:"pin"`
 }
 
 type SubmitCustomAppFormDTO struct {

@@ -70,23 +70,8 @@ func WorkspaceRouter(router *gin.RouterGroup) {
 
 		workspaceRouter.POST("/verify", middlewares.OTPTokenMiddleware("verify_workspace"), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
-			var body any
-			if os.Getenv("ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
-					apperrors.ErrorProcessingPayload(ctx)
-					return
-				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
-			} else {
-				if err := ctx.ShouldBindJSON(&body); err != nil {
-					apperrors.ErrorProcessingPayload(ctx)
-					return
-				}
-			}
 			controller.VerifyWorkspaceAccount(&interfaces.ApplicationContext[any]{
 				Ctx:        ctx,
-				Body:       &body,
 				Keys:       appContext.Keys,
 				DeviceID:   appContext.DeviceID,
 				DeviceName: appContext.DeviceName,

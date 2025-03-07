@@ -57,7 +57,7 @@ func CreateApplicationUseCase(ctx any, payload *dto.ApplicationDTO, deviceID str
 		AppImg:                 fmt.Sprintf("%s/%s", workspaceID, appPriKey),
 		Description:            payload.Description,
 		LocaleRestriction:      payload.LocaleRestriction,
-		RequiredVerifications:  payload.RequiredVerifications,
+		Verifications:          payload.RequiredVerifications,
 		RequestedFields:        payload.RequestedFields,
 		AppSigningKey:          *encryptedAppSigningKey,
 		SandboxAppSigningKey:   *encryptedSandboxAppSigningKey,

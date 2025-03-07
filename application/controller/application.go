@@ -21,7 +21,6 @@ import (
 	"gateman.io/application/utils"
 	"gateman.io/entities"
 	"gateman.io/infrastructure/cryptography"
-	"gateman.io/infrastructure/database/repository/mongo"
 	"gateman.io/infrastructure/logger"
 	messagequeue "gateman.io/infrastructure/message_queue"
 	queue_tasks "gateman.io/infrastructure/message_queue/tasks"
@@ -148,8 +147,6 @@ func UpdateApplication(ctx *interfaces.ApplicationContext[dto.UpdateApplications
 		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
 		return
 	}
-	var activeSubRepo *mongo.MongoRepository[entities.ActiveSubscription]
-	var activeSub *entities.ActiveSubscription
 	payload := map[string]any{}
 	if ctx.Body.Name != nil {
 		payload["name"] = ctx.Body.Name
@@ -160,37 +157,11 @@ func UpdateApplication(ctx *interfaces.ApplicationContext[dto.UpdateApplications
 	if ctx.Body.LocaleRestriction != nil {
 		payload["localeRestriction"] = ctx.Body.LocaleRestriction
 	}
-	if ctx.Body.RequiredVerifications != nil {
-		payload["requiredVerifications"] = ctx.Body.RequiredVerifications
+	if ctx.Body.Verifications != nil {
+		payload["verifications"] = ctx.Body.Verifications
 	}
 	if ctx.Body.RequestedFields != nil {
 		payload["requestedFields"] = ctx.Body.RequestedFields
-	}
-	if ctx.Body.PinProtected {
-		activeSubRepo = repository.ActiveSubscriptionRepo()
-		activeSub, _ = activeSubRepo.FindOneByFilter(map[string]any{
-			"appID": ctx.GetStringParameter("id"),
-		})
-		if activeSub == nil || !activeSub.Active || activeSub.ActiveSubName == entities.Free {
-			apperrors.ClientError(ctx.Ctx, "Pin protection is available for only Essential and Premium customers", nil, nil)
-			return
-		}
-		payload["pinProtected"] = true
-	}
-	if ctx.Body.RequireAppMFA {
-		if activeSubRepo == nil {
-			activeSubRepo = repository.ActiveSubscriptionRepo()
-		}
-		if activeSub == nil {
-			activeSub, _ = activeSubRepo.FindOneByFilter(map[string]any{
-				"appID": ctx.GetStringParameter("id"),
-			})
-		}
-		if activeSub == nil || !activeSub.Active || activeSub.ActiveSubName == entities.Free {
-			apperrors.ClientError(ctx.Ctx, "Pin protection is available for only Essential and Premium customers", nil, nil)
-			return
-		}
-		payload["requireAppMFA"] = true
 	}
 	if ctx.Body.CustomFormFields != nil {
 		payload["customFields"] = ctx.Body.CustomFormFields
@@ -487,7 +458,18 @@ func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpD
 		"userID": ctx.GetStringContextData("UserID"),
 		"appID":  ctx.Body.AppID,
 	})
+	var responseCode *uint
 	if appUserExists != nil {
+		if app.PinProtected {
+			if appUserExists.Pin == nil {
+				responseCode = &constants.SET_APP_PIN
+			}
+			pinMatch := cryptography.CryptoHahser.VerifyHashData(*appUserExists.Pin, *ctx.Body.Pin)
+			if !pinMatch {
+				apperrors.AuthenticationError(ctx.Ctx, "Incorrect pin")
+				return
+			}
+		}
 		eligible, msg, payload, requestedFields := services.ProcessUserSignUp(app, user)
 		if eligible {
 			block, err := services.CheckMonthlyLimit(ctx.Ctx, app.ID, appUserExists.ID)
@@ -497,17 +479,24 @@ func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpD
 			payload, err := services.GenerateAuthTokens(payload, app, ctx.UserAgent, ctx.DeviceID, ctx.GetStringContextData("UserID"), requestedFields)
 			if err != nil {
 				apperrors.UnknownError(ctx.Ctx, err, nil)
+				return
 			}
-			server_response.Responder.Respond(ctx.Ctx, http.StatusOK, msg, payload, nil, nil, &ctx.DeviceID)
+			server_response.Responder.Respond(ctx.Ctx, http.StatusOK, msg, payload, nil, responseCode, &ctx.DeviceID)
 		}
 		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, msg, payload, nil, nil, &ctx.DeviceID)
 	} else {
+		if app.PinProtected && ctx.Body.Pin == nil {
+			apperrors.ClientError(ctx.Ctx, "Provide your login pin", nil, nil)
+			return
+		}
 		eligible, msg, payload, requestedFields := services.ProcessUserSignUp(app, user)
 		if eligible {
+			pin, _ := cryptography.CryptoHahser.HashString(*ctx.Body.Pin, nil)
 			appUserExists, _ := appUserRepo.CreateOne(context.TODO(), entities.AppUser{
 				AppID:       ctx.Body.AppID,
 				UserID:      ctx.GetStringContextData("UserID"),
 				WorkspaceID: app.WorkspaceID,
+				Pin:         utils.GetStringPointer(string(pin)),
 			})
 			block, err := services.CheckMonthlyLimit(ctx.Ctx, app.ID, appUserExists.ID)
 			if err != nil || block {

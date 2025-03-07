@@ -3,7 +3,6 @@ package middlewares
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	apperrors "gateman.io/application/appErrors"
 	"gateman.io/application/interfaces"
@@ -14,21 +13,18 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
-func RefreshTokenMiddleware(ctx *interfaces.ApplicationContext[any]) (*interfaces.ApplicationContext[any], bool) {
-	authTokenHeaderPointer := ctx.GetHeader("Authorization")
-	if authTokenHeaderPointer == nil {
-		apperrors.AuthenticationError(ctx.Ctx, "provide an auth token")
+func RefreshTokenMiddleware(ctx *interfaces.ApplicationContext[any], authToken string) (*interfaces.ApplicationContext[any], bool) {
+	if authToken == "" {
+		apperrors.AuthenticationError(ctx.Ctx, "missing auth token")
 		return nil, false
 	}
-	authTokenHeader := *authTokenHeaderPointer
-	authToken := strings.Split(authTokenHeader, " ")[1]
 	validAccessToken, err := auth.DecodeAuthToken(authToken)
 	if err != nil {
 		apperrors.AuthenticationError(ctx.Ctx, "this session has expired")
 		return nil, false
 	}
 	if !validAccessToken.Valid {
-		apperrors.AuthenticationError(ctx.Ctx, "unauthorised access")
+		apperrors.AuthenticationError(ctx.Ctx, "unauthorised access 1")
 		return nil, false
 	}
 	authTokenClaims := validAccessToken.Claims.(jwt.MapClaims)
@@ -37,7 +33,7 @@ func RefreshTokenMiddleware(ctx *interfaces.ApplicationContext[any]) (*interface
 			Key:  "token claims",
 			Data: validAccessToken,
 		})
-		apperrors.AuthenticationError(ctx.Ctx, "unauthorised access")
+		apperrors.AuthenticationError(ctx.Ctx, "unauthorised access2")
 		return nil, false
 	}
 
@@ -58,13 +54,13 @@ func RefreshTokenMiddleware(ctx *interfaces.ApplicationContext[any]) (*interface
 		return nil, false
 	}
 	if authTokenClaims["tokenType"] != "refresh_token" {
-		apperrors.AuthenticationError(ctx.Ctx, "unauthorised access")
+		apperrors.AuthenticationError(ctx.Ctx, "unauthorised access3")
 		return nil, false
 	}
 
 	if ctx.DeviceID == "" {
 		logger.Info("device id missing from client")
-		apperrors.AuthenticationError(ctx.Ctx, "unauthorized access")
+		apperrors.AuthenticationError(ctx.Ctx, "unauthorized access4")
 		return nil, false
 	}
 
@@ -76,7 +72,7 @@ func RefreshTokenMiddleware(ctx *interfaces.ApplicationContext[any]) (*interface
 			Key:  "request  device id",
 			Data: ctx.DeviceID,
 		})
-		apperrors.AuthenticationError(ctx.Ctx, "unauthorized access")
+		apperrors.AuthenticationError(ctx.Ctx, "unauthorized access5")
 		return nil, false
 	}
 

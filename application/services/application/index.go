@@ -22,7 +22,7 @@ import (
 func ProcessUserSignUp(app *entities.Application, user *entities.User) (bool, string, map[string]any, map[string]any) {
 	var eligible = true
 	outstandingIDs := []string{}
-	for _, id := range *app.RequiredVerifications {
+	for _, id := range *app.Verifications {
 		if id.Name == "nin" {
 			if user.NIN == nil && id.Required {
 				outstandingIDs = append(outstandingIDs, "nin")

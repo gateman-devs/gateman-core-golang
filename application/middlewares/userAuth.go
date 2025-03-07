@@ -3,7 +3,6 @@ package middlewares
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	apperrors "gateman.io/application/appErrors"
 	"gateman.io/application/interfaces"
@@ -14,14 +13,12 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
-func UserAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], intent *string) (*interfaces.ApplicationContext[any], bool) {
-	authTokenHeaderPointer := ctx.GetHeader("Authorization")
-	if authTokenHeaderPointer == nil {
-		apperrors.AuthenticationError(ctx.Ctx, "provide an auth token")
+func UserAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], intent *string, authToken string) (*interfaces.ApplicationContext[any], bool) {
+	fmt.Println(authToken)
+	if authToken == "" {
+		apperrors.AuthenticationError(ctx.Ctx, "missing auth token")
 		return nil, false
 	}
-	authTokenHeader := *authTokenHeaderPointer
-	authToken := strings.Split(authTokenHeader, " ")[1]
 	validAccessToken, err := auth.DecodeAuthToken(authToken)
 	if err != nil {
 		apperrors.AuthenticationError(ctx.Ctx, "this session has expired")
@@ -54,7 +51,7 @@ func UserAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], inten
 	}
 
 	if intent != nil {
-		if authTokenClaims["intent"] != intent {
+		if authTokenClaims["intent"] != *intent {
 			apperrors.AuthenticationError(ctx.Ctx, "unauthorised access")
 			return nil, false
 		}

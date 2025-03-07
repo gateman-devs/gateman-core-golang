@@ -12,12 +12,18 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/hibiken/asynq v0.25.0
+	github.com/prometheus/client_golang v1.21.1
 	github.com/savaki/geoip2 v0.0.0-20150727150920-9968b08fbf39
 	github.com/ua-parser/uap-go v0.0.0-20250213224047-9c035f085b90
 )
 
 require (
+	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
+	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/prometheus/client_model v0.6.1 // indirect
+	github.com/prometheus/common v0.62.0 // indirect
+	github.com/prometheus/procfs v0.15.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
@@ -62,8 +68,7 @@ require (
 
 require (
 	cloud.google.com/go v0.110.8 // indirect
-	cloud.google.com/go/compute v1.23.1 // indirect
-	cloud.google.com/go/compute/metadata v0.2.3 // indirect
+	cloud.google.com/go/compute/metadata v0.3.0 // indirect
 	cloud.google.com/go/iam v1.1.3 // indirect
 	cloud.google.com/go/pubsub v1.33.0 // indirect
 	github.com/AsaiYusuke/jsonpath v1.6.0 // indirect
@@ -97,7 +102,7 @@ require (
 	github.com/imroc/req v0.3.2 // indirect
 	github.com/joho/godotenv v1.5.1
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.17.1 // indirect
+	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
@@ -127,17 +132,16 @@ require (
 	golang.org/x/arch v0.8.0 // indirect
 	golang.org/x/crypto v0.32.0 // indirect
 	golang.org/x/net v0.33.0 // indirect
-	golang.org/x/oauth2 v0.13.0 // indirect
+	golang.org/x/oauth2 v0.24.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/time v0.8.0 // indirect
 	google.golang.org/api v0.150.0 // indirect
-	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20231016165738-49dd2c1f3d0b // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20231016165738-49dd2c1f3d0b // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231030173426-d783a09b4405 // indirect
 	google.golang.org/grpc v1.59.0 // indirect
-	google.golang.org/protobuf v1.35.2 // indirect
+	google.golang.org/protobuf v1.36.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
