@@ -78,7 +78,7 @@ func CreateApplication(ctx *interfaces.ApplicationContext[dto.ApplicationDTO]) {
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "app created", map[string]any{
-		"app":                  app,
+		"url":                  fmt.Sprintf("%s/app/authenticate/%s", os.Getenv("CLIENT_URL"), app.ID),
 		"apiKey":               apiKey,
 		"appID":                appID,
 		"appSigningKey":        appSigningKey,
