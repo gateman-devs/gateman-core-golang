@@ -68,7 +68,7 @@ func (s *ginServer) Start() {
 		// clientPubKeyBytes, _ := ctx.GetRawData()
 		var body map[string]any
 		if err := ctx.ShouldBindJSON(&body); err != nil {
-			apperrors.ErrorProcessingPayload(ctx)
+			apperrors.ErrorProcessingPayload(ctx, nil)
 			return
 		}
 		it, _ := hex.DecodeString(body["clientPubKey"].(string))
@@ -104,7 +104,8 @@ func (s *ginServer) Start() {
 	})
 
 	server.NoRoute(func(ctx *gin.Context) {
-		apperrors.NotFoundError(ctx, fmt.Sprintf("%s %s does not exist", ctx.Request.Method, ctx.Request.URL))
+		deviceID := ctx.GetHeader("X-Device-Id")
+		apperrors.NotFoundError(ctx, fmt.Sprintf("%s %s does not exist", ctx.Request.Method, ctx.Request.URL), &deviceID)
 	})
 
 	gin_mode := os.Getenv("GIN_MODE")

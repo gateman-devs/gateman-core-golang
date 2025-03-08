@@ -18,7 +18,7 @@ func IPAddressMiddleware(ctx *interfaces.ApplicationContext[any], clientIP strin
 			Key:  "ip",
 			Data: clientIP,
 		})
-		apperrors.FatalServerError(ctx.Ctx, err)
+		apperrors.FatalServerError(ctx.Ctx, err, ctx.DeviceID)
 		return nil, false
 	}
 	logger.Info("request-ip-lookup", logger.LoggerOptions{

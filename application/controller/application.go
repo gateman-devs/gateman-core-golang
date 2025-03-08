@@ -33,27 +33,45 @@ import (
 func CreateApplication(ctx *interfaces.ApplicationContext[dto.ApplicationDTO]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
 		return
 	}
 	if len(ctx.Body.RequestedFields) == 0 {
-		apperrors.ValidationFailedError(ctx.Ctx, &[]error{errors.New("requestedFields cannot be empty")})
+		apperrors.ValidationFailedError(ctx.Ctx, &[]error{errors.New("requestedFields cannot be empty")}, ctx.DeviceID)
 		return
 	}
-	for _, field := range *ctx.Body.RequiredVerifications {
-		if !utils.HasItemString(&constants.AVAILABLE_REQUIRED_DATA_POINTS, field.Name) {
-			apperrors.ValidationFailedError(ctx.Ctx, &[]error{fmt.Errorf("%s is not allowed in requested field", field.Name)})
-			return
+	if ctx.Body.Verifications != nil {
+		for _, field := range *ctx.Body.Verifications {
+			if !utils.HasItemString(&constants.AVAILABLE_REQUIRED_DATA_POINTS, field.Name) {
+				apperrors.ValidationFailedError(ctx.Ctx, &[]error{fmt.Errorf("%s is not allowed in requested field", field.Name)}, ctx.DeviceID)
+				return
+			}
 		}
 	}
 	if ctx.Body.LocaleRestriction != nil {
 		for _, r := range *ctx.Body.LocaleRestriction {
 			valiedationErr := validator.ValidatorInstance.ValidateStruct(r)
 			if valiedationErr != nil {
-				apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+				apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
 				return
 			}
 		}
+	}
+	if ctx.Body.CustomFormFields != nil && len(*ctx.Body.CustomFormFields) > 48 {
+		apperrors.ValidationFailedError(ctx.Ctx, &[]error{errors.New("duplicate validation options detected on custom form fields")}, ctx.DeviceID)
+		return
+	}
+	if len(ctx.Body.RequestedFields) > 11 {
+		apperrors.ValidationFailedError(ctx.Ctx, &[]error{errors.New("requested fields cannot contain more than 11 items")}, ctx.DeviceID)
+		return
+	}
+	if ctx.Body.Verifications != nil && len(*ctx.Body.Verifications) > 4 {
+		apperrors.ValidationFailedError(ctx.Ctx, &[]error{errors.New("verifications cannot contain more than 4 items")}, ctx.DeviceID)
+		return
+	}
+	if ctx.Body.LocaleRestriction != nil && len(*ctx.Body.LocaleRestriction) > 300 {
+		apperrors.ValidationFailedError(ctx.Ctx, &[]error{errors.New("locale restrictions cannot contain more than 300 items")}, ctx.DeviceID)
+		return
 	}
 	app, apiKey, appID, appSigningKey, sandboxAPIKey, sandboxAppSigningKey := application_usecase.CreateApplicationUseCase(ctx.Ctx, ctx.Body, ctx.DeviceID, ctx.GetStringContextData("UserID"), ctx.GetStringContextData("WorkspaceID"), ctx.GetStringContextData("Email"))
 	if app == nil {
@@ -95,7 +113,7 @@ func FetchWorkspaceApps(ctx *interfaces.ApplicationContext[any]) {
 			Key:  "error",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "apps fetched", apps, nil, nil, &ctx.DeviceID)
 }
@@ -108,11 +126,11 @@ func DeleteApplication(ctx *interfaces.ApplicationContext[any]) {
 			Key:  "error",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	if deleted == 0 {
-		apperrors.NotFoundError(ctx.Ctx, "this application does not exist")
+		apperrors.NotFoundError(ctx.Ctx, "this application does not exist", &ctx.DeviceID)
 		return
 	}
 	appRepo.UpdatePartialByID(ctx.GetStringParameter("id"), map[string]any{
@@ -124,7 +142,7 @@ func DeleteApplication(ctx *interfaces.ApplicationContext[any]) {
 	})
 	if err != nil {
 		logger.Error("error marshalling payload for delete app queue")
-		apperrors.FatalServerError(ctx, err)
+		apperrors.FatalServerError(ctx, err, ctx.DeviceID)
 		return
 	}
 	deleteIn := os.Getenv("DELETE_APP_IN_SECONDS")
@@ -144,7 +162,7 @@ func DeleteApplication(ctx *interfaces.ApplicationContext[any]) {
 func UpdateApplication(ctx *interfaces.ApplicationContext[dto.UpdateApplications]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
 		return
 	}
 	payload := map[string]any{}
@@ -170,7 +188,7 @@ func UpdateApplication(ctx *interfaces.ApplicationContext[dto.UpdateApplications
 		workspaceRepo := repository.WorkspaceRepository()
 		workspace, err := workspaceRepo.FindByID(ctx.GetStringContextData("WorkspaceID"))
 		if err != nil {
-			apperrors.UnknownError(ctx.Ctx, err, nil)
+			apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 			return
 		}
 		var card *entities.CardInfo
@@ -181,7 +199,7 @@ func UpdateApplication(ctx *interfaces.ApplicationContext[dto.UpdateApplications
 			}
 		}
 		if card == nil {
-			apperrors.ClientError(ctx.Ctx, "Saved card not found", nil, nil)
+			apperrors.ClientError(ctx.Ctx, "Saved card not found", nil, nil, ctx.DeviceID)
 			return
 		}
 		payload["paymentCard"] = ctx.Body.PaymentCard
@@ -197,7 +215,7 @@ func UpdateApplication(ctx *interfaces.ApplicationContext[dto.UpdateApplications
 		}, logger.LoggerOptions{
 			Key: "payload", Data: payload,
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "app updated", nil, nil, nil, &ctx.DeviceID)
@@ -216,11 +234,11 @@ func RefreshAppAPIKey(ctx *interfaces.ApplicationContext[any]) {
 		}, logger.LoggerOptions{
 			Key: "payload", Data: ctx.Body,
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	if app == 0 {
-		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found")
+		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found", &ctx.DeviceID)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "API key updated. This will only be displayed once", apiKey, nil, nil, &ctx.DeviceID)
@@ -229,12 +247,12 @@ func RefreshAppAPIKey(ctx *interfaces.ApplicationContext[any]) {
 func UpdateWhiteListedIPs(ctx *interfaces.ApplicationContext[dto.UpdateWhitelistIPDTO]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
 		return
 	}
 	invalidIP := utils.ValidateIPAddresses(ctx.Body.IPs)
 	if invalidIP {
-		apperrors.ClientError(ctx.Ctx, "please enter only valid IP addresses", nil, nil)
+		apperrors.ClientError(ctx.Ctx, "please enter only valid IP addresses", nil, nil, ctx.DeviceID)
 		return
 	}
 	appRepo := repository.ApplicationRepo()
@@ -247,11 +265,11 @@ func UpdateWhiteListedIPs(ctx *interfaces.ApplicationContext[dto.UpdateWhitelist
 		}, logger.LoggerOptions{
 			Key: "payload", Data: ctx.Body,
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	if app == 0 {
-		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found")
+		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found", &ctx.DeviceID)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "IP Whitelist updated", nil, nil, nil, &ctx.DeviceID)
@@ -271,11 +289,11 @@ func RefreshAppSigningKey(ctx *interfaces.ApplicationContext[any]) {
 		}, logger.LoggerOptions{
 			Key: "payload", Data: ctx.Body,
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	if app == 0 {
-		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found")
+		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found", &ctx.DeviceID)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "App Signing Key updated. This will only be displayed once", appSigningKey, nil, nil, &ctx.DeviceID)
@@ -290,11 +308,11 @@ func TogglePinProtectionSetting(ctx *interfaces.ApplicationContext[dto.TogglePin
 		logger.Error("an error occured while fetching active subcription for toggle pin protected account", logger.LoggerOptions{
 			Key: "id", Data: ctx.GetStringParameter("id"),
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	if activeSub == nil || activeSub.ActiveSubName == entities.Free {
-		apperrors.ClientError(ctx.Ctx, "Your current tier does not support pin protected accounts. Please upgrade to the Gateman Essential plan to get this feature", nil, nil)
+		apperrors.ClientError(ctx.Ctx, "Your current tier does not support pin protected accounts. Please upgrade to the Gateman Essential plan to get this feature", nil, nil, ctx.DeviceID)
 		return
 	}
 	appRepo := repository.ApplicationRepo()
@@ -305,11 +323,11 @@ func TogglePinProtectionSetting(ctx *interfaces.ApplicationContext[dto.TogglePin
 		logger.Error("an error occured while updating protected pin setting", logger.LoggerOptions{
 			Key: "id", Data: ctx.GetStringParameter("id"),
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	if app == 0 {
-		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found")
+		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found", &ctx.DeviceID)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Pin protection setting updated", nil, nil, nil, &ctx.DeviceID)
@@ -324,11 +342,11 @@ func ToggleMFAProtectionSetting(ctx *interfaces.ApplicationContext[dto.ToggleMFA
 		logger.Error("an error occured while fetching active subcription for toggle MFA protected accounts", logger.LoggerOptions{
 			Key: "id", Data: ctx.GetStringParameter("id"),
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	if activeSub == nil || activeSub.ActiveSubName != entities.Premium {
-		apperrors.ClientError(ctx.Ctx, "Your current tier does not support MFA protected accounts. Please upgrade to the Gateman Premium plan to get this feature", nil, nil)
+		apperrors.ClientError(ctx.Ctx, "Your current tier does not support MFA protected accounts. Please upgrade to the Gateman Premium plan to get this feature", nil, nil, ctx.DeviceID)
 		return
 	}
 	appRepo := repository.ApplicationRepo()
@@ -339,11 +357,11 @@ func ToggleMFAProtectionSetting(ctx *interfaces.ApplicationContext[dto.ToggleMFA
 		logger.Error("an error occured while updating mfa protected setting", logger.LoggerOptions{
 			Key: "id", Data: ctx.GetStringParameter("id"),
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	if app == 0 {
-		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found")
+		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found", &ctx.DeviceID)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "MFA protection setting updated", nil, nil, nil, &ctx.DeviceID)
@@ -362,11 +380,11 @@ func RefreshSandboxAppAPIKey(ctx *interfaces.ApplicationContext[any]) {
 		}, logger.LoggerOptions{
 			Key: "payload", Data: ctx.Body,
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	if app == 0 {
-		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found")
+		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found", &ctx.DeviceID)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Sandbox API key updated. This will only be displayed once", apiKey, nil, nil, &ctx.DeviceID)
@@ -386,11 +404,11 @@ func RefreshSandboxAppSigningKey(ctx *interfaces.ApplicationContext[any]) {
 		}, logger.LoggerOptions{
 			Key: "payload", Data: ctx.Body,
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	if app == 0 {
-		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found")
+		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found", &ctx.DeviceID)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Sandbox App Signing Key updated. This will only be displayed once", appSigningKey, nil, nil, &ctx.DeviceID)
@@ -399,7 +417,7 @@ func RefreshSandboxAppSigningKey(ctx *interfaces.ApplicationContext[any]) {
 func UpdateAccessRefreshTokenTTL(ctx *interfaces.ApplicationContext[dto.UpdateAccessRefreshTokenTTL]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
 		return
 	}
 	updateFields := map[string]any{}
@@ -430,7 +448,7 @@ func UpdateAccessRefreshTokenTTL(ctx *interfaces.ApplicationContext[dto.UpdateAc
 func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpDTO]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
 		return
 	}
 	app, err := application_usecase.FetchAppUseCase(ctx.Ctx, ctx.Body.AppID, ctx.DeviceID, ctx.Keys["ip"].(string))
@@ -446,11 +464,11 @@ func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpD
 			Key:  "userID",
 			Data: ctx.GetStringContextData("UserID"),
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	if user == nil {
-		apperrors.NotFoundError(ctx.Ctx, "This user was not found")
+		apperrors.NotFoundError(ctx.Ctx, "This user was not found", &ctx.DeviceID)
 		return
 	}
 	appUserRepo := repository.AppUserRepo()
@@ -460,56 +478,63 @@ func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpD
 	})
 	var responseCode *uint
 	if appUserExists != nil {
+		if appUserExists.Blocked {
+			apperrors.AuthenticationError(ctx.Ctx, "Your access to this application has been restricted", ctx.DeviceID)
+			return
+		}
 		if app.PinProtected {
 			if appUserExists.Pin == nil {
 				responseCode = &constants.SET_APP_PIN
 			}
 			pinMatch := cryptography.CryptoHahser.VerifyHashData(*appUserExists.Pin, *ctx.Body.Pin)
 			if !pinMatch {
-				apperrors.AuthenticationError(ctx.Ctx, "Incorrect pin")
+				apperrors.AuthenticationError(ctx.Ctx, "Incorrect pin", ctx.DeviceID)
 				return
 			}
 		}
-		eligible, msg, payload, requestedFields := services.ProcessUserSignUp(app, user)
+		eligible, msg, payload, requestedFields := services.ProcessUserSignUp(app, user, ctx.Keys["ip"].(string))
 		if eligible {
-			block, err := services.CheckMonthlyLimit(ctx.Ctx, app.ID, appUserExists.ID)
+			block, err := services.CheckMonthlyLimit(ctx.Ctx, app.ID, appUserExists.ID, ctx.DeviceID)
 			if err != nil || block {
 				return
 			}
 			payload, err := services.GenerateAuthTokens(payload, app, ctx.UserAgent, ctx.DeviceID, ctx.GetStringContextData("UserID"), requestedFields)
 			if err != nil {
-				apperrors.UnknownError(ctx.Ctx, err, nil)
+				apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 				return
 			}
 			server_response.Responder.Respond(ctx.Ctx, http.StatusOK, msg, payload, nil, responseCode, &ctx.DeviceID)
 		}
-		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, msg, payload, nil, nil, &ctx.DeviceID)
+		server_response.Responder.Respond(ctx.Ctx, http.StatusBadRequest, msg, payload, nil, nil, &ctx.DeviceID)
 	} else {
 		if app.PinProtected && ctx.Body.Pin == nil {
-			apperrors.ClientError(ctx.Ctx, "Provide your login pin", nil, nil)
+			apperrors.ClientError(ctx.Ctx, "Provide your login pin", nil, nil, ctx.DeviceID)
 			return
 		}
-		eligible, msg, payload, requestedFields := services.ProcessUserSignUp(app, user)
+		eligible, msg, payload, requestedFields := services.ProcessUserSignUp(app, user, ctx.Keys["ip"].(string))
 		if eligible {
-			pin, _ := cryptography.CryptoHahser.HashString(*ctx.Body.Pin, nil)
+			var pin []byte
+			if ctx.Body.Pin != nil {
+				pin, _ = cryptography.CryptoHahser.HashString(*ctx.Body.Pin, nil)
+			}
 			appUserExists, _ := appUserRepo.CreateOne(context.TODO(), entities.AppUser{
 				AppID:       ctx.Body.AppID,
 				UserID:      ctx.GetStringContextData("UserID"),
 				WorkspaceID: app.WorkspaceID,
 				Pin:         utils.GetStringPointer(string(pin)),
 			})
-			block, err := services.CheckMonthlyLimit(ctx.Ctx, app.ID, appUserExists.ID)
+			block, err := services.CheckMonthlyLimit(ctx.Ctx, app.ID, appUserExists.ID, ctx.DeviceID)
 			if err != nil || block {
 				return
 			}
 			payload, err := services.GenerateAuthTokens(payload, app, ctx.UserAgent, ctx.DeviceID, ctx.GetStringContextData("UserID"), requestedFields)
 			if err != nil {
-				apperrors.UnknownError(ctx.Ctx, err, nil)
+				apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 			}
 			server_response.Responder.Respond(ctx.Ctx, http.StatusOK, msg, payload, nil, nil, &ctx.DeviceID)
 			return
 		}
-		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, msg, payload, nil, nil, &ctx.DeviceID)
+		server_response.Responder.Respond(ctx.Ctx, http.StatusBadRequest, msg, payload, nil, nil, &ctx.DeviceID)
 	}
 }
 
@@ -520,15 +545,15 @@ func SubmitCustomAppForm(ctx *interfaces.ApplicationContext[dto.SubmitCustomAppF
 		logger.Error("an error occured while trying to fetch application for custom for submititon", logger.LoggerOptions{
 			Key: "err", Data: err,
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	if app == nil {
-		apperrors.NotFoundError(ctx.Ctx, "App not found")
+		apperrors.NotFoundError(ctx.Ctx, "App not found", &ctx.DeviceID)
 		return
 	}
 	if app.CustomFields == nil {
-		apperrors.ClientError(ctx.Ctx, fmt.Sprintf("%s does not have a custom form", app.Name), nil, nil)
+		apperrors.ClientError(ctx.Ctx, fmt.Sprintf("%s does not have a custom form", app.Name), nil, nil, ctx.DeviceID)
 		return
 	}
 	appUserRepo := repository.AppUserRepo()
@@ -540,11 +565,11 @@ func SubmitCustomAppForm(ctx *interfaces.ApplicationContext[dto.SubmitCustomAppF
 		logger.Error("an error occured while trying to fetch application user for custom for submititon", logger.LoggerOptions{
 			Key: "err", Data: err,
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	if appUser == nil {
-		apperrors.ClientError(ctx.Ctx, "Sign up to the app before attempting to submit the form", nil, nil)
+		apperrors.ClientError(ctx.Ctx, "Sign up to the app before attempting to submit the form", nil, nil, ctx.DeviceID)
 		return
 	}
 	var validationErr []error
@@ -572,7 +597,7 @@ func SubmitCustomAppForm(ctx *interfaces.ApplicationContext[dto.SubmitCustomAppF
 		}
 	}
 	if len(validationErr) != 0 {
-		apperrors.ValidationFailedError(ctx.Ctx, &validationErr)
+		apperrors.ValidationFailedError(ctx.Ctx, &validationErr, ctx.DeviceID)
 		return
 	}
 	maps.Copy(ctx.Body.Data, appUser.CustomFieldData)
@@ -587,7 +612,7 @@ func SubmitCustomAppForm(ctx *interfaces.ApplicationContext[dto.SubmitCustomAppF
 func FetchAppUsers(ctx *interfaces.ApplicationContext[dto.FetchAppUsersDTO]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
 		return
 	}
 	filter := map[string]interface{}{
@@ -607,7 +632,7 @@ func FetchAppUsers(ctx *interfaces.ApplicationContext[dto.FetchAppUsersDTO]) {
 			Key:  "appID",
 			Data: ctx.Body.AppID,
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "users fetched", users, nil, nil, &ctx.DeviceID)
@@ -616,7 +641,7 @@ func FetchAppUsers(ctx *interfaces.ApplicationContext[dto.FetchAppUsersDTO]) {
 func BlockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
 		return
 	}
 	appUserRepo := repository.AppUserRepo()
@@ -634,7 +659,7 @@ func BlockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
 			Key:  "ids",
 			Data: ctx.Body.IDs,
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "users blocked", nil, nil, nil, &ctx.DeviceID)
@@ -643,7 +668,7 @@ func BlockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
 func UnblockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
 		return
 	}
 	appUserRepo := repository.AppUserRepo()
@@ -661,7 +686,7 @@ func UnblockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
 			Key:  "ids",
 			Data: ctx.Body.IDs,
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "users unblocked", nil, nil, nil, &ctx.DeviceID)
@@ -677,7 +702,7 @@ func FetchUserApps(ctx *interfaces.ApplicationContext[any]) {
 			Key:  "userID",
 			Data: ctx.GetStringContextData("UserID"),
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "apps fetched", apps, nil, nil, &ctx.DeviceID)
@@ -686,7 +711,7 @@ func FetchUserApps(ctx *interfaces.ApplicationContext[any]) {
 func GetAppMetrics(ctx *interfaces.ApplicationContext[dto.FetchAppMetrics]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
 		return
 	}
 	appMetrics := map[string]any{}
@@ -698,11 +723,11 @@ func GetAppMetrics(ctx *interfaces.ApplicationContext[dto.FetchAppMetrics]) {
 		"disabled":  1,
 	}))
 	if app == nil {
-		apperrors.NotFoundError(ctx.Ctx, "App not found")
+		apperrors.NotFoundError(ctx.Ctx, "App not found", &ctx.DeviceID)
 		return
 	}
 	if app.Disabled {
-		apperrors.ClientError(ctx.Ctx, "This app has been deactivated", nil, nil)
+		apperrors.ClientError(ctx.Ctx, "This app has been deactivated", nil, nil, ctx.DeviceID)
 		return
 	}
 	appMetrics["name"] = app.Name

@@ -3,11 +3,14 @@ package application_usecase
 import (
 	"errors"
 	"strings"
+	"time"
 
 	apperrors "gateman.io/application/appErrors"
 	"gateman.io/application/repository"
 	"gateman.io/application/utils"
 	"gateman.io/entities"
+	fileupload "gateman.io/infrastructure/file_upload"
+	fileTypes "gateman.io/infrastructure/file_upload/types"
 	"gateman.io/infrastructure/ipresolver"
 	"gateman.io/infrastructure/logger"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -15,7 +18,9 @@ import (
 
 func FetchAppUseCase(ctx any, appID string, deviceID string, ip string) (*entities.Application, error) {
 	appRepo := repository.ApplicationRepo()
-	app, err := appRepo.FindByID(appID, options.FindOne().SetProjection(map[string]any{
+	app, err := appRepo.FindOneByFilter(map[string]interface{}{
+		"appID": appID,
+	}, options.FindOne().SetProjection(map[string]any{
 		"name":                  1,
 		"requiredVerifications": 1,
 		"requestedFields":       1,
@@ -31,11 +36,11 @@ func FetchAppUseCase(ctx any, appID string, deviceID string, ip string) (*entiti
 			Key:  "error",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx, err, nil)
+		apperrors.UnknownError(ctx, err, nil, deviceID)
 		return nil, err
 	}
 	if app == nil {
-		apperrors.NotFoundError(ctx, "This application was not found. Seems the link you used might be damaged or malformed. Contact the App owner to report or help you resolve this issue")
+		apperrors.NotFoundError(ctx, "This application was not found. Seems the link you used might be damaged or malformed. Contact the App owner to report or help you resolve this issue", &deviceID)
 		return nil, errors.New("app does not exist")
 	}
 	if app.LocaleRestriction != nil {
@@ -45,7 +50,7 @@ func FetchAppUseCase(ctx any, appID string, deviceID string, ip string) (*entiti
 				Key:  "error",
 				Data: err,
 			})
-			apperrors.UnknownError(ctx, err, nil)
+			apperrors.UnknownError(ctx, err, nil, deviceID)
 			return nil, err
 		}
 		passed := false
@@ -76,9 +81,12 @@ func FetchAppUseCase(ctx any, appID string, deviceID string, ip string) (*entiti
 
 		}
 		if !passed {
-			apperrors.ClientError(ctx, "Seems you are not in a location that supports this app. If you are using a VPN please turn it off before attempting to access this app.", nil, nil)
+			apperrors.ClientError(ctx, "Seems you are not in a location that supports this app. If you are using a VPN please turn it off before attempting to access this app.", nil, nil, deviceID)
 			return nil, errors.New("invalid location")
 		}
 	}
+	expiresAt := time.Hour * 1
+	fileURL, _ := fileupload.FileUploader.GeneratedSignedURL(app.AppImg, fileTypes.SignedURLPermission{Read: true}, nil, &expiresAt)
+	app.AppImg = *fileURL
 	return app, nil
 }

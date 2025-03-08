@@ -32,27 +32,28 @@ import (
 func SetAccountImage(ctx *interfaces.ApplicationContext[any]) {
 	exists, err := fileupload.FileUploader.CheckFileExists(fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), "accountimage"))
 	if err != nil {
-		apperrors.ExternalDependencyError(ctx.Ctx, "CLOUDFLARE", "500", err)
+		apperrors.ExternalDependencyError(ctx.Ctx, "CLOUDFLARE", "500", err, ctx.DeviceID)
 		return
 	}
 	if !exists {
-		apperrors.ClientError(ctx.Ctx, "Image has not been uploaded. Request for a new url and upload image before attempting this request again.", nil, utils.GetUIntPointer(http.StatusBadRequest))
+		apperrors.ClientError(ctx.Ctx, "Image has not been uploaded. Request for a new url and upload image before attempting this request again.", nil, utils.GetUIntPointer(http.StatusBadRequest), ctx.DeviceID)
 		return
 	}
+	expiresAt := time.Minute * 1
 	url, _ := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), "accountimage"), types.SignedURLPermission{
 		Read: true,
-	})
+	}, nil, &expiresAt)
 	alive, err := biometric.BiometricService.LivenessCheck(url)
 	if err != nil {
 		logger.Error("something went wrong when verifying image", logger.LoggerOptions{
 			Key:  "error",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	if !alive {
-		apperrors.ClientError(ctx.Ctx, "Please make sure to take a clear picture of your face", nil, nil)
+		apperrors.ClientError(ctx.Ctx, "Please make sure to take a clear picture of your face", nil, nil, ctx.DeviceID)
 		return
 	}
 	var availability_filter = map[string]any{}
@@ -64,7 +65,7 @@ func SetAccountImage(ctx *interfaces.ApplicationContext[any]) {
 	userRepo := repository.UserRepo()
 	account, err := userRepo.FindOneByFilter(availability_filter)
 	if err != nil {
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	var savedDevice *entities.Device
@@ -76,7 +77,7 @@ func SetAccountImage(ctx *interfaces.ApplicationContext[any]) {
 		}
 	}
 	if savedDevice == nil {
-		apperrors.NotFoundError(ctx.Ctx, "please onboard this device to continue registration")
+		apperrors.NotFoundError(ctx.Ctx, "please onboard this device to continue registration", &ctx.DeviceID)
 		return
 	}
 	account.Devices = append(account.Devices, entities.Device{
@@ -95,7 +96,7 @@ func SetAccountImage(ctx *interfaces.ApplicationContext[any]) {
 			Key:  "error",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	var phone *string
@@ -127,7 +128,7 @@ func SetAccountImage(ctx *interfaces.ApplicationContext[any]) {
 	})
 
 	if err != nil {
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	hashedAccessToken, _ := cryptography.CryptoHahser.HashString(*accessToken, nil)
@@ -144,7 +145,7 @@ func SetAccountImage(ctx *interfaces.ApplicationContext[any]) {
 func SetNINDetails(ctx *interfaces.ApplicationContext[dto.SetNINDetails]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
 		return
 	}
 	userRepo := repository.UserRepo()
@@ -168,7 +169,7 @@ func SetNINDetails(ctx *interfaces.ApplicationContext[dto.SetNINDetails]) {
 	if cachedNIN == nil {
 		fetchedNIN, _ := identityverification.IdentityVerifier.FetchNINDetails(ctx.Body.NIN)
 		if fetchedNIN == nil {
-			apperrors.NotFoundError(ctx.Ctx, "Invalid NIN provided")
+			apperrors.NotFoundError(ctx.Ctx, "Invalid NIN provided", &ctx.DeviceID)
 			return
 		}
 		nin = *fetchedNIN
@@ -184,7 +185,7 @@ func SetNINDetails(ctx *interfaces.ApplicationContext[dto.SetNINDetails]) {
 			})
 			fetchedNIN, _ := identityverification.IdentityVerifier.FetchNINDetails(ctx.Body.NIN)
 			if fetchedNIN == nil {
-				apperrors.NotFoundError(ctx.Ctx, "Invalid NIN provided")
+				apperrors.NotFoundError(ctx.Ctx, "Invalid NIN provided", &ctx.DeviceID)
 				return
 			}
 			ninByte, _ := nin.MarshalBinary()
@@ -254,13 +255,13 @@ func SetNINDetails(ctx *interfaces.ApplicationContext[dto.SetNINDetails]) {
 		cache.Cache.CreateEntry(fmt.Sprintf("%s-nin-user", *nin.PhoneNumber), ctx.GetStringContextData("UserID"), time.Hour*24*365)
 		otp, err := auth.GenerateOTP(6, *nin.PhoneNumber)
 		if err != nil {
-			apperrors.FatalServerError(ctx.Ctx, err)
+			apperrors.FatalServerError(ctx.Ctx, err, ctx.DeviceID)
 			return
 		}
 		ref := sms.SMSService.SendOTP(*nin.PhoneNumber, false, otp)
 		encryptedRef, err := cryptography.EncryptData([]byte(*ref), nil)
 		if err != nil {
-			apperrors.UnknownError(ctx.Ctx, err, nil)
+			apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 			return
 		}
 		cache.Cache.CreateEntry(fmt.Sprintf("%s-sms-otp-ref", *nin.PhoneNumber), *encryptedRef, time.Minute*10)
@@ -272,7 +273,7 @@ func SetNINDetails(ctx *interfaces.ApplicationContext[dto.SetNINDetails]) {
 		}, logger.LoggerOptions{
 			Key: "userID", Data: ctx.GetStringContextData("UserID"),
 		})
-		apperrors.CustomError(ctx.Ctx, "Phone number not attached to NIN provided. Please reach out to support to resolve this issue", nil)
+		apperrors.CustomError(ctx.Ctx, "Phone number not attached to NIN provided. Please reach out to support to resolve this issue", nil, ctx.DeviceID)
 	}
 }
 
@@ -283,7 +284,7 @@ func VerifyNINDetails(ctx *interfaces.ApplicationContext[any]) {
 			Key:  "id",
 			Data: ctx.GetStringContextData("UserID"),
 		})
-		apperrors.NotFoundError(ctx.Ctx, "NIN verification failed. Please restart verification process")
+		apperrors.NotFoundError(ctx.Ctx, "NIN verification failed. Please restart verification process", &ctx.DeviceID)
 		return
 	}
 	cachedNIN := cache.Cache.FindOne(*cachedNINNumber)
@@ -292,7 +293,7 @@ func VerifyNINDetails(ctx *interfaces.ApplicationContext[any]) {
 			Key:  "id",
 			Data: ctx.GetStringContextData("UserID"),
 		})
-		apperrors.NotFoundError(ctx.Ctx, "NIN verification failed. Please restart verification process")
+		apperrors.NotFoundError(ctx.Ctx, "NIN verification failed. Please restart verification process", &ctx.DeviceID)
 		return
 	}
 	userID := cache.Cache.FindOne(fmt.Sprintf("%s-nin-user", ctx.GetStringContextData("OTPPhone")))
@@ -301,7 +302,7 @@ func VerifyNINDetails(ctx *interfaces.ApplicationContext[any]) {
 			Key:  "id",
 			Data: userID,
 		})
-		apperrors.NotFoundError(ctx.Ctx, "NIN verification failed. Please restart verification process")
+		apperrors.NotFoundError(ctx.Ctx, "NIN verification failed. Please restart verification process", &ctx.DeviceID)
 		return
 	}
 	var nin identity_verification_types.NINData
@@ -312,7 +313,7 @@ func VerifyNINDetails(ctx *interfaces.ApplicationContext[any]) {
 		}, logger.LoggerOptions{
 			Key: "cachedNIN", Data: cachedNIN,
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	parsedNINDOB, err := time.Parse("2006-01-02", "1990-01-01")
@@ -393,7 +394,7 @@ func VerifyNINDetails(ctx *interfaces.ApplicationContext[any]) {
 func SetBVNDetails(ctx *interfaces.ApplicationContext[dto.SetBVNDetails]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
 		return
 	}
 	userRepo := repository.UserRepo()
@@ -417,7 +418,7 @@ func SetBVNDetails(ctx *interfaces.ApplicationContext[dto.SetBVNDetails]) {
 	if cachedBVN == nil {
 		fetchedBVN, _ := identityverification.IdentityVerifier.FetchBVNDetails(ctx.Body.BVN)
 		if fetchedBVN == nil {
-			apperrors.NotFoundError(ctx.Ctx, "Invalid BVN provided")
+			apperrors.NotFoundError(ctx.Ctx, "Invalid BVN provided", &ctx.DeviceID)
 			return
 		}
 		bvn = *fetchedBVN
@@ -433,7 +434,7 @@ func SetBVNDetails(ctx *interfaces.ApplicationContext[dto.SetBVNDetails]) {
 			})
 			fetchedBVN, _ := identityverification.IdentityVerifier.FetchBVNDetails(ctx.Body.BVN)
 			if fetchedBVN == nil {
-				apperrors.NotFoundError(ctx.Ctx, "Invalid BVN provided")
+				apperrors.NotFoundError(ctx.Ctx, "Invalid BVN provided", &ctx.DeviceID)
 				return
 			}
 			bvnByte, _ := bvn.MarshalBinary()
@@ -504,13 +505,13 @@ func SetBVNDetails(ctx *interfaces.ApplicationContext[dto.SetBVNDetails]) {
 		cache.Cache.CreateEntry(fmt.Sprintf("%s-bvn-user", bvn.PhoneNumber), ctx.GetStringContextData("UserID"), time.Hour*24*365)
 		otp, err := auth.GenerateOTP(6, bvn.PhoneNumber)
 		if err != nil {
-			apperrors.FatalServerError(ctx.Ctx, err)
+			apperrors.FatalServerError(ctx.Ctx, err, ctx.DeviceID)
 			return
 		}
 		ref := sms.SMSService.SendOTP(bvn.PhoneNumber, false, otp)
 		encryptedRef, err := cryptography.EncryptData([]byte(*ref), nil)
 		if err != nil {
-			apperrors.UnknownError(ctx.Ctx, err, nil)
+			apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 			return
 		}
 		cache.Cache.CreateEntry(fmt.Sprintf("%s-sms-otp-ref", bvn.PhoneNumber), *encryptedRef, time.Minute*10)
@@ -522,7 +523,7 @@ func SetBVNDetails(ctx *interfaces.ApplicationContext[dto.SetBVNDetails]) {
 		}, logger.LoggerOptions{
 			Key: "userID", Data: ctx.GetStringContextData("UserID"),
 		})
-		apperrors.CustomError(ctx.Ctx, "Phone number not attached to BVN provided. Please reach out to support to resolve this issue", nil)
+		apperrors.CustomError(ctx.Ctx, "Phone number not attached to BVN provided. Please reach out to support to resolve this issue", nil, ctx.DeviceID)
 	}
 }
 
@@ -533,7 +534,7 @@ func VerifyBVNDetails(ctx *interfaces.ApplicationContext[any]) {
 			Key:  "id",
 			Data: ctx.GetStringContextData("UserID"),
 		})
-		apperrors.NotFoundError(ctx.Ctx, "BVN verification failed. Please restart verification process")
+		apperrors.NotFoundError(ctx.Ctx, "BVN verification failed. Please restart verification process", &ctx.DeviceID)
 		return
 	}
 	cachedBVN := cache.Cache.FindOne(*cachedBVNNumber)
@@ -542,7 +543,7 @@ func VerifyBVNDetails(ctx *interfaces.ApplicationContext[any]) {
 			Key:  "id",
 			Data: ctx.GetStringContextData("UserID"),
 		})
-		apperrors.NotFoundError(ctx.Ctx, "BVN verification failed. Please restart verification process")
+		apperrors.NotFoundError(ctx.Ctx, "BVN verification failed. Please restart verification process", &ctx.DeviceID)
 		return
 	}
 	userID := cache.Cache.FindOne(fmt.Sprintf("%s-bvn-user", ctx.GetStringContextData("OTPPhone")))
@@ -551,7 +552,7 @@ func VerifyBVNDetails(ctx *interfaces.ApplicationContext[any]) {
 			Key:  "id",
 			Data: userID,
 		})
-		apperrors.NotFoundError(ctx.Ctx, "BVN verification failed. Please restart verification process")
+		apperrors.NotFoundError(ctx.Ctx, "BVN verification failed. Please restart verification process", &ctx.DeviceID)
 		return
 	}
 	var bvn identity_verification_types.BVNData
@@ -562,7 +563,7 @@ func VerifyBVNDetails(ctx *interfaces.ApplicationContext[any]) {
 		}, logger.LoggerOptions{
 			Key: "cachedBVN", Data: cachedBVN,
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	parsedBVNDOB, err := time.Parse("02-Jan-2006", bvn.DateOfBirth)

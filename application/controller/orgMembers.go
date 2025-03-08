@@ -25,11 +25,11 @@ import (
 func InviteWorkspaceMembers(ctx *interfaces.ApplicationContext[dto.InviteWorspaceMembersDTO]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
 		return
 	}
 	if len(ctx.Body.Invites) > 100 {
-		apperrors.ClientError(ctx.Ctx, "You can only invite a maximum of 100 members at once", nil, nil)
+		apperrors.ClientError(ctx.Ctx, "You can only invite a maximum of 100 members at once", nil, nil, ctx.DeviceID)
 		return
 	}
 	var wg sync.WaitGroup
@@ -47,7 +47,7 @@ func InviteWorkspaceMembers(ctx *interfaces.ApplicationContext[dto.InviteWorspac
 			})
 			if err != nil {
 				logger.Error("error marshalling payload for workspace invite queue")
-				apperrors.FatalServerError(ctx.Ctx, err)
+				apperrors.FatalServerError(ctx.Ctx, err, ctx.DeviceID)
 				return
 			}
 			messagequeue.TaskQueue.Enqueue(mq_types.QueueTask{
@@ -66,7 +66,7 @@ func InviteWorkspaceMembers(ctx *interfaces.ApplicationContext[dto.InviteWorspac
 func ResendInvite(ctx *interfaces.ApplicationContext[dto.ResendWorspaceInviteDTO]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
 		return
 	}
 	inviteRepo := repository.WorkspaceInviteRepo()
@@ -82,11 +82,11 @@ func ResendInvite(ctx *interfaces.ApplicationContext[dto.ResendWorspaceInviteDTO
 			Key:  "userID",
 			Data: ctx.GetStringContextData("UserID"),
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	if invite == nil {
-		apperrors.ClientError(ctx.Ctx, fmt.Sprintf("This email has not previously been invited to %s. Send a new invite to this email.", ctx.GetStringContextData("WorkspaceName")), nil, nil)
+		apperrors.ClientError(ctx.Ctx, fmt.Sprintf("This email has not previously been invited to %s. Send a new invite to this email.", ctx.GetStringContextData("WorkspaceName")), nil, nil, ctx.DeviceID)
 		return
 	}
 	if invite.Accepted != nil {
@@ -94,7 +94,7 @@ func ResendInvite(ctx *interfaces.ApplicationContext[dto.ResendWorspaceInviteDTO
 		if !*invite.Accepted {
 			decision = "rejected"
 		}
-		apperrors.ClientError(ctx.Ctx, fmt.Sprintf("User has already %s the invite sent to them", decision), nil, nil)
+		apperrors.ClientError(ctx.Ctx, fmt.Sprintf("User has already %s the invite sent to them", decision), nil, nil, ctx.DeviceID)
 		return
 	}
 
@@ -105,7 +105,7 @@ func ResendInvite(ctx *interfaces.ApplicationContext[dto.ResendWorspaceInviteDTO
 	})
 	if err != nil {
 		logger.Error("error marshalling payload for email queue")
-		apperrors.FatalServerError(ctx.Ctx, err)
+		apperrors.FatalServerError(ctx.Ctx, err, ctx.DeviceID)
 		return
 	}
 	messagequeue.TaskQueue.Enqueue(mq_types.QueueTask{
@@ -123,7 +123,7 @@ func ResendInvite(ctx *interfaces.ApplicationContext[dto.ResendWorspaceInviteDTO
 func AcknowledgeWorkspaceInvite(ctx *interfaces.ApplicationContext[dto.AcknowledgeWorkspaceInviteDTO]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
 		return
 	}
 	inviteRepo := repository.WorkspaceInviteRepo()
@@ -133,15 +133,15 @@ func AcknowledgeWorkspaceInvite(ctx *interfaces.ApplicationContext[dto.Acknowled
 			Key:  "payload",
 			Data: ctx.Body,
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	if invite == nil {
-		apperrors.ClientError(ctx.Ctx, "invalid invite link", nil, nil)
+		apperrors.ClientError(ctx.Ctx, "invalid invite link", nil, nil, ctx.DeviceID)
 		return
 	}
 	if invite.Accepted != nil {
-		apperrors.ClientError(ctx.Ctx, "this link has already been used", nil, nil)
+		apperrors.ClientError(ctx.Ctx, "this link has already been used", nil, nil, ctx.DeviceID)
 		return
 	}
 	workspaceMemberRepo := repository.WorkspaceMemberRepo()

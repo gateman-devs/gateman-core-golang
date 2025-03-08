@@ -20,7 +20,7 @@ type LocaleRestriction struct {
 }
 
 type RequestedField struct {
-	Name     string `bson:"name" json:"name" validate:"required,min=2,max=50"`
+	Name     string `bson:"name" json:"name" validate:"required,oneof=BVN NIN FirstName LastName Gender MiddleName DOB Image Email Phone LoginLocale"`
 	Verified bool   `bson:"verified" json:"verified"`
 }
 
@@ -43,13 +43,13 @@ type CustomValidationRule struct {
 }
 
 type ValidationRule struct {
-	AppliesTo *[]string `json:"-" bson:"-"`
+	AppliesTo *[]string `json:"appliesTo" bson:"-"`
 	Tag       string    `json:"-" bson:"-"`
 }
 
 var ValidationRules map[string]ValidationRule = map[string]ValidationRule{
 	"Required": {
-		AppliesTo: &[]string{"long_text", "short_text", "switch", "dropdown", "number", "secret", "pin"},
+		AppliesTo: &[]string{"long_text", "short_text", "switch", "dropdown", "number", "secret", "pin", "date"},
 		Tag:       "required",
 	},
 	"Email": {
@@ -129,23 +129,23 @@ var ValidationRules map[string]ValidationRule = map[string]ValidationRule{
 		Tag:       "excludes",
 	},
 	"Date": {
-		AppliesTo: &[]string{"long_text", "short_text"},
+		AppliesTo: &[]string{"long_text", "short_text", "date"},
 		Tag:       "datetime=2006-01-02",
 	},
 	"Date Time": {
-		AppliesTo: &[]string{"long_text", "short_text"},
+		AppliesTo: &[]string{"long_text", "short_text", "date"},
 		Tag:       "datetime=2006-01-02 15:04:05",
 	},
 	"Time": {
-		AppliesTo: &[]string{"long_text", "short_text"},
+		AppliesTo: &[]string{"long_text", "short_text", "date"},
 		Tag:       "datetime=15:04:05",
 	},
 	"Before Date": {
-		AppliesTo: &[]string{"long_text", "short_text"},
+		AppliesTo: &[]string{"long_text", "short_text", "date"},
 		Tag:       "ltfield",
 	},
 	"After Date": {
-		AppliesTo: &[]string{"long_text", "short_text"},
+		AppliesTo: &[]string{"long_text", "short_text", "date"},
 		Tag:       "gtfield",
 	},
 	"Minimum Tag": {

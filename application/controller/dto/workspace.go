@@ -10,6 +10,11 @@ type CreateWorkspaceDTO struct {
 	Sector   string `json:"sector" validate:"required,oneof=fintech government health education other"`
 }
 
+type LoginWorkspaceMemberDTO struct {
+	Email    string `json:"email" validate:"required,email,min=6,max=100"`
+	Password string `json:"password" validate:"required,max=30"`
+}
+
 type UpdateOrgDTO struct {
 	WorkspaceName *string `json:"workspaceName" validate:"required"`
 	Country       *string `json:"country" validate:"required,iso3166_1_alpha2"`

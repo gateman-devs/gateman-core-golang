@@ -9,9 +9,10 @@ import (
 func AttestationMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		appContext, next := middlewares.AttestationVerifier(&interfaces.ApplicationContext[any]{
-			Ctx:    ctx,
-			Keys:   ctx.Keys,
-			Header: ctx.Request.Header,
+			Ctx:      ctx,
+			Keys:     ctx.Keys,
+			Header:   ctx.Request.Header,
+			DeviceID: ctx.Request.Header.Get("X-Device-Id"),
 		})
 		if next {
 			ctx.Set("AppContext", appContext)

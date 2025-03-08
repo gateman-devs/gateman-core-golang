@@ -14,9 +14,10 @@ var ACCOUNT_EXISTS_UNVERIFIED uint = 9130                // take the user to the
 var ACCOUNT_EXISTS_EMAIL_OR_PHONE_UNVERIFIED uint = 9140 // take the user to the verify otp page to verify email
 var FREE_TIER_ACCOUNT_LIMIT_HIT uint = 5243              // display a page telling the user the limit has been hit
 var SET_APP_PIN uint = 1433                              // display a page telling the user the limit has been hit
+var VERIFY_WORKSPACE_MEMBER_EMAIL uint = 1937            // display a page telling the user the limit has been hit
 
-var AVAILABLE_REQUIRED_DATA_POINTS = []string{"bvn", "nin", "address", "biometric", "email", "phone", "login_location"}
-var CUSTOM_FIELD_TYPES = []string{"long_text", "short_text", "switch", "dropdown", "number", "secret", "pin"}
+var AVAILABLE_REQUIRED_DATA_POINTS = []string{"BVN", "NIN", "FirstName", "LastName", "Gender", "MiddleName", "DOB", "Image", "Email", "Phone", "LoginLocale"} // include "address" later
+var CUSTOM_FIELD_TYPES = []string{"long_text", "short_text", "switch", "dropdown", "number", "secret", "pin", "date"}
 
 var MAX_ORGANISATIONS_CREATED int64 = 20
 

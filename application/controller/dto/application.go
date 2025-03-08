@@ -3,12 +3,12 @@ package dto
 import "gateman.io/entities"
 
 type ApplicationDTO struct {
-	Name                  string                        `json:"name" validate:"required,max=100,min=2"`
-	Description           string                        `json:"description" validate:"required,max=200,min=10"`
-	RequiredVerifications *[]entities.VerificationType  `json:"requiredVerifications" validate:"dive"`
-	LocaleRestriction     *[]entities.LocaleRestriction `json:"localeRestriction" validate:"dive"`
-	RequestedFields       []entities.RequestedField     `json:"requestedFields" validate:"required,dive"`
-	CustomFormFields      *[]entities.CustomFormField   `json:"customFormFields" validate:"dive,max=20"`
+	Name              string                        `json:"name" validate:"required,max=100,min=2"`
+	Description       string                        `json:"description" validate:"required,max=200,min=10"`
+	Verifications     *[]entities.VerificationType  `json:"verifications" validate:"omitempty,dive"`
+	LocaleRestriction *[]entities.LocaleRestriction `json:"localeRestriction" validate:"omitempty,dive"`
+	RequestedFields   []entities.RequestedField     `json:"requestedFields" validate:"required,dive"`
+	CustomFormFields  *[]entities.CustomFormField   `json:"customFormFields" validate:"omitempty,dive"`
 }
 
 type UpdateApplications struct {

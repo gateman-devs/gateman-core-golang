@@ -1,13 +1,25 @@
 package controller
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
+	"time"
 
 	apperrors "gateman.io/application/appErrors"
+	"gateman.io/application/constants"
 	"gateman.io/application/controller/dto"
 	"gateman.io/application/interfaces"
 	"gateman.io/application/repository"
 	org_usecases "gateman.io/application/usecases/workspace"
+	"gateman.io/infrastructure/auth"
+	"gateman.io/infrastructure/cryptography"
+	"gateman.io/infrastructure/database/repository/cache"
+	"gateman.io/infrastructure/logger"
+	messagequeue "gateman.io/infrastructure/message_queue"
+	queue_tasks "gateman.io/infrastructure/message_queue/tasks"
+	mq_types "gateman.io/infrastructure/message_queue/types"
 	server_response "gateman.io/infrastructure/serverResponse"
 	"gateman.io/infrastructure/validator"
 )
@@ -15,7 +27,7 @@ import (
 func CreateWorkspace(ctx *interfaces.ApplicationContext[dto.CreateWorkspaceDTO]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
 		return
 	}
 	err := org_usecases.CreateWorkspaceUseCase(ctx.Ctx, ctx.Body, ctx.DeviceID, ctx.DeviceName, ctx.UserAgent, ctx.Param["ip"].(string))
@@ -27,7 +39,7 @@ func CreateWorkspace(ctx *interfaces.ApplicationContext[dto.CreateWorkspaceDTO])
 func UpdateOrgDetails(ctx *interfaces.ApplicationContext[dto.UpdateOrgDTO]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
 		return
 	}
 	workspaceRepo := repository.WorkspaceRepository()
@@ -43,4 +55,107 @@ func UpdateOrgDetails(ctx *interfaces.ApplicationContext[dto.UpdateOrgDTO]) {
 		})
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "org updated", nil, nil, nil, &ctx.DeviceID)
+}
+
+func LoginWorkspaceMember(ctx *interfaces.ApplicationContext[dto.LoginWorkspaceMemberDTO]) {
+	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
+	if valiedationErr != nil {
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
+		return
+	}
+	workspaceMemberRepo := repository.WorkspaceMemberRepo()
+	member, err := workspaceMemberRepo.FindOneByFilter(map[string]interface{}{
+		"email": ctx.Body.Email,
+	})
+	if err != nil {
+		logger.Error("an error occured while trying to fetch a workspace member for login", logger.LoggerOptions{
+			Key:  "email",
+			Data: ctx.Body.Email,
+		}, logger.LoggerOptions{
+			Key:  "err",
+			Data: err,
+		})
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
+		return
+	}
+	if member == nil {
+		apperrors.NotFoundError(ctx.Ctx, "incorrect email or password", &ctx.DeviceID)
+		return
+	}
+	passwordResult := cryptography.CryptoHahser.VerifyHashData(member.Password, ctx.Body.Password)
+	if !passwordResult {
+		apperrors.AuthenticationError(ctx.Ctx, "incorrect email or password", ctx.DeviceID)
+		return
+	}
+	if !member.VerifiedEmail {
+		otp, err := auth.GenerateOTP(6, ctx.Body.Email)
+		if err != nil {
+			apperrors.FatalServerError(ctx, err, ctx.DeviceID)
+			return
+		}
+		emailPayload, err := json.Marshal(queue_tasks.EmailPayload{
+			Opts: map[string]any{
+				"OTP": otp,
+			},
+			To:       ctx.Body.Email,
+			Subject:  "Gateman OTP",
+			Template: "workspace_created",
+			Intent:   "verify_workspace",
+		})
+		if err != nil {
+			logger.Error("error marshalling payload for email queue")
+			apperrors.FatalServerError(ctx, err, ctx.DeviceID)
+			return
+		}
+		messagequeue.TaskQueue.Enqueue(mq_types.QueueTask{
+			Payload:   emailPayload,
+			Name:      queue_tasks.HandleEmailDeliveryTaskName,
+			Priority:  mq_types.High,
+			ProcessIn: 1,
+		})
+		cache.Cache.CreateEntry(fmt.Sprintf("%s-otp-intent", ctx.Body.Email), "verify_workspace", time.Minute*10)
+		apperrors.ClientError(ctx.Ctx, "Veify your email", nil, &constants.VERIFY_WORKSPACE_MEMBER_EMAIL, ctx.DeviceID)
+		return
+	}
+
+	accessToken, err := auth.GenerateAuthToken(auth.ClaimsData{
+		UserID:          member.ID,
+		UserAgent:       member.UserAgent,
+		Email:           &member.Email,
+		VerifiedAccount: member.VerifiedEmail,
+		WorkspaceID:     &member.WorkspaceID,
+		DeviceID:        ctx.DeviceID,
+		TokenType:       auth.AccessToken,
+		IssuedAt:        time.Now().Unix(),
+		ExpiresAt:       time.Now().Add(time.Hour * 1).Unix(), //lasts for 1 hr
+	})
+	if err != nil {
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
+		return
+	}
+	refreshToken, err := auth.GenerateAuthToken(auth.ClaimsData{
+		UserID:          member.ID,
+		UserAgent:       member.UserAgent,
+		Email:           &member.Email,
+		VerifiedAccount: member.VerifiedEmail,
+		TokenType:       auth.RefreshToken,
+		WorkspaceID:     &member.WorkspaceID,
+		DeviceID:        ctx.DeviceID,
+		IssuedAt:        time.Now().Unix(),
+		ExpiresAt:       time.Now().Add(time.Hour * 24 * 180).Unix(), //lasts for 180 days
+	})
+
+	if err != nil {
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
+		return
+	}
+	hashedAccessToken, _ := cryptography.CryptoHahser.HashString(*accessToken, nil)
+	hashedRefreshToken, _ := cryptography.CryptoHahser.HashString(*refreshToken, nil)
+	hashedDeviceID, _ := cryptography.CryptoHahser.HashString(ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
+	cache.Cache.CreateEntry(fmt.Sprintf("%s-workspace-access", string(hashedDeviceID)), hashedAccessToken, time.Hour*24)       // token should last for 10 mins
+	cache.Cache.CreateEntry(fmt.Sprintf("%s-workspace-refresh", string(hashedDeviceID)), hashedRefreshToken, time.Hour*24*180) // token should last for 100 days
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "email verified", map[string]any{
+		"workspaceAccessToken":  accessToken,
+		"workspaceRefreshToken": refreshToken,
+	}, nil, nil, &ctx.DeviceID)
 }
