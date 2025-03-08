@@ -81,5 +81,27 @@ func WorkspaceRouter(router *gin.RouterGroup) {
 			})
 		})
 
+		workspaceRouter.POST("/login", func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			var body dto.LoginWorkspaceMemberDTO
+			if os.Getenv("ENV") != "dev" {
+				decryptedPayload, exists := ctx.Get("DecryptedBody")
+				if !exists {
+					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+					return
+				}
+				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+			} else {
+				if err := ctx.ShouldBindJSON(&body); err != nil {
+					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+					return
+				}
+			}
+			controller.LoginWorkspaceMember(&interfaces.ApplicationContext[dto.LoginWorkspaceMemberDTO]{
+				Ctx:  ctx,
+				Body: &body,
+				Keys: appContext.Keys,
+			})
+		})
 	}
 }

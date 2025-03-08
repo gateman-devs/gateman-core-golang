@@ -154,8 +154,9 @@ func LoginWorkspaceMember(ctx *interfaces.ApplicationContext[dto.LoginWorkspaceM
 	hashedDeviceID, _ := cryptography.CryptoHahser.HashString(ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
 	cache.Cache.CreateEntry(fmt.Sprintf("%s-workspace-access", string(hashedDeviceID)), hashedAccessToken, time.Hour*24)       // token should last for 10 mins
 	cache.Cache.CreateEntry(fmt.Sprintf("%s-workspace-refresh", string(hashedDeviceID)), hashedRefreshToken, time.Hour*24*180) // token should last for 100 days
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "email verified", map[string]any{
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "login successful", map[string]any{
 		"workspaceAccessToken":  accessToken,
 		"workspaceRefreshToken": refreshToken,
+		"profile":               member,
 	}, nil, nil, &ctx.DeviceID)
 }

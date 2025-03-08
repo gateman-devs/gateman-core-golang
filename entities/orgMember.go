@@ -40,7 +40,7 @@ type WorkspaceMember struct {
 	LastName      string              `bson:"lastName" json:"lastName"`
 	Email         string              `bson:"email" json:"email"`
 	Username      string              `bson:"username" json:"username"`
-	Password      string              `bson:"password" json:"password"`
+	Password      string              `bson:"password" json:"-"`
 	WorkspaceID   string              `bson:"workspaceID" json:"workspaceID"`
 	WorkspaceName string              `bson:"workspaceName" json:"workspaceName"`
 	Deactivated   bool                `bson:"deactivated" json:"deactivated"`
