@@ -21,7 +21,7 @@ type ginResponder struct{}
 
 // Sends an encrypted payload to the client
 func (gr ginResponder) Respond(ctx interface{}, code int, message string, payload any, errs []error, responseCode *uint, deviceID *string) {
-	if os.Getenv("ENV") == "dev" {
+	if os.Getenv("ENV") == "dev" || deviceID == nil {
 		gr.UnEncryptedRespond(ctx, code, message, payload, errs, responseCode)
 		return
 	}
@@ -114,11 +114,9 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 	ginCtx.Abort()
 
 	if payload != nil {
-		fmt.Println(payload)
 		switch p := payload.(type) {
 		case map[string]any:
 			if value, ok := p["accessToken"]; ok && value.(*string) != nil {
-				fmt.Println("access", *value.(*string))
 				http.SetCookie(ginCtx.Writer, &http.Cookie{
 					Name:     "accessToken",
 					Value:    *value.(*string),
@@ -132,7 +130,6 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 				})
 			}
 			if value, ok := p["refreshToken"]; ok && value.(*string) != nil {
-				fmt.Println("refresh", *value.(*string))
 				http.SetCookie(ginCtx.Writer, &http.Cookie{
 					Name:     "refreshToken",
 					Value:    *value.(*string),
@@ -142,7 +139,7 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 					Path:     "/api/v1/auth/refresh",
 					SameSite: http.SameSiteStrictMode,
 					Expires:  time.Now().Add(time.Hour * 24 * 183),
-					MaxAge:   15768000 ,
+					MaxAge:   15768000,
 				})
 			}
 			if value, ok := p["workspaceAccessToken"]; ok && value.(*string) != nil {
@@ -152,6 +149,7 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 					Domain:   os.Getenv("CLIENT_URL"),
 					HttpOnly: true,
 					Secure:   true,
+					Path:     "/",
 					SameSite: http.SameSiteStrictMode,
 					Expires:  time.Now().Add(time.Hour * 1),
 					MaxAge:   3600,
@@ -164,10 +162,10 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 					Domain:   os.Getenv("CLIENT_URL"),
 					HttpOnly: true,
 					Secure:   true,
-					Path:     "/api/v1/auth/refresh",
+					Path:     "/api/v1/auth/workspace/refresh",
 					SameSite: http.SameSiteStrictMode,
 					Expires:  time.Now().Add(time.Hour * 24 * 183),
-					MaxAge:   15768000 ,
+					MaxAge:   15768000,
 				})
 			}
 			delete(payload.(map[string]any), "accessToken")

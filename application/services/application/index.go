@@ -16,30 +16,40 @@ import (
 	"gateman.io/infrastructure/auth"
 	"gateman.io/infrastructure/cryptography"
 	"gateman.io/infrastructure/database/repository/cache"
+	"gateman.io/infrastructure/ipresolver"
+	"gateman.io/infrastructure/ipresolver/types"
 	"gateman.io/infrastructure/logger"
 )
 
-func ProcessUserSignUp(app *entities.Application, user *entities.User) (bool, string, map[string]any, map[string]any) {
+func ProcessUserSignUp(app *entities.Application, user *entities.User, ip string) (bool, string, map[string]any, map[string]any) {
 	var eligible = true
 	outstandingIDs := []string{}
-	for _, id := range *app.Verifications {
-		if id.Name == "nin" {
-			if user.NIN == nil && id.Required {
-				outstandingIDs = append(outstandingIDs, "nin")
-				eligible = false
-			}
-		} else {
-			if user.BVN == nil && id.Required {
-				outstandingIDs = append(outstandingIDs, "bvn")
-				eligible = false
+	if app.Verifications != nil {
+		for _, id := range *app.Verifications {
+			if id.Name == "nin" {
+				if user.NIN == nil && id.Required {
+					outstandingIDs = append(outstandingIDs, "nin")
+					eligible = false
+				}
+			} else {
+				if user.BVN == nil && id.Required {
+					outstandingIDs = append(outstandingIDs, "bvn")
+					eligible = false
+				}
 			}
 		}
 	}
+
+	loginLocaleRequested := false
 	var results []string
 	requestedFields := map[string]any{}
 	userValue := reflect.ValueOf(*user)
 
 	for _, field := range app.RequestedFields {
+		if field.Name == "LoginLocale" {
+			loginLocaleRequested = true
+			continue
+		}
 		userField := userValue.FieldByName(field.Name)
 		if !userField.IsValid() {
 			results = append(results, field.Name)
@@ -55,14 +65,33 @@ func ProcessUserSignUp(app *entities.Application, user *entities.User) (bool, st
 		if userFieldData.Value == nil || !userFieldData.Verified {
 			results = append(results, field.Name)
 			eligible = false
+
+			// Edge case: If no ID is indicated for verification, default to "nin"
+			if field.Verified && len(outstandingIDs) == 0 {
+				outstandingIDs = append(outstandingIDs, "nin")
+				eligible = false
+			}
 		}
 		requestedFields[field.Name] = userFieldData.Value
+	}
+	var loginLocale *types.IPResult
+	if loginLocaleRequested {
+		result, err := ipresolver.IPResolverInstance.LookUp(ip)
+		if err != nil {
+			logger.Error("an error occured trying to get login locale for app signup", logger.LoggerOptions{
+				Key: "err", Data: err,
+			})
+		}
+		loginLocale = result
 	}
 
 	payload := map[string]any{}
 	var msg string
 	if eligible {
 		msg = "Authentication successful"
+		if loginLocale != nil {
+			payload["loginLocale"] = loginLocale
+		}
 	} else {
 		msg = "Additional info is required to sign up to this app"
 		payload["missingIDs"] = outstandingIDs
@@ -199,7 +228,7 @@ func GenerateAuthTokens(payload map[string]any, app *entities.Application, userA
 	return &payload, nil
 }
 
-func CheckMonthlyLimit(ctx any, appID string, userID string) (block bool, err error) {
+func CheckMonthlyLimit(ctx any, appID string, userID string, deviceID string) (block bool, err error) {
 	activeSubRepo := repository.ActiveSubscriptionRepo()
 	appActiveSub, err := activeSubRepo.FindOneByFilter(map[string]interface{}{
 		"appID": appID,
@@ -212,7 +241,7 @@ func CheckMonthlyLimit(ctx any, appID string, userID string) (block bool, err er
 			Key:  "err",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx, err, nil)
+		apperrors.UnknownError(ctx, err, nil, deviceID)
 		return true, err
 	}
 	yearMonth := time.Now().Format("2006-01")
@@ -222,7 +251,7 @@ func CheckMonthlyLimit(ctx any, appID string, userID string) (block bool, err er
 		if *appMAU >= constants.FREE_TIER_MAU_LIMIT {
 			userTracked := cache.Cache.DoesItemExistInSet(fmt.Sprintf("application:%s:%s:mau", appID, yearMonth), userID)
 			if !userTracked {
-				apperrors.CustomError(ctx, "This app has hit it's free tier limit and cannot onboard new users", &constants.FREE_TIER_ACCOUNT_LIMIT_HIT)
+				apperrors.CustomError(ctx, "This app has hit it's free tier limit and cannot onboard new users", &constants.FREE_TIER_ACCOUNT_LIMIT_HIT, deviceID)
 				return true, nil
 			}
 		}

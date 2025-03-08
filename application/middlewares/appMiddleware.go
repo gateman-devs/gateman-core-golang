@@ -12,13 +12,13 @@ import (
 func AppAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], ipAddress string) (*interfaces.ApplicationContext[any], bool) {
 	apiKeyPointer := ctx.GetHeader("X-Api-Key")
 	if apiKeyPointer == nil {
-		apperrors.AuthenticationError(ctx.Ctx, "provide an api key")
+		apperrors.AuthenticationError(ctx.Ctx, "provide an api key", ctx.DeviceID)
 		return nil, false
 	}
 	apiKey := *apiKeyPointer
 	appIDPointer := ctx.GetHeader("X-App-Id")
 	if appIDPointer == nil {
-		apperrors.AuthenticationError(ctx.Ctx, "provide an app id")
+		apperrors.AuthenticationError(ctx.Ctx, "provide an app id", ctx.DeviceID)
 		return nil, false
 	}
 	appID := *appIDPointer
@@ -27,7 +27,7 @@ func AppAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], ipAddr
 		"appID": appID,
 	})
 	if app == nil {
-		apperrors.NotFoundError(ctx.Ctx, "invalid credentials")
+		apperrors.NotFoundError(ctx.Ctx, "invalid credentials", ctx.GetHeader("X-Device-Id"))
 		return nil, false
 	}
 	var appAPIKey string
@@ -38,11 +38,11 @@ func AppAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], ipAddr
 	}
 	match := cryptography.CryptoHahser.VerifyHashData(appAPIKey, apiKey)
 	if !match {
-		apperrors.ClientError(ctx.Ctx, "invalid credentials", nil, nil)
+		apperrors.ClientError(ctx.Ctx, "invalid credentials", nil, nil, ctx.DeviceID)
 		return nil, false
 	}
 	if app.WhiteListedIPs == nil {
-		apperrors.ClientError(ctx.Ctx, "no ip address whitelisted", nil, nil)
+		apperrors.ClientError(ctx.Ctx, "no ip address whitelisted", nil, nil, ctx.DeviceID)
 		return nil, false
 	}
 	if os.Getenv("ENV") == "production" {
@@ -54,7 +54,7 @@ func AppAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], ipAddr
 			}
 		}
 		if !validIP {
-			apperrors.ClientError(ctx.Ctx, "unauthorised access", nil, nil)
+			apperrors.ClientError(ctx.Ctx, "unauthorised access", nil, nil, ctx.DeviceID)
 			return nil, false
 		}
 	}

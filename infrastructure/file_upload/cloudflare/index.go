@@ -6,8 +6,7 @@ import (
 	"log"
 	"os"
 	"strings"
-
-	// "github.com/aws/aws-sdk-go/aws"
+	"time"
 
 	"gateman.io/application/utils"
 	"gateman.io/infrastructure/file_upload/types"
@@ -40,21 +39,25 @@ func (c *R2SignedURLService) InitialiseClient() {
 	})
 }
 
-func (c *R2SignedURLService) GeneratedSignedURL(fileName string, permission types.SignedURLPermission) (*string, error) {
+func (c *R2SignedURLService) GeneratedSignedURL(fileName string, permission types.SignedURLPermission, writeExpiresAt *time.Time, readExpiresAt *time.Duration) (*string, error) {
 	presignClient := s3.NewPresignClient(c.Client)
 	var presignResult *v4.PresignedHTTPRequest
 	var err error
 	if permission.Write {
 		presignResult, err = presignClient.PresignPutObject(context.TODO(), &s3.PutObjectInput{
-			Bucket: aws.String(os.Getenv("R2_BUCKET")),
-			Key:    aws.String(fileName),
+			Bucket:  aws.String(os.Getenv("R2_BUCKET")),
+			Key:     aws.String(fileName),
+			// Expires: writeExpiresAt,
 		})
 	} else {
 		presignResult, err = presignClient.PresignGetObject(context.TODO(), &s3.GetObjectInput{
 			Bucket: aws.String(os.Getenv("R2_BUCKET")),
 			Key:    aws.String(fileName),
+		}, func(opts *s3.PresignOptions) {
+			if readExpiresAt != nil {
+				// opts.Expires = *readExpiresAt
+			}
 		})
-
 	}
 
 	if err != nil {

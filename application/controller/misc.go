@@ -25,7 +25,7 @@ import (
 func GeneratedSignedURL(ctx *interfaces.ApplicationContext[dto.GeneratedSignedURLDTO]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
 		return
 	}
 	if ctx.Body.AccountImage {
@@ -34,20 +34,22 @@ func GeneratedSignedURL(ctx *interfaces.ApplicationContext[dto.GeneratedSignedUR
 	var url *string
 	var err error
 	if ctx.Body.Permission.Read {
+		expiresAt := time.Hour * 1
 		url, err = fileupload.FileUploader.GeneratedSignedURL(ctx.Body.FilePath, types.SignedURLPermission{
 			Read: true,
-		})
+		}, nil, &expiresAt)
 	} else if ctx.Body.Permission.Write {
+		expiresAt := time.Now().Add(time.Hour * 1)
 		url, err = fileupload.FileUploader.GeneratedSignedURL(ctx.Body.FilePath, types.SignedURLPermission{
 			Write: true,
-		})
+		}, &expiresAt, nil)
 	} else if ctx.Body.Permission.Delete {
 	} else {
-		apperrors.ClientError(ctx.Ctx, "invalid request", nil, nil)
+		apperrors.ClientError(ctx.Ctx, "invalid request", nil, nil, ctx.DeviceID)
 		return
 	}
 	if err != nil {
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "account created", map[string]any{
@@ -64,7 +66,7 @@ func GetSubscriptionPlans(ctx *interfaces.ApplicationContext[any]) {
 			Key:  "err",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx.Ctx, err, nil)
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "plans fetched", *plans, nil, nil, &ctx.DeviceID)
@@ -73,7 +75,7 @@ func GetSubscriptionPlans(ctx *interfaces.ApplicationContext[any]) {
 func GenerateLinkToAddCard(ctx *interfaces.ApplicationContext[dto.GenerateAddCardLinkDTO]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
 		return
 	}
 	var appEmail *string
@@ -87,11 +89,11 @@ func GenerateLinkToAddCard(ctx *interfaces.ApplicationContext[dto.GenerateAddCar
 				Key:  "err",
 				Data: err,
 			})
-			apperrors.UnknownError(ctx.Ctx, nil, nil)
+			apperrors.UnknownError(ctx.Ctx, nil, nil, ctx.DeviceID)
 			return
 		}
 		if app == nil {
-			apperrors.NotFoundError(ctx.Ctx, "Application not found")
+			apperrors.NotFoundError(ctx.Ctx, "Application not found", &ctx.DeviceID)
 			return
 		}
 		appEmail = &app.Email
@@ -105,7 +107,7 @@ func GenerateLinkToAddCard(ctx *interfaces.ApplicationContext[dto.GenerateAddCar
 		"reverse":     true,
 	}, 500_00, []payment_types.PaymentChannel{payment_types.Card})
 	if err != nil {
-		apperrors.ExternalDependencyError(ctx.Ctx, "Paystack", "500", err)
+		apperrors.ExternalDependencyError(ctx.Ctx, "Paystack", "500", err, ctx.DeviceID)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "link generated", link.Link, nil, nil, &ctx.DeviceID)
@@ -114,7 +116,7 @@ func GenerateLinkToAddCard(ctx *interfaces.ApplicationContext[dto.GenerateAddCar
 func GeneratePaymentLink(ctx *interfaces.ApplicationContext[dto.GeneratePaymentLinkDTO]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr)
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
 		return
 	}
 	appRepo := repository.ApplicationRepo()
@@ -124,11 +126,11 @@ func GeneratePaymentLink(ctx *interfaces.ApplicationContext[dto.GeneratePaymentL
 			Key:  "err",
 			Data: err,
 		})
-		apperrors.UnknownError(ctx.Ctx, nil, nil)
+		apperrors.UnknownError(ctx.Ctx, nil, nil, ctx.DeviceID)
 		return
 	}
 	if application == nil {
-		apperrors.NotFoundError(ctx.Ctx, "Application not found")
+		apperrors.NotFoundError(ctx.Ctx, "Application not found", &ctx.DeviceID)
 		return
 	}
 	subscriptionRepo := repository.SubscriptionPlanRepo()
@@ -141,15 +143,15 @@ func GeneratePaymentLink(ctx *interfaces.ApplicationContext[dto.GeneratePaymentL
 			Key:  "id",
 			Data: ctx.Body.PlanID,
 		})
-		apperrors.UnknownError(ctx.Ctx, nil, nil)
+		apperrors.UnknownError(ctx.Ctx, nil, nil, ctx.DeviceID)
 		return
 	}
 	if newSubscription == nil {
-		apperrors.NotFoundError(ctx.Ctx, "Invalid Subscription ID provided")
+		apperrors.NotFoundError(ctx.Ctx, "Invalid Subscription ID provided", &ctx.DeviceID)
 		return
 	}
 	if newSubscription.Name == entities.Free || newSubscription.MonthlyPrice == 0 || newSubscription.AnnualPrice == 0 {
-		apperrors.ClientError(ctx.Ctx, "You do not have to pay to be on the free plan", nil, nil)
+		apperrors.ClientError(ctx.Ctx, "You do not have to pay to be on the free plan", nil, nil, ctx.DeviceID)
 		return
 	}
 	activeSubscriptionRepo := repository.ActiveSubscriptionRepo()
@@ -164,7 +166,7 @@ func GeneratePaymentLink(ctx *interfaces.ApplicationContext[dto.GeneratePaymentL
 			Key:  "id",
 			Data: ctx.Body.PlanID,
 		})
-		apperrors.UnknownError(ctx.Ctx, nil, nil)
+		apperrors.UnknownError(ctx.Ctx, nil, nil, ctx.DeviceID)
 		return
 	}
 	var activeSubAmount uint32 = 0
@@ -179,27 +181,27 @@ func GeneratePaymentLink(ctx *interfaces.ApplicationContext[dto.GeneratePaymentL
 				Key:  "id",
 				Data: ctx.Body.PlanID,
 			})
-			apperrors.UnknownError(ctx.Ctx, nil, nil)
+			apperrors.UnknownError(ctx.Ctx, nil, nil, ctx.DeviceID)
 			return
 		}
 		if subscription == nil {
-			apperrors.NotFoundError(ctx.Ctx, "Invalid Subscription ID provided")
+			apperrors.NotFoundError(ctx.Ctx, "Invalid Subscription ID provided", &ctx.DeviceID)
 			return
 		}
 		if activeSub.ActiveSubName == "Premium" && newSubscription.Name == "Essential" {
 			if ctx.Body.Frequency == entities.Monthly {
-				apperrors.ClientError(ctx.Ctx, "You do not need to pay to downgrade to an Essential subscription", nil, nil)
+				apperrors.ClientError(ctx.Ctx, "You do not need to pay to downgrade to an Essential subscription", nil, nil, ctx.DeviceID)
 				return
 			}
 		}
 
 		if activeSub.Interval == entities.Annually && ctx.Body.Frequency == entities.Monthly {
-			apperrors.ClientError(ctx.Ctx, "You do not need to pay to switch to a monthly plan", nil, nil)
+			apperrors.ClientError(ctx.Ctx, "You do not need to pay to switch to a monthly plan", nil, nil, ctx.DeviceID)
 			return
 		}
 
 		if activeSub.Interval == ctx.Body.Frequency && ctx.Body.PlanID == activeSub.ActiveSubID {
-			apperrors.ClientError(ctx.Ctx, "You are already on this plan", nil, nil)
+			apperrors.ClientError(ctx.Ctx, "You are already on this plan", nil, nil, ctx.DeviceID)
 			return
 		}
 		var subStartAt time.Time
@@ -223,7 +225,7 @@ func GeneratePaymentLink(ctx *interfaces.ApplicationContext[dto.GeneratePaymentL
 	} else if ctx.Body.Frequency == entities.Monthly {
 		amount = newSubscription.MonthlyPrice
 	} else {
-		apperrors.ClientError(ctx.Ctx, "Invalid frequency selected", nil, nil)
+		apperrors.ClientError(ctx.Ctx, "Invalid frequency selected", nil, nil, ctx.DeviceID)
 		return
 	}
 	link, err := payments.PaymentProcessor.GeneratePaymentLink(application.Email, map[string]any{
@@ -234,7 +236,7 @@ func GeneratePaymentLink(ctx *interfaces.ApplicationContext[dto.GeneratePaymentL
 		"autoRenew":   ctx.Body.AutoRenew,
 	}, amount-activeSubAmount, []payment_types.PaymentChannel{payment_types.Card})
 	if err != nil {
-		apperrors.ExternalDependencyError(ctx.Ctx, "Paystack", "500", err)
+		apperrors.ExternalDependencyError(ctx.Ctx, "Paystack", "500", err, ctx.DeviceID)
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "link generated", link.Link, nil, nil, &ctx.DeviceID)

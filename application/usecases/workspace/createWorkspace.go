@@ -32,7 +32,7 @@ func CreateWorkspaceUseCase(ctx any, payload *dto.CreateWorkspaceDTO, deviceID s
 	})
 	if existingWorkspace != nil {
 
-		apperrors.ClientError(ctx, "this email is already attached to a workspace", nil, nil)
+		apperrors.ClientError(ctx, "this email is already attached to a workspace", nil, nil, deviceID)
 		return errors.New("this email is already attached to a workspace")
 	}
 	err := workspaceRepo.StartTransaction(func(sc mongo.Session, c context.Context) error {
@@ -109,13 +109,13 @@ func CreateWorkspaceUseCase(ctx any, payload *dto.CreateWorkspaceDTO, deviceID s
 	})
 
 	if err != nil {
-		apperrors.UnknownError(ctx, err, nil)
+		apperrors.UnknownError(ctx, err, nil, deviceID)
 		return err
 	}
 
 	otp, err := auth.GenerateOTP(6, payload.Email)
 	if err != nil {
-		apperrors.FatalServerError(ctx, err)
+		apperrors.FatalServerError(ctx, err, deviceID)
 		return err
 	}
 	emailPayload, err := json.Marshal(queue_tasks.EmailPayload{
@@ -129,7 +129,7 @@ func CreateWorkspaceUseCase(ctx any, payload *dto.CreateWorkspaceDTO, deviceID s
 	})
 	if err != nil {
 		logger.Error("error marshalling payload for email queue")
-		apperrors.FatalServerError(ctx, err)
+		apperrors.FatalServerError(ctx, err, deviceID)
 		return err
 	}
 	messagequeue.TaskQueue.Enqueue(mq_types.QueueTask{

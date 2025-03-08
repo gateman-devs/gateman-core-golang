@@ -2,8 +2,10 @@ package utils
 
 import (
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha512"
 	"encoding/hex"
+	"fmt"
 	"net"
 	"regexp"
 	"strings"
@@ -96,4 +98,21 @@ func CreateHMACSHA512Hash(data []byte, secretKey string) string {
 	hmac := hmac.New(sha512.New, []byte(secretKey))
 	hmac.Write(data)
 	return hex.EncodeToString(hmac.Sum(nil))
+}
+
+func GenerateRandomHexKey(length int) (string, error) {
+	if length <= 0 {
+		return "", fmt.Errorf("length must be greater than 0")
+	}
+	byteLength := length / 2
+	if length%2 != 0 {
+		byteLength++
+	}
+	randomBytes := make([]byte, byteLength)
+	_, err := rand.Read(randomBytes)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate random bytes: %w", err)
+	}
+	hexString := hex.EncodeToString(randomBytes)
+	return hexString[:length], nil
 }

@@ -19,11 +19,11 @@ import (
 func WorkspaceAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], intent *string, requiredPermissions *[]entities.MemberPermissions, authToken string) (*interfaces.ApplicationContext[any], bool) {
 	validAccessToken, err := auth.DecodeAuthToken(authToken)
 	if err != nil {
-		apperrors.AuthenticationError(ctx.Ctx, "this session has expired")
+		apperrors.AuthenticationError(ctx.Ctx, "this session has expired", ctx.DeviceID)
 		return nil, false
 	}
 	if !validAccessToken.Valid {
-		apperrors.AuthenticationError(ctx.Ctx, "unauthorised access1")
+		apperrors.AuthenticationError(ctx.Ctx, "unauthorised access", ctx.DeviceID)
 		return nil, false
 	}
 	authTokenClaims := validAccessToken.Claims.(jwt.MapClaims)
@@ -32,40 +32,40 @@ func WorkspaceAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], 
 			Key:  "token claims",
 			Data: validAccessToken,
 		})
-		apperrors.AuthenticationError(ctx.Ctx, "unauthorised access2")
+		apperrors.AuthenticationError(ctx.Ctx, "unauthorised access", ctx.DeviceID)
 		return nil, false
 	}
 
 	deviceIDHash, _ := cryptography.CryptoHahser.HashString(ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
-	validToken := cache.Cache.FindOne(fmt.Sprintf("%s-access", string(deviceIDHash)))
+	validToken := cache.Cache.FindOne(fmt.Sprintf("%s-workspace-access", string(deviceIDHash)))
 	if validToken == nil {
-		apperrors.AuthenticationError(ctx.Ctx, "this session has expired")
+		apperrors.AuthenticationError(ctx.Ctx, "this session has expired", ctx.DeviceID)
 		return nil, false
 	}
 	match := cryptography.CryptoHahser.VerifyHashData(*validToken, authToken)
 	if !match {
-		apperrors.AuthenticationError(ctx.Ctx, "this session has expired")
+		apperrors.AuthenticationError(ctx.Ctx, "this session has expired", ctx.DeviceID)
 		return nil, false
 	}
 
 	if intent != nil {
 		if authTokenClaims["intent"] != intent {
-			apperrors.AuthenticationError(ctx.Ctx, "unauthorised access3")
+			apperrors.AuthenticationError(ctx.Ctx, "unauthorised access", ctx.DeviceID)
 			return nil, false
 		}
 	}
 	if !authTokenClaims["verifiedAccount"].(bool) {
-		apperrors.AuthenticationError(ctx.Ctx, "verify your account before trying to use this route")
+		apperrors.AuthenticationError(ctx.Ctx, "verify your account before trying to use this route", ctx.DeviceID)
 		return nil, false
 	}
 	if authTokenClaims["tokenType"] != "access_token" {
-		apperrors.AuthenticationError(ctx.Ctx, "unauthorised access4")
+		apperrors.AuthenticationError(ctx.Ctx, "unauthorised access", ctx.DeviceID)
 		return nil, false
 	}
 
 	if ctx.DeviceID == "" {
 		logger.Info("device id missing from client")
-		apperrors.AuthenticationError(ctx.Ctx, "unauthorized access1")
+		apperrors.AuthenticationError(ctx.Ctx, "unauthorized access", ctx.DeviceID)
 		return nil, false
 	}
 
@@ -77,31 +77,30 @@ func WorkspaceAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], 
 			Key:  "request  device id",
 			Data: ctx.DeviceID,
 		})
-		apperrors.AuthenticationError(ctx.Ctx, "unauthorized access2")
+		apperrors.AuthenticationError(ctx.Ctx, "unauthorized access", ctx.DeviceID)
 		return nil, false
 	}
 
 	var workspaceName string
 	var workspaceEmail string
 	if authTokenClaims["workspace"] == nil {
-		apperrors.AuthenticationError(ctx.Ctx, "unauthorized access3")
+		apperrors.AuthenticationError(ctx.Ctx, "unauthorized access", ctx.DeviceID)
 		return nil, false
 	} else {
 		WorkspaceMemberRepo := repository.WorkspaceMemberRepo()
 		workspaceMember, err := WorkspaceMemberRepo.FindOneByFilter(map[string]interface{}{
 			"workspaceID": authTokenClaims["workspace"],
-			"userID":      authTokenClaims["userID"],
 		})
 		if err != nil {
-			apperrors.AuthenticationError(ctx.Ctx, "unauthorized access4")
+			apperrors.AuthenticationError(ctx.Ctx, "unauthorized access", ctx.DeviceID)
 			return nil, false
 		}
 		if workspaceMember == nil {
-			apperrors.AuthenticationError(ctx.Ctx, "unauthorized access5")
+			apperrors.AuthenticationError(ctx.Ctx, "unauthorized access", ctx.DeviceID)
 			return nil, false
 		}
 		if workspaceMember.Deactivated {
-			apperrors.AuthenticationError(ctx.Ctx, "unauthorized access6")
+			apperrors.AuthenticationError(ctx.Ctx, "unauthorized access", ctx.DeviceID)
 			return nil, false
 		}
 		hasAccess := false
@@ -119,7 +118,7 @@ func WorkspaceAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], 
 			}
 		}
 		if !hasAccess {
-			apperrors.AuthenticationError(ctx.Ctx, "unauthorized access7")
+			apperrors.AuthenticationError(ctx.Ctx, "unauthorized access", ctx.DeviceID)
 			return nil, false
 		}
 		workspaceRepo := repository.WorkspaceRepository()
@@ -127,11 +126,11 @@ func WorkspaceAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], 
 			"email": 1,
 		}))
 		if err != nil {
-			apperrors.AuthenticationError(ctx.Ctx, "unauthorized access8")
+			apperrors.AuthenticationError(ctx.Ctx, "unauthorized access", ctx.DeviceID)
 			return nil, false
 		}
 		if workspace == nil {
-			apperrors.AuthenticationError(ctx.Ctx, "unauthorized access9")
+			apperrors.AuthenticationError(ctx.Ctx, "unauthorized access", ctx.DeviceID)
 			return nil, false
 		}
 		workspaceName = workspaceMember.WorkspaceName
@@ -144,6 +143,6 @@ func WorkspaceAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], 
 	ctx.SetContextData("WorkspaceEmail", workspaceEmail)
 	ctx.SetContextData("Email", authTokenClaims["email"])
 	ctx.SetContextData("UserAgent", authTokenClaims["userAgent"])
-	ctx.SetContextData("DeviceID", authTokenClaims["deviceID"])
+	ctx.SetContextData("DeviceID", ctx.DeviceID)
 	return ctx, true
 }

@@ -163,7 +163,7 @@ func (redisRepo *RedisRepository) FindSortedSet(key string) *[]string {
 
 func (redisRepo *RedisRepository) CreateInSet(key string, member interface{}, ttl time.Duration) int64 {
 	redisRepo.preRequest()
-	added := redisRepo.Clinet.SAdd(key, member, ttl)
+	added := redisRepo.Clinet.SAdd(key, member, ttl.Seconds())
 
 	if err := added.Err(); err != nil {
 		logger.Error("redis error occured while running CreateInSet", logger.LoggerOptions{

@@ -31,13 +31,13 @@ func UserRouter(router *gin.RouterGroup) {
 			if os.Getenv("ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
-					apperrors.ErrorProcessingPayload(ctx)
+					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
 				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
-					apperrors.ErrorProcessingPayload(ctx)
+					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
 			}
@@ -64,13 +64,13 @@ func UserRouter(router *gin.RouterGroup) {
 			if os.Getenv("ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
-					apperrors.ErrorProcessingPayload(ctx)
+					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
 				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
-					apperrors.ErrorProcessingPayload(ctx)
+					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
 			}

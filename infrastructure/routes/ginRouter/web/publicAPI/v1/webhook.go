@@ -13,7 +13,7 @@ func WebhookRouter(router *gin.RouterGroup) {
 		webhookRouter.POST("/paystack", func(ctx *gin.Context) {
 			body, err := ctx.GetRawData()
 			if err != nil {
-				apperrors.ErrorProcessingPayload(ctx)
+				apperrors.ErrorProcessingPayload(ctx, nil)
 				return
 			}
 			controller.ProcessPaystackWebhook(&interfaces.ApplicationContext[[]byte]{
