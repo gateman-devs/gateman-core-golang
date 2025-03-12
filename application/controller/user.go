@@ -39,10 +39,9 @@ func SetAccountImage(ctx *interfaces.ApplicationContext[any]) {
 		apperrors.ClientError(ctx.Ctx, "Image has not been uploaded. Request for a new url and upload image before attempting this request again.", nil, utils.GetUIntPointer(http.StatusBadRequest), ctx.DeviceID)
 		return
 	}
-	expiresAt := time.Minute * 1
 	url, _ := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), "accountimage"), types.SignedURLPermission{
 		Read: true,
-	}, nil, &expiresAt)
+	}, time.Minute*1)
 	alive, err := biometric.BiometricService.LivenessCheck(url)
 	if err != nil {
 		logger.Error("something went wrong when verifying image", logger.LoggerOptions{
@@ -197,8 +196,17 @@ func SetNINDetails(ctx *interfaces.ApplicationContext[dto.SetNINDetails]) {
 	} else {
 		nin.PhoneNumber = utils.GetStringPointer(fmt.Sprintf("234%s", *nin.PhoneNumber))
 	}
+	parsedNINDOB, err := time.Parse("2006-01-02", nin.DateOfBirth)
+	if err != nil {
+		logger.Error("failed to parse NIN DOB", logger.LoggerOptions{
+			Key: "userID", Data: ctx.GetStringContextData("UserID"),
+		}, logger.LoggerOptions{Key: "hashedNIN", Data: hashedNIN}, logger.LoggerOptions{
+			Key: `err`, Data: err,
+		})
+		return
+	}
 	if ctx.GetStringContextData("Phone") != "" && nin.PhoneNumber != nil {
-		if *nin.PhoneNumber == ctx.GetStringContextData("Phone") {
+		if *nin.PhoneNumber == ctx.GetStringContextData("Phone") || (nin.FirstName == *account.FirstName.Value && nin.LastName == *account.LastName.Value && parsedNINDOB == *account.DOB.Value) {
 			parsedNINDOB, err := time.Parse("2006-01-02", nin.DateOfBirth)
 			if err != nil {
 				logger.Error("failed to parse NIN DOB", logger.LoggerOptions{
@@ -246,6 +254,7 @@ func SetNINDetails(ctx *interfaces.ApplicationContext[dto.SetNINDetails]) {
 				}
 
 			}
+			userRepo.UpdatePartialByID(ctx.GetStringContextData("UserID"), payload)
 			server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "NIN Added", nil, nil, nil, &ctx.DeviceID)
 			return
 		}
@@ -447,19 +456,28 @@ func SetBVNDetails(ctx *interfaces.ApplicationContext[dto.SetBVNDetails]) {
 		bvn.PhoneNumber = fmt.Sprintf("234%s", bvn.PhoneNumber)
 	}
 	if ctx.GetStringContextData("Phone") != "" && bvn.PhoneNumber != "" {
-		if bvn.PhoneNumber == ctx.GetStringContextData("Phone") {
+		parsedBVNDOB, err := time.Parse("2006-01-02", bvn.DateOfBirth)
+		if err != nil {
+			logger.Error("failed to parse BVN DOB", logger.LoggerOptions{
+				Key: "userID", Data: ctx.GetStringContextData("UserID"),
+			}, logger.LoggerOptions{Key: "hashedBVN", Data: string(hashedBVN)}, logger.LoggerOptions{
+				Key: `err`, Data: err,
+			})
+			return
+		}
+		if bvn.PhoneNumber == ctx.GetStringContextData("Phone") || (bvn.FirstName == *account.FirstName.Value && bvn.LastName == *account.LastName.Value && parsedBVNDOB == *account.DOB.Value) {
 			parsedBVNDOB, err := time.Parse("2006-01-02", bvn.DateOfBirth)
 			if err != nil {
 				logger.Error("failed to parse BVN DOB", logger.LoggerOptions{
 					Key: "userID", Data: ctx.GetStringContextData("UserID"),
-				}, logger.LoggerOptions{Key: "hashedBVN", Data: hashedBVN}, logger.LoggerOptions{
+				}, logger.LoggerOptions{Key: "hashedBVN", Data: string(hashedBVN)}, logger.LoggerOptions{
 					Key: `err`, Data: err,
 				})
 				return
 			}
 
 			user, _ := userRepo.FindByID(ctx.GetStringContextData("UserID"))
-			payload := map[string]any{"bvn": hashedBVN}
+			payload := map[string]any{"bvn": string(hashedBVN)}
 			if user.Address == nil {
 				payload["address"] = entities.Address{
 					Value: &bvn.Address,
@@ -496,6 +514,7 @@ func SetBVNDetails(ctx *interfaces.ApplicationContext[dto.SetBVNDetails]) {
 				}
 
 			}
+			userRepo.UpdatePartialByID(ctx.GetStringContextData("UserID"), payload)
 			server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "BVN Added", nil, nil, nil, &ctx.DeviceID)
 			return
 		}
@@ -637,6 +656,428 @@ func VerifyBVNDetails(ctx *interfaces.ApplicationContext[any]) {
 	hashedDeviceID, _ := cryptography.CryptoHahser.HashString(ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
 	cache.Cache.CreateEntry(fmt.Sprintf("%s-access", string(hashedDeviceID)), hashedAccessToken, time.Hour*24)
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "BVN Added", map[string]any{
+		"accessToken": accessToken,
+	}, nil, nil, &ctx.DeviceID)
+}
+
+func SetDriversLicenseDetails(ctx *interfaces.ApplicationContext[dto.SetDriversLicenseDetails]) {
+	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
+	if valiedationErr != nil {
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
+		return
+	}
+	userRepo := repository.UserRepo()
+	account, _ := userRepo.FindByID(ctx.GetStringContextData("UserID"), options.FindOne().SetProjection(map[string]any{
+		"driverID": 1,
+		"image":    1,
+	}))
+	if account.DriverID != nil {
+		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Seems you have verified your Drivers License already. You're good to go!", nil, nil, nil, &ctx.DeviceID)
+		return
+	}
+	hashedDriversID, _ := cryptography.CryptoHahser.HashString(ctx.Body.DriverID, []byte(os.Getenv("HASH_FIXED_SALT")))
+	driversIDExists, _ := userRepo.CountDocs(map[string]interface{}{
+		"driverID": hashedDriversID,
+	})
+	if driversIDExists != 0 {
+		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "This Drivers License is already linked to another Gateman account.", nil, nil, nil, &ctx.DeviceID)
+		return
+	}
+	var driverID identity_verification_types.DriversID
+	cachedDriverID := cache.Cache.FindOne(string(hashedDriversID))
+	if cachedDriverID == nil {
+		fetchedDriverID, err := identityverification.IdentityVerifier.FetchDriverIDDetails(ctx.Body.DriverID)
+		if fetchedDriverID == nil {
+			apperrors.NotFoundError(ctx.Ctx, "Invalid Driver ID provided", &ctx.DeviceID)
+			return
+		}
+		if err != nil {
+			apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
+			return
+		}
+		driverID = *fetchedDriverID
+		driverIDByte, _ := driverID.MarshalBinary()
+		cache.Cache.CreateEntry(string(hashedDriversID), driverIDByte, time.Hour*24*365) // save fetched driver id details for a year
+	} else {
+		err := json.Unmarshal([]byte(*cachedDriverID), &driverID)
+		if err != nil {
+			logger.Error("failed to marshal cached Driver ID data", logger.LoggerOptions{
+				Key: "userID", Data: ctx.GetStringContextData("UserID"),
+			}, logger.LoggerOptions{
+				Key: "hashedDriverID", Data: hashedDriversID,
+			})
+			fetchedDriverID, _ := identityverification.IdentityVerifier.FetchDriverIDDetails(ctx.Body.DriverID)
+			if fetchedDriverID == nil {
+				apperrors.NotFoundError(ctx.Ctx, "Invalid Driver ID provided", &ctx.DeviceID)
+				return
+			}
+			driverIDByte, _ := driverID.MarshalBinary()
+			cache.Cache.CreateEntry(string(hashedDriversID), driverIDByte, time.Hour*24*365) // save fetched driver id details for a year
+		}
+	}
+	accountImgURL, _ := fileupload.FileUploader.GeneratedSignedURL(account.Image, types.SignedURLPermission{
+		Read: true,
+	}, time.Minute*1)
+	success, _ := biometric.BiometricService.FaceMatch(&driverID.Photo, accountImgURL)
+	if !success {
+		parsedDriverIDDOB, err := time.Parse("02-01-2006", driverID.BirthDate)
+		if err != nil {
+			logger.Error("failed to parse Driver ID DOB", logger.LoggerOptions{
+				Key: "userID", Data: ctx.GetStringContextData("UserID"),
+			}, logger.LoggerOptions{Key: "hashedDriverID", Data: string(hashedDriversID)}, logger.LoggerOptions{
+				Key: `err`, Data: err,
+			})
+			return
+		}
+		if driverID.FirstName == *account.FirstName.Value && driverID.LastName == *account.LastName.Value && parsedDriverIDDOB == *account.DOB.Value {
+			success = true
+		}
+	}
+	if !success {
+		parsedDriverIDDOB, err := time.Parse("02-01-2006", driverID.BirthDate)
+		if err != nil {
+			logger.Error("failed to parse Driver ID DOB", logger.LoggerOptions{
+				Key: "userID", Data: ctx.GetStringContextData("UserID"),
+			}, logger.LoggerOptions{Key: "hashedDriverID", Data: string(hashedDriversID)}, logger.LoggerOptions{
+				Key: `err`, Data: err,
+			})
+			return
+		}
+
+		user, _ := userRepo.FindByID(ctx.GetStringContextData("UserID"))
+		payload := map[string]any{"driverID": string(hashedDriversID)}
+		if user.FirstName == nil || !user.FirstName.Verified {
+			payload["firstName"] = entities.KYCData[string]{
+				Value: &driverID.FirstName,
+			}
+		}
+		if user.MiddleName == nil || !user.MiddleName.Verified {
+			payload["middleName"] = entities.KYCData[string]{
+				Value: driverID.MiddleName,
+			}
+		}
+		if user.LastName == nil || !user.LastName.Verified {
+			payload["lastName"] = entities.KYCData[string]{
+				Value: &driverID.LastName,
+			}
+		}
+		if user.Gender == nil || !user.Gender.Verified {
+			payload["gender"] = entities.KYCData[string]{
+				Value: &driverID.Gender,
+			}
+		}
+		if user.DOB == nil || !user.DOB.Verified {
+			payload["dob"] = entities.KYCData[time.Time]{
+				Value: &parsedDriverIDDOB,
+			}
+		}
+		userRepo.UpdatePartialByID(ctx.GetStringContextData("UserID"), payload)
+	} else {
+		parsedDriverIDDOB, err := time.Parse("02-01-2006", driverID.BirthDate)
+		if err != nil {
+			logger.Error("failed to parse Driver ID DOB", logger.LoggerOptions{
+				Key: "userID", Data: ctx.GetStringContextData("UserID"),
+			}, logger.LoggerOptions{Key: "hashedDriverID", Data: string(hashedDriversID)}, logger.LoggerOptions{
+				Key: `err`, Data: err,
+			})
+			return
+		}
+
+		user, _ := userRepo.FindByID(ctx.GetStringContextData("UserID"))
+		payload := map[string]any{"driverID": string(hashedDriversID)}
+		if user.FirstName == nil || !user.FirstName.Verified {
+			payload["firstName"] = entities.KYCData[string]{
+				Value:    &driverID.FirstName,
+				Verified: true,
+			}
+		}
+		if user.MiddleName == nil || !user.MiddleName.Verified {
+			payload["middleName"] = entities.KYCData[string]{
+				Value:    driverID.MiddleName,
+				Verified: true,
+			}
+		}
+		if user.LastName == nil || !user.LastName.Verified {
+			payload["lastName"] = entities.KYCData[string]{
+				Value:    &driverID.LastName,
+				Verified: true,
+			}
+		}
+		if user.Gender == nil || !user.Gender.Verified {
+			payload["gender"] = entities.KYCData[string]{
+				Value:    &driverID.Gender,
+				Verified: true,
+			}
+		}
+		if user.DOB == nil || !user.DOB.Verified {
+			payload["dob"] = entities.KYCData[time.Time]{
+				Value:    &parsedDriverIDDOB,
+				Verified: true,
+			}
+
+		}
+		userRepo.UpdatePartialByID(ctx.GetStringContextData("UserID"), payload)
+	}
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "drivers license added", nil, nil, nil, &ctx.DeviceID)
+}
+
+func SetVoterIDDetails(ctx *interfaces.ApplicationContext[dto.SetVoterIDDetails]) {
+	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
+	if valiedationErr != nil {
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
+		return
+	}
+	userRepo := repository.UserRepo()
+	account, _ := userRepo.FindByID(ctx.GetStringContextData("UserID"), options.FindOne().SetProjection(map[string]any{
+		"voterID": 1,
+	}))
+	if account.VoterID != nil {
+		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Seems you have verified your Voter ID already. You're good to go!", nil, nil, nil, &ctx.DeviceID)
+		return
+	}
+	hashedVoterID, _ := cryptography.CryptoHahser.HashString(ctx.Body.VoterID, []byte(os.Getenv("HASH_FIXED_SALT")))
+	voterIDExists, _ := userRepo.CountDocs(map[string]interface{}{
+		"voterID": hashedVoterID,
+	})
+	if voterIDExists != 0 {
+		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "This Voter ID is already linked to another Gateman account.", nil, nil, nil, &ctx.DeviceID)
+		return
+	}
+	var voterID identity_verification_types.VoterID
+	cachedVoterID := cache.Cache.FindOne(string(hashedVoterID))
+	if cachedVoterID == nil {
+		fetchedVoterID, _ := identityverification.IdentityVerifier.FetchVoterIDDetails(ctx.Body.VoterID)
+		if fetchedVoterID == nil {
+			apperrors.NotFoundError(ctx.Ctx, "Invalid Voter ID provided", &ctx.DeviceID)
+			return
+		}
+		voterID = *fetchedVoterID
+		bvnByte, _ := voterID.MarshalBinary()
+		cache.Cache.CreateEntry(string(hashedVoterID), bvnByte, time.Hour*24*365) // save fetched bvn details for a year
+	} else {
+		err := json.Unmarshal([]byte(*cachedVoterID), &voterID)
+		if err != nil {
+			logger.Error("failed to marshal cached Voter ID data", logger.LoggerOptions{
+				Key: "userID", Data: ctx.GetStringContextData("UserID"),
+			}, logger.LoggerOptions{
+				Key: "hashedBVN", Data: hashedVoterID,
+			})
+			fetchedBVN, _ := identityverification.IdentityVerifier.FetchVoterIDDetails(ctx.Body.VoterID)
+			if fetchedBVN == nil {
+				apperrors.NotFoundError(ctx.Ctx, "Invalid Voter ID provided", &ctx.DeviceID)
+				return
+			}
+			bvnByte, _ := voterID.MarshalBinary()
+			cache.Cache.CreateEntry(string(hashedVoterID), bvnByte, time.Hour*24*365) // save fetched bvn details for a year
+		}
+	}
+	if os.Getenv("ENV") != "production" {
+		voterID.Phone = "00000000000"
+	} else {
+		voterID.Phone = fmt.Sprintf("234%s", voterID.Phone)
+	}
+	if ctx.GetStringContextData("Phone") != "" && voterID.Phone != "" {
+		// parsedBVNDOB, err := time.Parse("2006-01-02", voterID.DateOfBirth)
+		// if err != nil {
+		// 	logger.Error("failed to parse Voter ID DOB", logger.LoggerOptions{
+		// 		Key: "userID", Data: ctx.GetStringContextData("UserID"),
+		// 	}, logger.LoggerOptions{Key: "hashedBVN", Data: string(hashedVoterID)}, logger.LoggerOptions{
+		// 		Key: `err`, Data: err,
+		// 	})
+		// 	return
+		// }
+		names := strings.Split(voterID.FullName, " ")
+		if voterID.Phone == ctx.GetStringContextData("Phone") || (names[2] == *account.FirstName.Value && names[0] == *account.LastName.Value) {
+			// parsedDOB, err := time.Parse("2006-01-02", voterID.DateOfBirth)
+			// if err != nil {
+			// 	logger.Error("failed to parse Voter ID DOB", logger.LoggerOptions{
+			// 		Key: "userID", Data: ctx.GetStringContextData("UserID"),
+			// 	}, logger.LoggerOptions{Key: "hashedBVN", Data: string(hashedVoterID)}, logger.LoggerOptions{
+			// 		Key: `err`, Data: err,
+			// 	})
+			// 	return
+			// }
+
+			user, _ := userRepo.FindByID(ctx.GetStringContextData("UserID"))
+			payload := map[string]any{"voterID": string(hashedVoterID)}
+			if user.Address == nil {
+				payload["address"] = entities.Address{
+					Value: &voterID.Address,
+				}
+			}
+			if user.FirstName == nil || !user.FirstName.Verified {
+				payload["firstName"] = entities.KYCData[string]{
+					Value:    &names[0],
+					Verified: true,
+				}
+			}
+			if user.MiddleName == nil || !user.MiddleName.Verified {
+				payload["middleName"] = entities.KYCData[string]{
+					Value:    &names[1],
+					Verified: true,
+				}
+			}
+			if user.LastName == nil || !user.LastName.Verified {
+				payload["lastName"] = entities.KYCData[string]{
+					Value:    &names[2],
+					Verified: true,
+				}
+			}
+			if user.Gender == nil || !user.Gender.Verified {
+				payload["gender"] = entities.KYCData[string]{
+					Value:    &voterID.Gender,
+					Verified: true,
+				}
+			}
+			// if user.DOB == nil || !user.DOB.Verified {
+			// 	payload["dob"] = entities.KYCData[time.Time]{
+			// 		Value:    &parsedDOB,
+			// 		Verified: true,
+			// 	}
+
+			// }
+			userRepo.UpdatePartialByID(ctx.GetStringContextData("UserID"), payload)
+			server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Voter ID Added", nil, nil, nil, &ctx.DeviceID)
+			return
+		}
+	}
+	if voterID.Phone != "" {
+		cache.Cache.CreateEntry(fmt.Sprintf("%s-voter-id", voterID.Phone), hashedVoterID, time.Hour*24*365)
+		cache.Cache.CreateEntry(fmt.Sprintf("%s-voter-id-user", voterID.Phone), ctx.GetStringContextData("UserID"), time.Hour*24*365)
+		otp, err := auth.GenerateOTP(6, voterID.Phone)
+		if err != nil {
+			apperrors.FatalServerError(ctx.Ctx, err, ctx.DeviceID)
+			return
+		}
+		ref := sms.SMSService.SendOTP(voterID.Phone, false, otp)
+		encryptedRef, err := cryptography.EncryptData([]byte(*ref), nil)
+		if err != nil {
+			apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
+			return
+		}
+		cache.Cache.CreateEntry(fmt.Sprintf("%s-sms-otp-ref", voterID.Phone), *encryptedRef, time.Minute*10)
+		cache.Cache.CreateEntry(fmt.Sprintf("%s-otp-intent", voterID.Phone), "verify_voter_id", time.Minute*10)
+		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, fmt.Sprintf("Verify OTP sent to ******%s", (voterID.Phone)[len(voterID.Phone)-4:]), nil, nil, nil, &ctx.DeviceID)
+	} else {
+		logger.Error("Phone number not attached to Voter ID provided", logger.LoggerOptions{
+			Key: "Voter ID", Data: ctx.Body.VoterID,
+		}, logger.LoggerOptions{
+			Key: "userID", Data: ctx.GetStringContextData("UserID"),
+		})
+		apperrors.CustomError(ctx.Ctx, "Phone number not attached to Voter ID provided. Please reach out to support to resolve this issue", nil, ctx.DeviceID)
+	}
+}
+
+func VerifyVoterIDDetails(ctx *interfaces.ApplicationContext[any]) {
+	cachedVoterIDNumber := cache.Cache.FindOne(fmt.Sprintf("%s-voter-id", ctx.GetStringContextData("OTPPhone")))
+	if cachedVoterIDNumber == nil {
+		logger.Error("cached Voter ID number not found", logger.LoggerOptions{
+			Key:  "id",
+			Data: ctx.GetStringContextData("UserID"),
+		})
+		apperrors.NotFoundError(ctx.Ctx, "Voter ID verification failed. Please restart verification process", &ctx.DeviceID)
+		return
+	}
+	cachedVoterID := cache.Cache.FindOne(*cachedVoterIDNumber)
+	if cachedVoterID == nil {
+		logger.Error("cached Voter ID not found", logger.LoggerOptions{
+			Key:  "id",
+			Data: ctx.GetStringContextData("UserID"),
+		})
+		apperrors.NotFoundError(ctx.Ctx, "Voter ID verification failed. Please restart verification process", &ctx.DeviceID)
+		return
+	}
+	userID := cache.Cache.FindOne(fmt.Sprintf("%s-voter-id-user", ctx.GetStringContextData("OTPPhone")))
+	if userID == nil {
+		logger.Error("userID Voter ID not found", logger.LoggerOptions{
+			Key:  "id",
+			Data: userID,
+		})
+		apperrors.NotFoundError(ctx.Ctx, "Voter ID verification failed. Please restart verification process", &ctx.DeviceID)
+		return
+	}
+	var voterID identity_verification_types.VoterID
+	err := json.Unmarshal([]byte(*cachedVoterID), &voterID)
+	if err != nil {
+		logger.Error("failed to marshal cached Voter ID data", logger.LoggerOptions{
+			Key: "userID", Data: ctx.GetStringContextData("UserID"),
+		}, logger.LoggerOptions{
+			Key: "cachedVoterID", Data: cachedVoterID,
+		})
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
+		return
+	}
+	// parsedDOB, err := time.Parse("2006-01-02", voterID.DateOfBirth)
+	// if err != nil {
+	// 	logger.Error("failed to parse Voter ID DOB", logger.LoggerOptions{
+	// 		Key: "userID", Data: ctx.GetStringContextData("UserID"),
+	// 	}, logger.LoggerOptions{Key: "cachedBVoterID", Data: cachedVoterID}, logger.LoggerOptions{
+	// 		Key: `err`, Data: err,
+	// 	})
+	// 	return
+	// }
+	userRepo := repository.UserRepo()
+	user, _ := userRepo.FindByID(*userID)
+	payload := map[string]any{"voterID": cachedVoterIDNumber}
+	if user.Address == nil {
+		payload["address"] = entities.Address{
+			Value: &voterID.Address,
+		}
+	}
+	names := strings.Split(voterID.FullName, " ")
+	if user.FirstName == nil || !user.FirstName.Verified {
+		payload["firstName"] = entities.KYCData[string]{
+			Value:    &names[0],
+			Verified: true,
+		}
+	}
+	if user.MiddleName == nil || !user.MiddleName.Verified {
+		payload["middleName"] = entities.KYCData[string]{
+			Value:    &names[1],
+			Verified: true,
+		}
+	}
+	if user.LastName == nil || !user.LastName.Verified {
+		payload["lastName"] = entities.KYCData[string]{
+			Value:    &names[2],
+			Verified: true,
+		}
+	}
+	if user.Gender == nil || !user.Gender.Verified {
+		payload["gender"] = entities.KYCData[string]{
+			Value:    &voterID.Gender,
+			Verified: true,
+		}
+	}
+	// if user.DOB == nil || !user.DOB.Verified {
+	// 	payload["dob"] = entities.KYCData[time.Time]{
+	// 		Value:    &parsedDOB,
+	// 		Verified: true,
+	// 	}
+	// }
+	userRepo.UpdatePartialByID(*userID, payload)
+	cache.Cache.DeleteOne(fmt.Sprintf("%s-voter-id", ctx.GetStringContextData("UserID")))
+	cache.Cache.DeleteOne(*cachedVoterID)
+
+	var phone *string
+	if user.Phone != nil {
+		phone = utils.GetStringPointer(fmt.Sprintf("%s%s", user.Phone.Prefix, user.Phone.LocalNumber))
+	}
+	accessToken, err := auth.GenerateAuthToken(auth.ClaimsData{
+		UserID:          user.ID,
+		UserAgent:       user.UserAgent,
+		Email:           user.Email,
+		VerifiedAccount: user.VerifiedAccount,
+		PhoneNum:        phone,
+		DeviceID:        ctx.DeviceID,
+		TokenType:       auth.AccessToken,
+		IssuedAt:        time.Now().Unix(),
+		ExpiresAt:       time.Now().Add(time.Hour * 1).Unix(), //lasts for 1 hr
+	})
+	hashedAccessToken, _ := cryptography.CryptoHahser.HashString(*accessToken, nil)
+	hashedDeviceID, _ := cryptography.CryptoHahser.HashString(ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
+	cache.Cache.CreateEntry(fmt.Sprintf("%s-access", string(hashedDeviceID)), hashedAccessToken, time.Hour*24)
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Voter ID Added", map[string]any{
 		"accessToken": accessToken,
 	}, nil, nil, &ctx.DeviceID)
 }

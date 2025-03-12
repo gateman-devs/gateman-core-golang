@@ -98,9 +98,10 @@ func WorkspaceRouter(router *gin.RouterGroup) {
 				}
 			}
 			controller.LoginWorkspaceMember(&interfaces.ApplicationContext[dto.LoginWorkspaceMemberDTO]{
-				Ctx:  ctx,
-				Body: &body,
-				Keys: appContext.Keys,
+				Ctx:      ctx,
+				Body:     &body,
+				Keys:     appContext.Keys,
+				DeviceID: appContext.DeviceID,
 			})
 		})
 	}

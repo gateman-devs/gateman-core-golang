@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	apperrors "gateman.io/application/appErrors"
 	"gateman.io/application/constants"
@@ -154,7 +155,7 @@ func DeleteApplication(ctx *interfaces.ApplicationContext[any]) {
 		Payload:   deleteAppPayload,
 		Name:      queue_tasks.HandleAppDeletionTaskName,
 		Priority:  mq_types.Low,
-		ProcessIn: uint(processIn),
+		ProcessIn: time.Duration(processIn),
 	})
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "app deleted", nil, nil, nil, &ctx.DeviceID)
 }
@@ -203,6 +204,16 @@ func UpdateApplication(ctx *interfaces.ApplicationContext[dto.UpdateApplications
 			return
 		}
 		payload["paymentCard"] = ctx.Body.PaymentCard
+	}
+	if ctx.Body.Interval != nil || ctx.Body.SubscriptionID != nil {
+		subscriptionRepo := repository.SubscriptionPlanRepo()
+		sub, _ := subscriptionRepo.FindByID(*ctx.Body.SubscriptionID)
+		if sub == nil {
+			apperrors.ClientError(ctx.Ctx, "invalid subscription id", nil, nil, ctx.DeviceID)
+			return
+		}
+		payload["subscriptionID"] = ctx.Body.SubscriptionID
+		payload["interval"] = ctx.Body.Interval
 	}
 	appRepo := repository.ApplicationRepo()
 	_, err := appRepo.UpdatePartialByFilter(map[string]interface{}{

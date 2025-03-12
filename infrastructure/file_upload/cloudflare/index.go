@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"gateman.io/application/utils"
-	"gateman.io/infrastructure/file_upload/types"
+	upload_types "gateman.io/infrastructure/file_upload/types"
 	"gateman.io/infrastructure/logger"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
@@ -38,30 +38,33 @@ func (c *R2SignedURLService) InitialiseClient() {
 		o.BaseEndpoint = aws.String(fmt.Sprintf("https://%s.r2.cloudflarestorage.com", c.AccountID))
 	})
 }
-
-func (c *R2SignedURLService) GeneratedSignedURL(fileName string, permission types.SignedURLPermission, writeExpiresAt *time.Time, readExpiresAt *time.Duration) (*string, error) {
+func (c *R2SignedURLService) GeneratedSignedURL(fileName string, permission upload_types.SignedURLPermission, expiresAt time.Duration) (*string, error) {
 	presignClient := s3.NewPresignClient(c.Client)
 	var presignResult *v4.PresignedHTTPRequest
+	var url *string
 	var err error
+
+	putOpts := s3.PutObjectInput{
+		Bucket: aws.String(os.Getenv("R2_BUCKET")),
+		Key:    aws.String(fileName),
+	}
+
+	// Public access is handled via bucket policy, so no need to set ACL here.
 	if permission.Write {
-		presignResult, err = presignClient.PresignPutObject(context.TODO(), &s3.PutObjectInput{
-			Bucket:  aws.String(os.Getenv("R2_BUCKET")),
-			Key:     aws.String(fileName),
-			// Expires: writeExpiresAt,
+		presignResult, err = presignClient.PresignPutObject(context.TODO(), &putOpts, func(opts *s3.PresignOptions) {
+			opts.Expires = expiresAt
 		})
 	} else {
 		presignResult, err = presignClient.PresignGetObject(context.TODO(), &s3.GetObjectInput{
 			Bucket: aws.String(os.Getenv("R2_BUCKET")),
 			Key:    aws.String(fileName),
 		}, func(opts *s3.PresignOptions) {
-			if readExpiresAt != nil {
-				// opts.Expires = *readExpiresAt
-			}
+			opts.Expires = expiresAt
 		})
 	}
 
 	if err != nil {
-		logger.Error("an error occured while trying to generate presigned url", logger.LoggerOptions{
+		logger.Error("an error occurred while trying to generate presigned URL", logger.LoggerOptions{
 			Key:  "fileName",
 			Data: fileName,
 		}, logger.LoggerOptions{
@@ -69,6 +72,10 @@ func (c *R2SignedURLService) GeneratedSignedURL(fileName string, permission type
 			Data: err,
 		})
 		return nil, err
+	}
+
+	if url != nil {
+		return url, nil
 	}
 
 	return utils.GetStringPointer(presignResult.URL), nil

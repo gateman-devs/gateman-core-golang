@@ -49,6 +49,30 @@ func UserRouter(router *gin.RouterGroup) {
 			})
 		})
 
+		userRouter.POST("/drivers-license", middlewares.UserAuthenticationMiddleware(nil), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			var body dto.SetDriversLicenseDetails
+			if os.Getenv("ENV") != "dev" {
+				decryptedPayload, exists := ctx.Get("DecryptedBody")
+				if !exists {
+					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+					return
+				}
+				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+			} else {
+				if err := ctx.ShouldBindJSON(&body); err != nil {
+					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+					return
+				}
+			}
+			controller.SetDriversLicenseDetails(&interfaces.ApplicationContext[dto.SetDriversLicenseDetails]{
+				Ctx:      ctx,
+				Keys:     appContext.Keys,
+				DeviceID: appContext.DeviceID,
+				Body:     &body,
+			})
+		})
+
 		userRouter.POST("/verify-nin", middlewares.OTPTokenMiddleware("verify_nin"), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			controller.VerifyNINDetails(&interfaces.ApplicationContext[any]{
@@ -85,6 +109,39 @@ func UserRouter(router *gin.RouterGroup) {
 		userRouter.POST("/verify-bvn", middlewares.OTPTokenMiddleware("verify_bvn"), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			controller.VerifyBVNDetails(&interfaces.ApplicationContext[any]{
+				Ctx:      ctx,
+				Keys:     appContext.Keys,
+				DeviceID: appContext.DeviceID,
+			})
+		})
+
+		userRouter.POST("/set-voter-id", middlewares.UserAuthenticationMiddleware(nil), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			var body dto.SetVoterIDDetails
+			if os.Getenv("ENV") != "dev" {
+				decryptedPayload, exists := ctx.Get("DecryptedBody")
+				if !exists {
+					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+					return
+				}
+				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+			} else {
+				if err := ctx.ShouldBindJSON(&body); err != nil {
+					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+					return
+				}
+			}
+			controller.SetVoterIDDetails(&interfaces.ApplicationContext[dto.SetVoterIDDetails]{
+				Ctx:      ctx,
+				Keys:     appContext.Keys,
+				DeviceID: appContext.DeviceID,
+				Body:     &body,
+			})
+		})
+
+		userRouter.POST("/verify-voter-id", middlewares.OTPTokenMiddleware("verify_voter_id"), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			controller.VerifyVoterIDDetails(&interfaces.ApplicationContext[any]{
 				Ctx:      ctx,
 				Keys:     appContext.Keys,
 				DeviceID: appContext.DeviceID,

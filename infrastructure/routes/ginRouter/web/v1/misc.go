@@ -16,7 +16,7 @@ import (
 func MiscRouter(router *gin.RouterGroup) {
 	miscRouter := router.Group("/misc")
 	{
-		miscRouter.GET("/signedurl/generate", func(ctx *gin.Context) {
+		miscRouter.POST("/signedurl/generate", func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.GeneratedSignedURLDTO
 			if os.Getenv("ENV") != "dev" {

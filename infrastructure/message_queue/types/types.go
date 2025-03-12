@@ -1,5 +1,7 @@
 package mq_types
 
+import "time"
+
 type TaskQueueBroker interface {
 	Start()
 	Enqueue(task QueueTask)
@@ -9,8 +11,9 @@ type QueueTask struct {
 	Name      Queues
 	Payload   []byte
 	Priority  TaskPriority
-	ProcessIn uint // second
-	TimeOut   uint // seconds
+	ProcessIn time.Duration // second
+	TimeOut   time.Duration // seconds
+	MaxRetry  int
 }
 
 type TaskPriority string
@@ -21,3 +24,6 @@ const (
 	High   TaskPriority = "high"
 )
 
+type BasePayload struct {
+	RetryInterval time.Duration
+}

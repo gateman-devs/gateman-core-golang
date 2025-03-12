@@ -41,7 +41,7 @@ func AppAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], ipAddr
 		apperrors.ClientError(ctx.Ctx, "invalid credentials", nil, nil, ctx.DeviceID)
 		return nil, false
 	}
-	if app.WhiteListedIPs == nil {
+	if os.Getenv("ENV") == "production" && app.WhiteListedIPs == nil {
 		apperrors.ClientError(ctx.Ctx, "no ip address whitelisted", nil, nil, ctx.DeviceID)
 		return nil, false
 	}

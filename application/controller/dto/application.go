@@ -12,13 +12,15 @@ type ApplicationDTO struct {
 }
 
 type UpdateApplications struct {
-	Name              *string                       `json:"name" validate:"max=100,min=2"`
-	Description       *string                       `json:"description" validate:"max=200,min=10"`
-	PaymentCard       *string                       `json:"paymentCard" validate:"ulid"`
-	Verifications     *[]entities.VerificationType  `json:"verifications" validate:"dive,min=2,max=50"`
-	LocaleRestriction *[]entities.LocaleRestriction `json:"localeRestriction"`
-	RequestedFields   []entities.RequestedField     `json:"requestedFields"`
-	CustomFormFields  *[]entities.CustomFormField   `json:"customFormFields" validate:"dive,max=20"`
+	Name              *string                         `json:"name" validate:"max=100,min=2"`
+	Description       *string                         `json:"description" validate:"max=200,min=10"`
+	PaymentCard       *string                         `json:"paymentCard" validate:"ulid"`
+	SubscriptionID    *string                         `json:"subscriptionID" validate:"ulid"`
+	Interval          *entities.SubscriptionFrequency `json:"interval" validate:"oneof=monthly annually"`
+	Verifications     *[]entities.VerificationType    `json:"verifications" validate:"omitempty,dive"`
+	LocaleRestriction *[]entities.LocaleRestriction   `json:"localeRestriction" validate:"omitempty,dive"`
+	RequestedFields   []entities.RequestedField       `json:"requestedFields" validate:"omitempty,dive"`
+	CustomFormFields  *[]entities.CustomFormField     `json:"customFormFields" validate:"omitempty,dive"`
 }
 
 type ApplicationSignUpDTO struct {

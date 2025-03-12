@@ -1,9 +1,14 @@
 package identity_verification_types
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"time"
+)
 
 type IdentityVerifierType interface {
 	FetchBVNDetails(string) (*BVNData, error)
+	FetchDriverIDDetails(string) (*DriversID, error)
+	FetchVoterIDDetails(string) (*VoterID, error)
 	FetchNINDetails(string) (*NINData, error)
 	EmailVerification(email string) (bool, error)
 	ImgLivenessCheck(img string) (bool, error)
@@ -45,9 +50,9 @@ func (b *BVNData) UnmarshalBinary(data []byte) error {
 
 type NINData struct {
 	FirstName             string  `json:"first_name"`
-	MiddleName            *string  `json:"middle_name"`
+	MiddleName            *string `json:"middle_name"`
 	LastName              string  `json:"last_name"`
-	PhoneNumber           *string  `json:"phone_number"`
+	PhoneNumber           *string `json:"phone_number"`
 	Photo                 string  `json:"photo"`
 	Gender                string  `json:"gender"`
 	Customer              string  `json:"customer"`
@@ -63,7 +68,7 @@ type NINData struct {
 	NSpokenLang           string  `json:"nspoken_lang"`
 	Profession            *string `json:"profession"`
 	Religion              string  `json:"religion"`
-	Address string  `json:"residence_address_line_1"`
+	Address               string  `json:"residence_address_line_1"`
 	ResidenceAddressLine2 *string `json:"residence_address_line_2"`
 	ResidenceStatus       string  `json:"residence_status"`
 	ResidenceTown         string  `json:"residence_town"`
@@ -108,4 +113,52 @@ type LivenessCheckResultEntity struct {
 type LivenessCheckResultLiveness struct {
 	LivenessCheck       bool    `json:"liveness_check"`
 	LivenessProbability float32 `json:"liveness_probability"`
+}
+
+type VoterID struct {
+	FullName                  string    `json:"full_name"`
+	VoterIdentificationNumber string    `json:"voter_identification_number"`
+	Gender                    string    `json:"gender"`
+	Occupation                string    `json:"occupation"`
+	TimeOfRegistration        time.Time `json:"time_of_registration"`
+	State                     string    `json:"state"`
+	LocalGovernment           string    `json:"local_government"`
+	RegistrationAreaWard      string    `json:"registration_area_ward"`
+	PollingUnit               string    `json:"polling_unit"`
+	PollingUnitCode           string    `json:"polling_unit_code"`
+	Address                   string    `json:"address"`
+	Phone                     string    `json:"phone"`
+	// DateOfBirth               string    `json:"date_of_birth"`
+}
+
+func (n *VoterID) MarshalBinary() ([]byte, error) {
+	return json.Marshal(n) // Serialize to JSON
+}
+
+// Implement encoding.BinaryUnmarshaler
+func (n *VoterID) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data, n) // Deserialize from JSON
+}
+
+type DriversID struct {
+	UUID         string  `json:"uuid"`
+	LicenseNo    string  `json:"licenseNo"`
+	FirstName    string  `json:"firstName"`
+	LastName     string  `json:"lastName"`
+	MiddleName   *string `json:"middleName"`
+	Gender       string  `json:"gender"`
+	IssuedDate   string  `json:"issuedDate"` // Use time.Time if parsing is needed
+	ExpiryDate   string  `json:"expiryDate"` // Use time.Time if parsing is needed
+	StateOfIssue string  `json:"stateOfIssue"`
+	BirthDate    string  `json:"birthDate"` // Use time.Time if parsing is needed
+	Photo        string  `json:"photo"`
+}
+
+func (n *DriversID) MarshalBinary() ([]byte, error) {
+	return json.Marshal(n) // Serialize to JSON
+}
+
+// Implement encoding.BinaryUnmarshaler
+func (n *DriversID) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data, n) // Deserialize from JSON
 }

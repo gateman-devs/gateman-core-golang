@@ -85,8 +85,7 @@ func FetchAppUseCase(ctx any, appID string, deviceID string, ip string) (*entiti
 			return nil, errors.New("invalid location")
 		}
 	}
-	expiresAt := time.Hour * 1
-	fileURL, _ := fileupload.FileUploader.GeneratedSignedURL(app.AppImg, fileTypes.SignedURLPermission{Read: true}, nil, &expiresAt)
+	fileURL, _ := fileupload.FileUploader.GeneratedSignedURL(app.AppImg, fileTypes.SignedURLPermission{Read: true}, time.Minute*1)
 	app.AppImg = *fileURL
 	return app, nil
 }

@@ -19,7 +19,7 @@ import (
 func WorkspaceAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], intent *string, requiredPermissions *[]entities.MemberPermissions, authToken string) (*interfaces.ApplicationContext[any], bool) {
 	validAccessToken, err := auth.DecodeAuthToken(authToken)
 	if err != nil {
-		apperrors.AuthenticationError(ctx.Ctx, "this session has expired", ctx.DeviceID)
+		apperrors.AuthenticationError(ctx.Ctx, "this session has expired1", ctx.DeviceID)
 		return nil, false
 	}
 	if !validAccessToken.Valid {
@@ -39,12 +39,12 @@ func WorkspaceAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], 
 	deviceIDHash, _ := cryptography.CryptoHahser.HashString(ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
 	validToken := cache.Cache.FindOne(fmt.Sprintf("%s-workspace-access", string(deviceIDHash)))
 	if validToken == nil {
-		apperrors.AuthenticationError(ctx.Ctx, "this session has expired", ctx.DeviceID)
+		apperrors.AuthenticationError(ctx.Ctx, "this session has expired2", ctx.DeviceID)
 		return nil, false
 	}
 	match := cryptography.CryptoHahser.VerifyHashData(*validToken, authToken)
 	if !match {
-		apperrors.AuthenticationError(ctx.Ctx, "this session has expired", ctx.DeviceID)
+		apperrors.AuthenticationError(ctx.Ctx, "this session has expired3", ctx.DeviceID)
 		return nil, false
 	}
 

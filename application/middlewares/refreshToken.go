@@ -50,8 +50,6 @@ func RefreshTokenMiddleware(ctx *interfaces.ApplicationContext[any], workspaceTo
 		return nil, false
 	}
 	match := cryptography.CryptoHahser.VerifyHashData(*validToken, authToken)
-	fmt.Println(*validToken)
-	fmt.Println(authToken)
 	if !match {
 		apperrors.AuthenticationError(ctx.Ctx, "this session has expired", ctx.DeviceID)
 		return nil, false
