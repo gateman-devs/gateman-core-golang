@@ -11,6 +11,16 @@ type DojahNINResponse struct {
 	Error string                              `json:"error"`
 }
 
+type DojahDriversLicenseResponse struct {
+	Data  identity_verification_types.DriversID `json:"entity"`
+	Error string                                `json:"error"`
+}
+
+type DojahVoterIDResponse struct {
+	Data  identity_verification_types.VoterID `json:"entity"`
+	Error string                              `json:"error"`
+}
+
 type DojahEmailVerification struct {
 	Entity DojahEmailVerificationPayload `json:"entity"`
 }

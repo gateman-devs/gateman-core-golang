@@ -34,15 +34,13 @@ func GeneratedSignedURL(ctx *interfaces.ApplicationContext[dto.GeneratedSignedUR
 	var url *string
 	var err error
 	if ctx.Body.Permission.Read {
-		expiresAt := time.Hour * 1
 		url, err = fileupload.FileUploader.GeneratedSignedURL(ctx.Body.FilePath, types.SignedURLPermission{
 			Read: true,
-		}, nil, &expiresAt)
+		}, time.Minute*1)
 	} else if ctx.Body.Permission.Write {
-		expiresAt := time.Now().Add(time.Hour * 1)
 		url, err = fileupload.FileUploader.GeneratedSignedURL(ctx.Body.FilePath, types.SignedURLPermission{
 			Write: true,
-		}, &expiresAt, nil)
+		}, time.Minute*1)
 	} else if ctx.Body.Permission.Delete {
 	} else {
 		apperrors.ClientError(ctx.Ctx, "invalid request", nil, nil, ctx.DeviceID)
@@ -105,7 +103,7 @@ func GenerateLinkToAddCard(ctx *interfaces.ApplicationContext[dto.GenerateAddCar
 		"workspaceID": ctx.GetStringContextData("WorkspaceID"),
 		"appID":       ctx.Body.AppID,
 		"reverse":     true,
-	}, 500_00, []payment_types.PaymentChannel{payment_types.Card})
+	}, 500_00, []payment_types.PaymentChannel{payment_types.Card, payment_types.DirectDebit})
 	if err != nil {
 		apperrors.ExternalDependencyError(ctx.Ctx, "Paystack", "500", err, ctx.DeviceID)
 		return
@@ -234,7 +232,7 @@ func GeneratePaymentLink(ctx *interfaces.ApplicationContext[dto.GeneratePaymentL
 		"planID":      ctx.Body.PlanID,
 		"frequency":   ctx.Body.Frequency,
 		"autoRenew":   ctx.Body.AutoRenew,
-	}, amount-activeSubAmount, []payment_types.PaymentChannel{payment_types.Card})
+	}, amount-activeSubAmount, []payment_types.PaymentChannel{payment_types.Card, payment_types.DirectDebit})
 	if err != nil {
 		apperrors.ExternalDependencyError(ctx.Ctx, "Paystack", "500", err, ctx.DeviceID)
 		return

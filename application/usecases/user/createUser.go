@@ -204,10 +204,9 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 			apperrors.UnknownError(ctx, err, nil, deviceID)
 			return nil, nil, nil, err
 		}
-		expiresAt := time.Now().Add(time.Minute * 10)
 		url, err := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", account.ID, deviceID), types.SignedURLPermission{
 			Write: true,
-		}, &expiresAt, nil)
+		}, time.Minute*10)
 		if err != nil {
 			logger.Error("an error occured while generating url for device verification", logger.LoggerOptions{
 				Key:  "error",
@@ -219,7 +218,7 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 		return nil, url, &constants.ACCOUNT_EXISTS, nil
 	}
 
-	if os.Getenv("ENV") == "prod" {
+	if os.Getenv("ENV") == "production" {
 		if payload.Email != nil {
 			// found := cache.Cache.FindOne(fmt.Sprintf("%s-email-blacklist", *payload.Email))
 			// if found != nil {

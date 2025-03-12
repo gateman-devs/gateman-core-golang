@@ -131,10 +131,9 @@ func VerifyUserAccount(ctx *interfaces.ApplicationContext[any]) {
 	hashedAccessToken, _ := cryptography.CryptoHahser.HashString(*token, nil)
 	hashedDeviceID, _ := cryptography.CryptoHahser.HashString(ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
 	cache.Cache.CreateEntry(fmt.Sprintf("%s-access", string(hashedDeviceID)), hashedAccessToken, time.Minute*10)
-	expiresAt := time.Now().Add(time.Minute * 10)
 	url, err := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", profile.ID, "accountimage"), types.SignedURLPermission{
 		Write: true,
-	}, &expiresAt, nil)
+	}, time.Minute*10)
 	if err != nil {
 		logger.Error("an error occured while generating url for setting account image", logger.LoggerOptions{
 			Key:  "error",
@@ -450,10 +449,9 @@ func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) 
 		apperrors.ClientError(ctx.Ctx, "Image has not been uploaded. Request for a new url and upload image before attempting this request again.", nil, utils.GetUIntPointer(http.StatusBadRequest), ctx.DeviceID)
 		return
 	}
-	expiresAt := time.Minute * 2
 	url, _ := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), ctx.DeviceID), types.SignedURLPermission{
 		Read: true,
-	}, nil, &expiresAt)
+	}, time.Minute*1)
 	alive, err := biometric.BiometricService.LivenessCheck(url)
 	if err != nil {
 		logger.Error("something went wrong when verifying image", logger.LoggerOptions{
@@ -469,7 +467,7 @@ func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) 
 	}
 	accountImgURL, _ := fileupload.FileUploader.GeneratedSignedURL(account.Image, types.SignedURLPermission{
 		Read: true,
-	}, nil, &expiresAt)
+	}, time.Minute*1)
 	match, err := biometric.BiometricService.FaceMatch(url, accountImgURL)
 	if err != nil {
 		logger.Error("something went wrong when match images", logger.LoggerOptions{

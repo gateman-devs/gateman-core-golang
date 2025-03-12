@@ -16,6 +16,9 @@ import (
 	"gateman.io/application/utils"
 	"gateman.io/entities"
 	"gateman.io/infrastructure/logger"
+	messagequeue "gateman.io/infrastructure/message_queue"
+	queue_tasks "gateman.io/infrastructure/message_queue/tasks"
+	mq_types "gateman.io/infrastructure/message_queue/types"
 	"gateman.io/infrastructure/payments"
 	paystack_local_payment_processor "gateman.io/infrastructure/payments/paystack"
 	server_response "gateman.io/infrastructure/serverResponse"
@@ -131,6 +134,26 @@ func ProcessPaystackWebhook(ctx *interfaces.ApplicationContext[[]byte]) {
 			})
 		}
 		workspace_usecases.SaveCardAndCreateTransaction(&ctx.Ctx, fmt.Sprintf("Gateman %s - %s", subscription.Name, verifiedData.Metadata.Frequency), verifiedData)
+		if activeSub == nil || activeSub.AutoRenew {
+			renewSubPayload, err := json.Marshal(queue_tasks.RenewSubscriptionPayload{
+				AppID: verifiedData.Metadata.AppID,
+				BasePayload: mq_types.BasePayload{
+					RetryInterval: time.Hour * 24,
+				},
+			})
+			if err != nil {
+				logger.Error("error marshalling payload for sub auto renewal queue")
+				apperrors.ErrorProcessingPayload(ctx, nil)
+				return
+			}
+			messagequeue.TaskQueue.Enqueue(mq_types.QueueTask{
+				Payload:   renewSubPayload,
+				Name:      queue_tasks.HandleSubscriptionAutoRenewal,
+				Priority:  mq_types.High,
+				MaxRetry:  30,
+				ProcessIn: (time.Minute * time.Duration(24*expireAfter)),
+			})
+		}
 	} else {
 		logger.Error("an unsupported event was sent by paystack", logger.LoggerOptions{
 			Key:  "payload",

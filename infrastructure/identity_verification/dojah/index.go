@@ -151,3 +151,65 @@ func (div *DojahIdentityVerification) EmailVerification(email string) (bool, err
 	})
 	return dojahResponse.Entity.Deliverable && !dojahResponse.Entity.DomainDetails.SusTLD && dojahResponse.Entity.DomainDetails.Registered && (dojahResponse.Entity.Score == 1), nil
 }
+
+func (div *DojahIdentityVerification) FetchDriverIDDetails(n string) (*identity_verification_types.DriversID, error) {
+	response, statusCode, err := div.Network.Get(fmt.Sprintf("/kyc/dl?dl=%s", n), &map[string]string{
+		"Authorization": div.API_KEY,
+		"AppId":         div.APP_ID,
+	}, nil)
+	var dojahResponse DojahDriversLicenseResponse
+	json.Unmarshal(*response, &dojahResponse)
+	if err != nil {
+		logger.Error("error retireving driver id data from dojah", logger.LoggerOptions{
+			Key:  "error",
+			Data: err,
+		})
+		return nil, errors.New("something went wrong while retireving driver id data from dojah")
+	}
+	if *statusCode != 200 {
+		logger.Error("request to Dojah for driver id fetch was unsuccessful", logger.LoggerOptions{
+			Key:  "statusCode",
+			Data: fmt.Sprintf("%d", statusCode),
+		}, logger.LoggerOptions{
+			Key:  "data",
+			Data: dojahResponse,
+		})
+		if dojahResponse.Error == "Wrong driver id Inputted" {
+			return nil, errors.New("Drives License not found. Crosscheck the number inputed")
+		}
+		return nil, errors.New("error retireving driver id")
+	}
+	logger.Info("driver id information retireved by Dojah")
+	return &dojahResponse.Data, nil
+}
+
+func (div *DojahIdentityVerification) FetchVoterIDDetails(vin string) (*identity_verification_types.VoterID, error) {
+	response, statusCode, err := div.Network.Get(fmt.Sprintf("/kyc/vin?vin=%s", vin), &map[string]string{
+		"Authorization": div.API_KEY,
+		"AppId":         div.APP_ID,
+	}, nil)
+	var dojahResponse DojahVoterIDResponse
+	json.Unmarshal(*response, &dojahResponse)
+	if err != nil {
+		logger.Error("error retireving voter id data from dojah", logger.LoggerOptions{
+			Key:  "error",
+			Data: err,
+		})
+		return nil, errors.New("something went wrong while retireving voter id data from dojah")
+	}
+	if *statusCode != 200 {
+		logger.Error("request to Dojah for voter id fetch was unsuccessful", logger.LoggerOptions{
+			Key:  "statusCode",
+			Data: fmt.Sprintf("%d", statusCode),
+		}, logger.LoggerOptions{
+			Key:  "data",
+			Data: dojahResponse,
+		})
+		if dojahResponse.Error == "Wrong voter id Inputted" {
+			return nil, errors.New("Voter License not found. Crosscheck the number inputed")
+		}
+		return nil, errors.New("error retireving voter id")
+	}
+	logger.Info("voter id information retireved by Dojah")
+	return &dojahResponse.Data, nil
+}

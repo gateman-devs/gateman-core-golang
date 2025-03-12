@@ -51,6 +51,7 @@ type User struct {
 	NIN             *string             `bson:"nin" json:"nin"`
 	BVN             *string             `bson:"bvn" json:"bvn"`
 	VoterID         *string             `bson:"voterID" json:"voterID"`
+	DriverID        *string             `bson:"driverID" json:"driverID"`
 	AllowedOrgs     []string            `bson:"allowedOrgs" json:"allowedOrgs"`
 	Email           *string             `bson:"email" json:"email,omitempty"`
 	Phone           *PhoneNumber        `bson:"phone" json:"phone,omitempty"`

@@ -142,3 +142,43 @@ func (paystack *PaystackPaymentProcessor) ReverseTransaction(id string, reason s
 	}
 	return paystackResponse.Data, nil
 }
+
+func (paystack *PaystackPaymentProcessor) ChargeCard(authorization_code string, email string, amount uint32, metadata map[string]any) (interface{}, error) {
+	response, statusCode, err := paystack.Network.Post("/transaction/charge_authorization", &map[string]string{
+		"Authorization": fmt.Sprintf("Bearer %s", paystack.AuthToken),
+		"Content-Type":  "application/json",
+	}, map[string]any{
+		"authorization_code": authorization_code,
+		"email":              email,
+		"amount":             amount,
+		"metadata":           metadata,
+	}, nil, false, nil)
+	if err != nil {
+		logger.Error("an error occured while trying to call ChargeCard", logger.LoggerOptions{
+			Key:  "error",
+			Data: err,
+		})
+		return nil, errors.New("failed to charge card")
+	}
+	var paystackResponse PaystackTransactionVerificationResponse
+	err = json.Unmarshal(*response, &paystackResponse)
+	if err != nil {
+		logger.Error("an error occured while trying to unmarshal ChargeCard response", logger.LoggerOptions{
+			Key:  "error",
+			Data: err,
+		})
+		return nil, errors.New("failed to charge card")
+	}
+	if *statusCode != 200 || !paystackResponse.Status {
+		err = errors.New("failed to charge card")
+		logger.Error("an error occured while trying to charge card", logger.LoggerOptions{
+			Key:  "error",
+			Data: err,
+		}, logger.LoggerOptions{
+			Key:  "body",
+			Data: paystackResponse,
+		})
+		return nil, nil
+	}
+	return paystackResponse.Data, nil
+}

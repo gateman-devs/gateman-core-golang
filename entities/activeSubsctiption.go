@@ -10,7 +10,7 @@ type ActiveSubscription struct {
 	SubscriptionID string                `bson:"subscriptionID" json:"subscriptionID"`
 	Active         bool                  `bson:"active" json:"active"`
 	ActiveSubID    string                `bson:"activeSubID" json:"activeSubID"`
-	ActiveSubName  SubscriptionPlanName                `bson:"activeSubName" json:"activeSubName"`
+	ActiveSubName  SubscriptionPlanName  `bson:"activeSubName" json:"activeSubName"`
 	AutoRenew      bool                  `bson:"autoRenew" json:"autoRenew"`
 	AppID          string                `bson:"appID" json:"appID"`
 	WorkspaceID    string                `bson:"workspaceID" json:"workspaceID"`
@@ -19,7 +19,6 @@ type ActiveSubscription struct {
 	ExpiresOn      *time.Time            `bson:"expiresOn" json:"expiresOn"`
 	RenewedOn      *time.Time            `bson:"renewedOn" json:"renewedOn"`
 	CancelledOn    *time.Time            `bson:"cancelledOn" json:"cancelledOn"`
-	CardID         string                `bson:"payment" json:"payment"`
 
 	ID            string     `bson:"_id" json:"id"`
 	CreatedAt     time.Time  `bson:"createdAt" json:"createdAt"`
