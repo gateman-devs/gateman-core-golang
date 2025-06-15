@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 
 	"gateman.io/application/repository"
 	"gateman.io/entities"
@@ -115,13 +114,12 @@ func HandleSubsciptionAutoRenewalTask(ctx context.Context, t *asynq.Task) error 
 	}
 
 	authCode, _ := cryptography.DecryptData(card.AuthorizationCode, nil)
-	res, _ := payments.PaymentProcessor.ChargeCard(string(authCode), workspace.Email, amount, map[string]any{
+	payments.PaymentProcessor.ChargeCard(string(authCode), workspace.Email, amount, map[string]any{
 		"workspaceID": workspace.ID,
 		"appID":       app.ID,
 		"planID":      activeSub.SubscriptionID,
 		"frequency":   activeSub.Interval,
 		"autoRenew":   true,
 	})
-	fmt.Println(res)
 	return nil
 }

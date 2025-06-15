@@ -1,7 +1,6 @@
 package totp
 
 import (
-	"os"
 	"time"
 
 	"gateman.io/application/utils"
@@ -14,7 +13,7 @@ type PquernaTOTPService struct {
 
 func (pq *PquernaTOTPService) GenerateSecret(userID string) (secretKey *string, url *string, err error) {
 	secret, err := totp.Generate(totp.GenerateOpts{
-		Issuer:      os.Getenv("GATEMAN_ISSUER"),
+		Issuer:      "Gateman Service",
 		AccountName: userID,
 	})
 	if err != nil {

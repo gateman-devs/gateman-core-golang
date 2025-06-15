@@ -41,16 +41,59 @@ func (gr ginResponder) Respond(ctx interface{}, code int, message string, payloa
 			if value, ok := p["accessToken"]; ok && value.(*string) != nil {
 				http.SetCookie(ginCtx.Writer, &http.Cookie{
 					Name:     "accessToken",
-					Value:    value.(string),
+					Value:    *value.(*string),
 					Domain:   os.Getenv("CLIENT_URL"),
 					HttpOnly: true,
 					Secure:   true,
+					Path:     "/",
 					SameSite: http.SameSiteStrictMode,
 					Expires:  time.Now().Add(time.Hour * 1),
 					MaxAge:   3600,
 				})
 			}
+			if value, ok := p["refreshToken"]; ok && value.(*string) != nil {
+				http.SetCookie(ginCtx.Writer, &http.Cookie{
+					Name:     "refreshToken",
+					Value:    *value.(*string),
+					Domain:   os.Getenv("CLIENT_URL"),
+					HttpOnly: true,
+					Secure:   true,
+					Path:     "/api/v1/auth/refresh",
+					SameSite: http.SameSiteStrictMode,
+					Expires:  time.Now().Add(time.Hour * 24 * 183),
+					MaxAge:   15768000,
+				})
+			}
+			if value, ok := p["workspaceAccessToken"]; ok && value.(*string) != nil {
+				http.SetCookie(ginCtx.Writer, &http.Cookie{
+					Name:     "workspaceAccessToken",
+					Value:    *value.(*string),
+					Domain:   os.Getenv("CLIENT_URL"),
+					HttpOnly: true,
+					Secure:   true,
+					Path:     "/",
+					SameSite: http.SameSiteStrictMode,
+					Expires:  time.Now().Add(time.Hour * 1),
+					MaxAge:   3600,
+				})
+			}
+			if value, ok := p["workspaceRefreshToken"]; ok && value.(*string) != nil {
+				http.SetCookie(ginCtx.Writer, &http.Cookie{
+					Name:     "workspaceRefreshToken",
+					Value:    *value.(*string),
+					Domain:   os.Getenv("CLIENT_URL"),
+					HttpOnly: true,
+					Secure:   true,
+					Path:     "/api/v1/auth/workspace/refresh",
+					SameSite: http.SameSiteStrictMode,
+					Expires:  time.Now().Add(time.Hour * 24 * 183),
+					MaxAge:   15768000,
+				})
+			}
 			delete(payload.(map[string]any), "accessToken")
+			delete(payload.(map[string]any), "refreshToken")
+			delete(payload.(map[string]any), "workspaceAccessToken")
+			delete(payload.(map[string]any), "workspaceRefreshToken")
 		}
 	}
 

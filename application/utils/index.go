@@ -6,6 +6,7 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
+	mathRand "math/rand"
 	"net"
 	"regexp"
 	"strings"
@@ -115,4 +116,20 @@ func GenerateRandomHexKey(length int) (string, error) {
 	}
 	hexString := hex.EncodeToString(randomBytes)
 	return hexString[:length], nil
+}
+
+func GenerateAccountRecoveryCodes(amount int) []string {
+	mathRand.New(mathRand.NewSource(time.Now().UnixNano()))
+
+	// Create a map to store unique codes
+	uniqueCodes := make(map[string]bool)
+	uniqueCodeArr := []string{}
+
+	// Generate 8 unique 6-digit codes
+	for len(uniqueCodes) < amount {
+		code := fmt.Sprintf("%06d", mathRand.Intn(1000000))
+		uniqueCodes[code] = true
+		uniqueCodeArr = append(uniqueCodeArr, code)
+	}
+	return uniqueCodeArr
 }

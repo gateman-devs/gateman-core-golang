@@ -231,6 +231,31 @@ func AppRouter(router *gin.RouterGroup) {
 			})
 		})
 
+		appRouter.POST("/mfa/toggle", middlewares.WorkspaceAuthenticationMiddleware(nil, &[]entities.MemberPermissions{
+			entities.USER_VIEW,
+		}, true), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+			var body dto.ToggleMFAProtectionSettingDTO
+			if os.Getenv("ENV") != "dev" {
+				decryptedPayload, exists := ctx.Get("DecryptedBody")
+				if !exists {
+					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+					return
+				}
+				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+			} else {
+				if err := ctx.ShouldBindJSON(&body); err != nil {
+					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+					return
+				}
+			}
+			controller.ToggleMFAProtectionSetting(&interfaces.ApplicationContext[dto.ToggleMFAProtectionSettingDTO]{
+				Ctx:  ctx,
+				Body: &body,
+				Keys: appContext.Keys,
+			})
+		})
+
 		appRouter.PATCH("/users/block/:id", middlewares.WorkspaceAuthenticationMiddleware(nil, &[]entities.MemberPermissions{
 			entities.USER_BLOCK,
 		}, true), func(ctx *gin.Context) {

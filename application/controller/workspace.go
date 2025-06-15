@@ -36,6 +36,7 @@ func CreateWorkspace(ctx *interfaces.ApplicationContext[dto.CreateWorkspaceDTO])
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "org created", nil, nil, nil, &ctx.DeviceID)
 }
+
 func UpdateOrgDetails(ctx *interfaces.ApplicationContext[dto.UpdateOrgDTO]) {
 	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if valiedationErr != nil {

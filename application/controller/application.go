@@ -27,6 +27,7 @@ import (
 	queue_tasks "gateman.io/infrastructure/message_queue/tasks"
 	mq_types "gateman.io/infrastructure/message_queue/types"
 	server_response "gateman.io/infrastructure/serverResponse"
+	"gateman.io/infrastructure/totp"
 	"gateman.io/infrastructure/validator"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -205,7 +206,10 @@ func UpdateApplication(ctx *interfaces.ApplicationContext[dto.UpdateApplications
 		}
 		payload["paymentCard"] = ctx.Body.PaymentCard
 	}
-	if ctx.Body.Interval != nil || ctx.Body.SubscriptionID != nil {
+	if ctx.Body.Interval != nil {
+		payload["interval"] = ctx.Body.Interval
+	}
+	if ctx.Body.SubscriptionID != nil {
 		subscriptionRepo := repository.SubscriptionPlanRepo()
 		sub, _ := subscriptionRepo.FindByID(*ctx.Body.SubscriptionID)
 		if sub == nil {
@@ -213,7 +217,6 @@ func UpdateApplication(ctx *interfaces.ApplicationContext[dto.UpdateApplications
 			return
 		}
 		payload["subscriptionID"] = ctx.Body.SubscriptionID
-		payload["interval"] = ctx.Body.Interval
 	}
 	appRepo := repository.ApplicationRepo()
 	_, err := appRepo.UpdatePartialByFilter(map[string]interface{}{
@@ -345,13 +348,18 @@ func TogglePinProtectionSetting(ctx *interfaces.ApplicationContext[dto.TogglePin
 }
 
 func ToggleMFAProtectionSetting(ctx *interfaces.ApplicationContext[dto.ToggleMFAProtectionSettingDTO]) {
+	valiedationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
+	if valiedationErr != nil {
+		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
+		return
+	}
 	activeSubRepo := repository.ActiveSubscriptionRepo()
 	activeSub, err := activeSubRepo.FindOneByFilter(map[string]interface{}{
-		"appID": ctx.GetStringParameter("id"),
+		"appID": ctx.Body.ID,
 	})
 	if err != nil {
 		logger.Error("an error occured while fetching active subcription for toggle MFA protected accounts", logger.LoggerOptions{
-			Key: "id", Data: ctx.GetStringParameter("id"),
+			Key: "id", Data: ctx.Body.ID,
 		})
 		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
@@ -361,7 +369,7 @@ func ToggleMFAProtectionSetting(ctx *interfaces.ApplicationContext[dto.ToggleMFA
 		return
 	}
 	appRepo := repository.ApplicationRepo()
-	app, err := appRepo.UpdatePartialByID(ctx.GetStringParameter("id"), map[string]any{
+	app, err := appRepo.UpdatePartialByID(ctx.Body.ID, map[string]any{
 		"requireAppMFA": ctx.Body.Activated,
 	})
 	if err != nil {
@@ -732,6 +740,7 @@ func GetAppMetrics(ctx *interfaces.ApplicationContext[dto.FetchAppMetrics]) {
 		"createdAt": 1,
 		"appImg":    1,
 		"disabled":  1,
+		"appID":     1,
 	}))
 	if app == nil {
 		apperrors.NotFoundError(ctx.Ctx, "App not found", &ctx.DeviceID)
@@ -747,8 +756,33 @@ func GetAppMetrics(ctx *interfaces.ApplicationContext[dto.FetchAppMetrics]) {
 	appUserRepo := repository.AppUserRepo()
 	usersCount, _ := appUserRepo.CountDocs(map[string]any{
 		"workspaceID": ctx.GetStringContextData("WorkspaceID"),
-		"appID":       ctx.Body.ID,
+		"appID":       app.AppID,
 	})
 	appMetrics["usersCount"] = usersCount
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "metrics fetched", appMetrics, nil, nil, &ctx.DeviceID)
+}
+
+func SetUpMFA(ctx *interfaces.ApplicationContext[any]) {
+	appUserRepo := repository.AppUserRepo()
+	user, _ := appUserRepo.FindByID(ctx.GetStringContextData("UserID"))
+	if user == nil {
+		apperrors.NotFoundError(ctx.Ctx, "User not found", &ctx.DeviceID)
+		return
+	}
+	if user.AuthenticatorSecret != nil {
+		apperrors.ClientError(ctx.Ctx, "MFA has already been set up on this account", nil, nil, ctx.DeviceID)
+		return
+	}
+	_, url, err := totp.TOTPService.GenerateSecret(ctx.GetStringContextData("UserID"))
+	if err != nil {
+		logger.Error("an error occured while trying to generate TOTP code", logger.LoggerOptions{
+			Key: "err", Data: err,
+		}, logger.LoggerOptions{
+			Key:  "userID",
+			Data: ctx.GetStringContextData("UserID"),
+		})
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
+		return
+	}
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "mfa secret generated", url, nil, nil, &ctx.DeviceID)
 }

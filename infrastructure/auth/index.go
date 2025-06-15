@@ -120,10 +120,6 @@ func DecodeAuthToken(tokenString string) (*jwt.Token, error) {
 		return []byte(os.Getenv("JWT_SIGNING_KEY")), nil
 	})
 	if err != nil {
-		if err == jwt.ErrSignatureInvalid {
-			err = errors.New("invalid token signature used")
-			return nil, err
-		}
 		logger.Error("error decoding jwt", logger.LoggerOptions{
 			Key:  "error",
 			Data: err,

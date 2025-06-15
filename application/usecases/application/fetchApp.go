@@ -43,7 +43,7 @@ func FetchAppUseCase(ctx any, appID string, deviceID string, ip string) (*entiti
 		apperrors.NotFoundError(ctx, "This application was not found. Seems the link you used might be damaged or malformed. Contact the App owner to report or help you resolve this issue", &deviceID)
 		return nil, errors.New("app does not exist")
 	}
-	if app.LocaleRestriction != nil {
+	if app.LocaleRestriction != nil && len(*app.LocaleRestriction) != 0 {
 		ipData, err := ipresolver.IPResolverInstance.LookUp(ip)
 		if err != nil {
 			logger.Error("an error occured while resolving users ip for locale restriction", logger.LoggerOptions{

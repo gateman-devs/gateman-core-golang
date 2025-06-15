@@ -12,15 +12,15 @@ type ApplicationDTO struct {
 }
 
 type UpdateApplications struct {
-	Name              *string                         `json:"name" validate:"max=100,min=2"`
-	Description       *string                         `json:"description" validate:"max=200,min=10"`
-	PaymentCard       *string                         `json:"paymentCard" validate:"ulid"`
-	SubscriptionID    *string                         `json:"subscriptionID" validate:"ulid"`
-	Interval          *entities.SubscriptionFrequency `json:"interval" validate:"oneof=monthly annually"`
-	Verifications     *[]entities.VerificationType    `json:"verifications" validate:"omitempty,dive"`
-	LocaleRestriction *[]entities.LocaleRestriction   `json:"localeRestriction" validate:"omitempty,dive"`
-	RequestedFields   []entities.RequestedField       `json:"requestedFields" validate:"omitempty,dive"`
-	CustomFormFields  *[]entities.CustomFormField     `json:"customFormFields" validate:"omitempty,dive"`
+	Name                *string                           `json:"name" validate:"omitempty,max=100,min=2"`
+	Description         *string                           `json:"description" validate:"omitempty,max=200,min=10"`
+	PaymentCard         *string                           `json:"paymentCard" validate:"omitempty,ulid"`
+	SubscriptionID      *string                           `json:"subscriptionID" validate:"omitempty,ulid"`
+	Interval            *entities.SubscriptionFrequency   `json:"interval" validate:"omitempty,oneof=monthly annually"`
+	Verifications       *[]entities.VerificationType      `json:"verifications" validate:"omitempty,dive"`
+	LocaleRestriction   *[]entities.LocaleRestriction     `json:"localeRestriction" validate:"omitempty,dive"`
+	RequestedFields     []entities.RequestedField         `json:"requestedFields" validate:"omitempty,dive"`
+	CustomFormFields    *[]entities.CustomFormField       `json:"customFormFields" validate:"omitempty,dive"`
 }
 
 type ApplicationSignUpDTO struct {
@@ -48,7 +48,7 @@ type BlockAccountsDTO struct {
 }
 
 type FetchAppMetrics struct {
-	ID string `json:"id" validate:"max=26"`
+	ID string `json:"id" validate:"ulid"`
 }
 
 type UpdateAccessRefreshTokenTTL struct {
@@ -67,5 +67,6 @@ type TogglePinProtectionSettingDTO struct {
 }
 
 type ToggleMFAProtectionSettingDTO struct {
-	Activated bool `json:"activated"`
+	Activated bool   `json:"activated"`
+	ID        string `json:"id" validate:"ulid"`
 }

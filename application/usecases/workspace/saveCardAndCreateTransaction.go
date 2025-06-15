@@ -43,6 +43,7 @@ func SaveCardAndCreateTransaction(ctx *any, trxDescription string, transaction p
 				Key:  "payload",
 				Data: transaction,
 			})
+			return
 		}
 		newCard = &entities.CardInfo{
 			ID:                utils.GenerateUULDString(),

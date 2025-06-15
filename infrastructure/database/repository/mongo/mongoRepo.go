@@ -135,6 +135,7 @@ func (repo *MongoRepository[T]) FindMany(filter map[string]interface{}, opts ...
 		cancel()
 	}()
 	var result []T
+	filter["deletedAt"] = nil
 	cursor, err := repo.Model.Find(c, filter, opts...)
 	if err != nil {
 		return nil, err

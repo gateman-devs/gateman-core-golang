@@ -8,10 +8,10 @@ package constants
 
 var ENCRYPTION_KEY_EXPIRED uint = 6170                   // request a new encryption key
 var UNVERIFIED_EMAIL_LOGIN_ATTEMPT uint = 4110           // take the user to the face match page to unlock the account
-var ACCOUNT_CREATED uint = 9110                          // take the user to the face match page to register the device
+var ACCOUNT_CREATED uint = 9110                          // take the user to the otp page to verify email or phone
 var ACCOUNT_EXISTS uint = 9120                           // take the user to the face match page to register the device
 var ACCOUNT_EXISTS_UNVERIFIED uint = 9130                // take the user to the face match page to register the device
-var ACCOUNT_EXISTS_EMAIL_OR_PHONE_UNVERIFIED uint = 9140 // take the user to the verify otp page to verify email
+var ACCOUNT_EXISTS_EMAIL_OR_PHONE_UNVERIFIED uint = 9140 // take the user to the otp page to verify email or phone
 var FREE_TIER_ACCOUNT_LIMIT_HIT uint = 5243              // display a page telling the user the limit has been hit
 var SET_APP_PIN uint = 1433                              // display a page telling the user the limit has been hit
 var VERIFY_WORKSPACE_MEMBER_EMAIL uint = 1937            // display a page telling the user the limit has been hit

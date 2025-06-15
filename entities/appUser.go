@@ -13,8 +13,8 @@ type AppUser struct {
 	WorkspaceID           string         `bson:"workspaceID" json:"workspaceID"`
 	CustomFieldData       map[string]any `bson:"customFieldData" json:"customFieldData"`
 	Blocked               bool           `bson:"blocked" json:"blocked"`
-	AuthenticatorSecret   *string        `bson:"authenticatorSecret" json:"authenticatorSecret"`
-	AccountRecoveryTokens *[]string      `bson:"accountRecoveryTokens" json:"accountRecoveryTokens"`
+	AuthenticatorSecret   *string        `bson:"authenticatorSecret" json:"-"`
+	AccountRecoveryTokens *[]string      `bson:"accountRecoveryTokens" json:"-"`
 	BlockedReason         *string        `bson:"blockedReason" json:"blockedReason"`
 	BlockedUserAt         *time.Time     `bson:"blockedUserAt" json:"blockedUserAt"`
 	Pin                   *string        `bson:"pin" json:"pin"`
