@@ -610,7 +610,7 @@ func (repo *MongoRepository[T]) UpdatePartialByFilter(filter map[string]interfac
 		cancel()
 	}()
 
-	_, err := repo.Model.UpdateMany(c, filter, bson.D{primitive.E{Key: "$set", Value: payload}}, opts...)
+	result, err := repo.Model.UpdateMany(c, filter, bson.D{primitive.E{Key: "$set", Value: payload}}, opts...)
 	if err != nil {
 		logger.Error("mongo error occured while running UpdatePartialByFilter", logger.LoggerOptions{
 			Key:  "error",
@@ -622,6 +622,9 @@ func (repo *MongoRepository[T]) UpdatePartialByFilter(filter map[string]interfac
 		return false, err
 	}
 	logger.Info("UpdatePartialByFilter complete")
+	if result.ModifiedCount == 0 && result.MatchedCount == 0 && result.UpsertedCount == 0 {
+		return false, nil
+	}
 	return true, err
 }
 

@@ -17,7 +17,7 @@ type AppUser struct {
 	AccountRecoveryTokens *[]string      `bson:"accountRecoveryTokens" json:"-"`
 	BlockedReason         *string        `bson:"blockedReason" json:"blockedReason"`
 	BlockedUserAt         *time.Time     `bson:"blockedUserAt" json:"blockedUserAt"`
-	Pin                   *string        `bson:"pin" json:"pin"`
+	Pin                   *string        `bson:"pin" json:"-"`
 
 	ID            string     `bson:"_id" json:"id"`
 	CreatedAt     time.Time  `bson:"createdAt" json:"createdAt"`
@@ -30,7 +30,9 @@ func (model AppUser) ParseModel() any {
 	now := time.Now()
 	if model.CreatedAt.IsZero() {
 		model.CreatedAt = now
-		model.ID = utils.GenerateUULDString()
+		if model.ID == "" {
+			model.ID = utils.GenerateUULDString()
+		}
 	}
 	model.UpdatedAt = now
 	return &model

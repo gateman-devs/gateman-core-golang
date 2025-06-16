@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 	"net/http"
 	"os"
 	"strconv"
@@ -22,6 +21,8 @@ import (
 	"gateman.io/application/utils"
 	"gateman.io/entities"
 	"gateman.io/infrastructure/cryptography"
+	fileupload "gateman.io/infrastructure/file_upload"
+	"gateman.io/infrastructure/file_upload/types"
 	"gateman.io/infrastructure/logger"
 	messagequeue "gateman.io/infrastructure/message_queue"
 	queue_tasks "gateman.io/infrastructure/message_queue/tasks"
@@ -116,6 +117,15 @@ func FetchWorkspaceApps(ctx *interfaces.ApplicationContext[any]) {
 			Data: err,
 		})
 		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
+	}
+	if apps != nil {
+		for i, app := range *apps {
+			url, _ := fileupload.FileUploader.GeneratedSignedURL(app.AppImg, types.SignedURLPermission{
+				Read: true,
+			}, time.Hour*1)
+			app.AppImg = *url
+			(*apps)[i] = app
+		}
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "apps fetched", apps, nil, nil, &ctx.DeviceID)
 }
@@ -457,10 +467,14 @@ func UpdateAccessRefreshTokenTTL(ctx *interfaces.ApplicationContext[dto.UpdateAc
 		updateFields["sandboxAccessTokenTTL"] = ctx.Body.SandboxAccessTokenTTL
 	}
 	appRepo := repository.ApplicationRepo()
-	appRepo.UpdatePartialByFilter(map[string]interface{}{
+	updated, _ := appRepo.UpdatePartialByFilter(map[string]interface{}{
 		"_id":         ctx.GetStringParameter("id"),
 		"workspaceID": ctx.GetStringContextData("WorkspaceID"),
 	}, updateFields)
+	if !updated {
+		apperrors.NotFoundError(ctx.Ctx, "Invalid app id provided. App not found", &ctx.DeviceID)
+		return
+	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "TTL updated", nil, nil, nil, &ctx.DeviceID)
 }
 
@@ -559,7 +573,9 @@ func ApplicationSignUp(ctx *interfaces.ApplicationContext[dto.ApplicationSignUpD
 
 func SubmitCustomAppForm(ctx *interfaces.ApplicationContext[dto.SubmitCustomAppFormDTO]) {
 	appRepo := repository.ApplicationRepo()
-	app, err := appRepo.FindByID(ctx.Body.AppID)
+	app, err := appRepo.FindOneByFilter(map[string]interface{}{
+		"appID": ctx.Body.AppID,
+	})
 	if err != nil {
 		logger.Error("an error occured while trying to fetch application for custom for submititon", logger.LoggerOptions{
 			Key: "err", Data: err,
@@ -596,7 +612,7 @@ func SubmitCustomAppForm(ctx *interfaces.ApplicationContext[dto.SubmitCustomAppF
 		if customField.Page != ctx.Body.Page {
 			continue
 		}
-		fieldValue := ctx.Body.Data[customField.Name]
+		fieldValue := ctx.Body.Data[customField.DBKey]
 		var rulesBuilder strings.Builder
 
 		for i, rule := range customField.Rules {
@@ -619,7 +635,6 @@ func SubmitCustomAppForm(ctx *interfaces.ApplicationContext[dto.SubmitCustomAppF
 		apperrors.ValidationFailedError(ctx.Ctx, &validationErr, ctx.DeviceID)
 		return
 	}
-	maps.Copy(ctx.Body.Data, appUser.CustomFieldData)
 	appUserRepo.UpdatePartialByFilter(map[string]interface{}{
 		"userID": ctx.GetStringContextData("UserID"),
 		"appID":  ctx.Body.AppID}, map[string]any{
@@ -671,7 +686,9 @@ func BlockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
 		"appID":       ctx.GetStringParameter("id"),
 		"workspaceID": ctx.GetStringContextData("WorkspaceID"),
 	}, map[string]any{
-		"blocked": true,
+		"blocked":       true,
+		"blockedUserAt": time.Now(),
+		"blockedReason": ctx.Body.Reason,
 	})
 	if err != nil {
 		logger.Error("an error occured while blocking users", logger.LoggerOptions{
@@ -698,7 +715,9 @@ func UnblockAccounts(ctx *interfaces.ApplicationContext[dto.BlockAccountsDTO]) {
 		"appID":       ctx.GetStringParameter("id"),
 		"workspaceID": ctx.GetStringContextData("WorkspaceID"),
 	}, map[string]any{
-		"blocked": false,
+		"blocked":       false,
+		"blockedUserAt": nil,
+		"blockedReason": nil,
 	})
 	if err != nil {
 		logger.Error("an error occured while unblocking users", logger.LoggerOptions{
@@ -738,7 +757,6 @@ func GetAppMetrics(ctx *interfaces.ApplicationContext[dto.FetchAppMetrics]) {
 	app, _ := appRepo.FindByID(ctx.Body.ID, options.FindOne().SetProjection(map[string]any{
 		"name":      1,
 		"createdAt": 1,
-		"appImg":    1,
 		"disabled":  1,
 		"appID":     1,
 	}))
@@ -752,13 +770,13 @@ func GetAppMetrics(ctx *interfaces.ApplicationContext[dto.FetchAppMetrics]) {
 	}
 	appMetrics["name"] = app.Name
 	appMetrics["createdAt"] = app.CreatedAt
-	appMetrics["appImg"] = app.AppImg
 	appUserRepo := repository.AppUserRepo()
 	usersCount, _ := appUserRepo.CountDocs(map[string]any{
 		"workspaceID": ctx.GetStringContextData("WorkspaceID"),
 		"appID":       app.AppID,
 	})
 	appMetrics["usersCount"] = usersCount
+	appMetrics["disabled"] = app.Disabled
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "metrics fetched", appMetrics, nil, nil, &ctx.DeviceID)
 }
 

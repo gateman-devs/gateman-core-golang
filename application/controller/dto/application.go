@@ -24,20 +24,20 @@ type UpdateApplications struct {
 }
 
 type ApplicationSignUpDTO struct {
-	AppID string  `json:"appID" validate:"required,max=100"`
+	AppID string  `json:"appID" validate:"required,ulid"`
 	Pin   *string `json:"pin"`
 }
 
 type SubmitCustomAppFormDTO struct {
-	AppID string         `json:"appID" validate:"required,max=100"`
+	AppID string         `json:"appID" validate:"required,ulid"`
 	Page  uint8          `json:"page" validate:"required,min=1,max=10"`
 	Data  map[string]any `json:"data" validate:"required"`
 }
 
 type FetchAppUsersDTO struct {
-	AppID    string  `json:"appID" validate:"required"`
+	AppID    string  `json:"appID" validate:"required,ulid"`
 	PageSize int64   `json:"pageSize" validate:"required"`
-	LastID   *string `json:"lastID" validate:"ulid"`
+	LastID   *string `json:"lastID" validate:"omitempty,ulid"`
 	Blocked  *bool   `json:"blocked"`
 	Deleted  *bool   `json:"deleted"`
 	Sort     int8    `json:"sort"`
@@ -45,6 +45,7 @@ type FetchAppUsersDTO struct {
 
 type BlockAccountsDTO struct {
 	IDs []string `json:"ids" validate:"dive,ulid"`
+	Reason string `json:"reason" validate:"omitempty,max=200"`
 }
 
 type FetchAppMetrics struct {

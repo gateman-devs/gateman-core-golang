@@ -25,7 +25,9 @@ func (model GovID) ParseModel() any {
 	now := time.Now()
 	if model.CreatedAt.IsZero() {
 		model.CreatedAt = now
-		model.ID = utils.GenerateUULDString()
+		if model.ID == "" {
+			model.ID = utils.GenerateUULDString()
+		}
 	}
 	model.UpdatedAt = now
 	return &model

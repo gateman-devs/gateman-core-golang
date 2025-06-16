@@ -315,7 +315,7 @@ func AppRouter(router *gin.RouterGroup) {
 		})
 
 		appRouter.PATCH("/ttl/update/:id", middlewares.WorkspaceAuthenticationMiddleware(nil, &[]entities.MemberPermissions{
-			entities.USER_BLOCK,
+			entities.WORKSPACE_EDIT_APPLICATIONS,
 		}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.UpdateAccessRefreshTokenTTL

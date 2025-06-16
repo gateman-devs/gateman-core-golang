@@ -6,4 +6,5 @@ func VerifyAuthTokenUseCase(ctx any, token string, appID string) error {
 	// 	"appID": appID,
 	// })
 	// au
+	return nil
 }

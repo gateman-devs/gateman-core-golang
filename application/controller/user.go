@@ -670,6 +670,9 @@ func SetDriversLicenseDetails(ctx *interfaces.ApplicationContext[dto.SetDriversL
 	account, _ := userRepo.FindByID(ctx.GetStringContextData("UserID"), options.FindOne().SetProjection(map[string]any{
 		"driverID": 1,
 		"image":    1,
+		"firstName":    1,
+		"lastName":    1,
+		"dob":    1,
 	}))
 	if account.DriverID != nil {
 		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Seems you have verified your Drivers License already. You're good to go!", nil, nil, nil, &ctx.DeviceID)
