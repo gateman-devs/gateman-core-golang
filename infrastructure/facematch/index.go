@@ -1,15 +1,64 @@
 package facematch
 
 import (
+	"encoding/base64"
 	"fmt"
 	"image"
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 
 	"gocv.io/x/gocv"
 )
+
+// isBase64Image checks if a string is a base64 encoded image
+func isBase64Image(input string) bool {
+	// Check if it starts with a data URL prefix
+	if strings.HasPrefix(input, "data:image/") {
+		return true
+	}
+
+	// Check if it looks like base64 (alphanumeric + / + = padding)
+	// This is a simple heuristic - base64 strings are typically longer and contain specific characters
+	if len(input) > 100 && !strings.Contains(input, "http") && !strings.Contains(input, "://") {
+		// Try to decode a small portion to see if it's valid base64
+		if len(input) > 50 {
+			testStr := input[:50]
+			_, err := base64.StdEncoding.DecodeString(testStr)
+			return err == nil
+		}
+	}
+
+	return false
+}
+
+// decodeBase64Image decodes a base64 encoded image string
+func decodeBase64Image(input string) ([]byte, error) {
+	// Handle data URLs (e.g., "data:image/jpeg;base64,/9j/4AAQ...")
+	if strings.HasPrefix(input, "data:image/") {
+		parts := strings.Split(input, ",")
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid data URL format")
+		}
+		return base64.StdEncoding.DecodeString(parts[1])
+	}
+
+	// Handle raw base64 strings
+	return base64.StdEncoding.DecodeString(input)
+}
+
+// loadImage loads an image from either a URL or base64 string
+func loadImage(input string) ([]byte, error) {
+	if isBase64Image(input) {
+		log.Printf("Loading image from base64 data")
+		return decodeBase64Image(input)
+	}
+
+	log.Printf("Loading image from URL: %s", input)
+	return downloadImage(input)
+}
 
 func downloadImage(url string) ([]byte, error) {
 	resp, err := http.Get(url)
@@ -213,6 +262,7 @@ func compareHist(mat1, mat2 gocv.Mat) float32 {
 	return gocv.CompareHist(hist1, hist2, gocv.HistCmpCorrel)
 }
 
+// Compare compares two images (URLs or base64 strings) and returns true if they contain the same face
 func Compare(img1 string, img2 string) bool {
 	fmt.Println("compare running")
 	var wg sync.WaitGroup
@@ -228,7 +278,7 @@ func Compare(img1 string, img2 string) bool {
 	for i := 0; i < 2; i++ {
 		go func(idx int) {
 			defer wg.Done()
-			imgBytes, err := downloadImage(urls[idx])
+			imgBytes, err := loadImage(urls[idx])
 			if err != nil {
 				results[idx] = faceResult{err: err}
 				return
@@ -273,15 +323,15 @@ func Compare(img1 string, img2 string) bool {
 	return similarity > 0.7
 }
 
-// TestFaceDetection is a helper function to test face detection on a single image
+// TestFaceDetection is a helper function to test face detection on a single image (URL or base64)
 func TestFaceDetection(imgURL string) {
 	// Get a detector from the pool
 	detector := globalPool.Get()
 	defer globalPool.Put(detector) // Return detector to pool when done
 
-	imgBytes, err := downloadImage(imgURL)
+	imgBytes, err := loadImage(imgURL)
 	if err != nil {
-		log.Printf("Error downloading image: %v\n", err)
+		log.Printf("Error loading image: %v\n", err)
 		return
 	}
 
@@ -458,7 +508,7 @@ func VerifyImageQuality(imgURL string) ImageQualityResult {
 	}
 
 	// Download image
-	imgBytes, err := downloadImage(imgURL)
+	imgBytes, err := loadImage(imgURL)
 	if err != nil {
 		result.Reason = "download_failed"
 		return result
