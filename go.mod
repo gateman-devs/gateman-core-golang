@@ -5,6 +5,7 @@ go 1.22
 toolchain go1.22.9
 
 require (
+	github.com/Kagami/go-face v0.0.0-20210630145111-0c14797b4d0e
 	github.com/apitoolkit/apitoolkit-go v0.0.0-20240522110710-6bb2e576e73a
 	github.com/aws/aws-sdk-go-v2 v1.34.0
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.55
@@ -129,6 +130,7 @@ require (
 	go.mongodb.org/mongo-driver v1.15.0
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/zap v1.27.0
+	gocv.io/x/gocv v0.41.0
 	golang.org/x/arch v0.8.0 // indirect
 	golang.org/x/crypto v0.32.0 // indirect
 	golang.org/x/net v0.33.0 // indirect
