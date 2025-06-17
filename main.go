@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	res:=facematch.Compare("https://res.cloudinary.com/dh3i1wodq/image/upload/v1675417496/cbimage_3_drqdoc.jpg", "https://res.cloudinary.com/dh3i1wodq/image/upload/v1675417496/cbimage_3_drqdoc.jpg")
+	res:=facematch.Compare("https://media.cnn.com/api/v1/images/stellar/prod/230711141746-01-mark-zuckerberg-life-in-pictures-lead-restricted.jpg?q=w_3000,c_fill", "https://media.cnn.com/api/v1/images/stellar/prod/230711141746-01-mark-zuckerberg-life-in-pictures-lead-restricted.jpg?q=w_3000,c_fill")
 	fmt.Println(res)
 	// infrastructure.StartServer()
 }
