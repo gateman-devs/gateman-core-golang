@@ -43,6 +43,41 @@ func (fd *FaceDetector) Close() {
 	fd.net.Close()
 }
 
+// Thread-safe detector pool
+type DetectorPool struct {
+	detectors chan *FaceDetector
+	mu        sync.Mutex
+}
+
+var globalPool *DetectorPool
+
+func init() {
+	// Initialize the global detector pool
+	poolSize := 10 // Number of concurrent detectors
+	globalPool = &DetectorPool{
+		detectors: make(chan *FaceDetector, poolSize),
+	}
+
+	// Pre-load detectors
+	for i := 0; i < poolSize; i++ {
+		detector, err := NewFaceDetector()
+		if err != nil {
+			log.Fatalf("Failed to initialize detector %d: %v", i, err)
+		}
+		globalPool.detectors <- detector
+	}
+
+	log.Printf("Initialized detector pool with %d detectors", poolSize)
+}
+
+func (dp *DetectorPool) Get() *FaceDetector {
+	return <-dp.detectors
+}
+
+func (dp *DetectorPool) Put(detector *FaceDetector) {
+	dp.detectors <- detector
+}
+
 func detectSingleFace(imgBytes []byte, detector *FaceDetector) ([]image.Rectangle, gocv.Mat, error) {
 	imgMat, err := gocv.IMDecode(imgBytes, gocv.IMReadColor)
 	if err != nil {
@@ -194,6 +229,7 @@ func compareHist(mat1, mat2 gocv.Mat) float32 {
 }
 
 func Compare(img1 string, img2 string) bool {
+	fmt.Println("compare running")
 	var wg sync.WaitGroup
 	type faceResult struct {
 		faces []image.Rectangle
@@ -201,13 +237,6 @@ func Compare(img1 string, img2 string) bool {
 		err   error
 	}
 	results := make([]faceResult, 2)
-
-	detector, err := NewFaceDetector()
-	if err != nil {
-		log.Printf("Error initializing face detector: %v\n", err)
-		return false
-	}
-	defer detector.Close()
 
 	urls := []string{img1, img2}
 	wg.Add(2)
@@ -219,6 +248,11 @@ func Compare(img1 string, img2 string) bool {
 				results[idx] = faceResult{err: err}
 				return
 			}
+
+			// Get a detector from the pool
+			detector := globalPool.Get()
+			defer globalPool.Put(detector) // Return detector to pool when done
+
 			faces, mat, err := detectSingleFace(imgBytes, detector)
 			results[idx] = faceResult{faces: faces, mat: mat, err: err}
 		}(i)
@@ -256,12 +290,9 @@ func Compare(img1 string, img2 string) bool {
 
 // TestFaceDetection is a helper function to test face detection on a single image
 func TestFaceDetection(imgURL string) {
-	detector, err := NewFaceDetector()
-	if err != nil {
-		log.Printf("Error initializing face detector: %v\n", err)
-		return
-	}
-	defer detector.Close()
+	// Get a detector from the pool
+	detector := globalPool.Get()
+	defer globalPool.Put(detector) // Return detector to pool when done
 
 	imgBytes, err := downloadImage(imgURL)
 	if err != nil {
