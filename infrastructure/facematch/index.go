@@ -78,13 +78,13 @@ func (dp *DetectorPool) Put(detector *FaceDetector) {
 	dp.detectors <- detector
 }
 
-func detectSingleFace(imgBytes []byte, detector *FaceDetector) ([]image.Rectangle, gocv.Mat, error) {
+func detectSingleFace(imgBytes []byte, detector *FaceDetector) ([]image.Rectangle, []float32, gocv.Mat, error) {
 	imgMat, err := gocv.IMDecode(imgBytes, gocv.IMReadColor)
 	if err != nil {
-		return nil, imgMat, err
+		return nil, nil, imgMat, err
 	}
 	if imgMat.Empty() {
-		return nil, imgMat, err
+		return nil, nil, imgMat, err
 	}
 
 	// Get original image dimensions
@@ -117,7 +117,7 @@ func detectSingleFace(imgBytes []byte, detector *FaceDetector) ([]image.Rectangl
 	// Check if detections output is valid
 	if detections.Empty() {
 		log.Printf("Model produced empty output")
-		return faces, imgMat, nil
+		return faces, scores, imgMat, nil
 	}
 
 	detectionSize := detections.Size()
@@ -125,14 +125,14 @@ func detectSingleFace(imgBytes []byte, detector *FaceDetector) ([]image.Rectangl
 	// Validate detection output dimensions
 	if len(detectionSize) < 2 {
 		log.Printf("Invalid detection output dimensions: %v", detectionSize)
-		return faces, imgMat, nil
+		return faces, scores, imgMat, nil
 	}
 
 	// YuNet output format: [1, num_detections, 15] where 15 = [x, y, w, h, confidence, landmarks...]
 	rows := detectionSize[1]
 	if rows <= 0 {
 		log.Printf("No detection rows found")
-		return faces, imgMat, nil
+		return faces, scores, imgMat, nil
 	}
 
 	// Check if we have the expected 15 values per detection
@@ -187,24 +187,9 @@ func detectSingleFace(imgBytes []byte, detector *FaceDetector) ([]image.Rectangl
 		log.Printf("Unexpected detection output format: %v", detectionSize)
 	}
 
-	// If multiple faces detected, select the one with highest confidence
-	if len(faces) > 1 {
-		log.Printf("Multiple faces detected (%d), selecting the best one", len(faces))
-		bestIdx := 0
-		bestScore := scores[0]
-		for i, score := range scores {
-			if score > bestScore {
-				bestScore = score
-				bestIdx = i
-			}
-		}
-		log.Printf("Selected face %d with confidence %.3f", bestIdx+1, bestScore)
-		faces = []image.Rectangle{faces[bestIdx]}
-	}
-
 	log.Printf("Final result: %d faces in image (%dx%d)", len(faces), imgWidth, imgHeight)
 
-	return faces, imgMat, nil
+	return faces, scores, imgMat, nil
 }
 
 func extractFaceFeature(imgMat gocv.Mat, faceRect image.Rectangle) gocv.Mat {
@@ -253,7 +238,7 @@ func Compare(img1 string, img2 string) bool {
 			detector := globalPool.Get()
 			defer globalPool.Put(detector) // Return detector to pool when done
 
-			faces, mat, err := detectSingleFace(imgBytes, detector)
+			faces, _, mat, err := detectSingleFace(imgBytes, detector)
 			results[idx] = faceResult{faces: faces, mat: mat, err: err}
 		}(i)
 	}
@@ -300,7 +285,7 @@ func TestFaceDetection(imgURL string) {
 		return
 	}
 
-	faces, mat, err := detectSingleFace(imgBytes, detector)
+	faces, scores, mat, err := detectSingleFace(imgBytes, detector)
 	if err != nil {
 		log.Printf("Error detecting faces: %v\n", err)
 		return
@@ -309,6 +294,274 @@ func TestFaceDetection(imgURL string) {
 
 	log.Printf("Test result: Found %d faces in image", len(faces))
 	for i, face := range faces {
-		log.Printf("Face %d: %v", i+1, face)
+		confidence := float32(0.0)
+		if i < len(scores) {
+			confidence = scores[i]
+		}
+		log.Printf("Face %d: %v (confidence: %.3f)", i+1, face, confidence)
 	}
+}
+
+// ImageQualityResult represents the result of image quality verification
+type ImageQualityResult struct {
+	IsValid bool
+	Reason  string // Possible values:
+	// - "valid": Image passed all quality checks
+	// - "download_failed": Could not download the image
+	// - "face_detection_failed": Face detection algorithm failed
+	// - "no_face_detected": No faces found in the image
+	// - "multiple_faces_no_clear_primary": Multiple faces detected but none is clearly the primary subject
+	// - "poor_lighting_too_dark": Image is too dark
+	// - "poor_lighting_too_bright": Image is too bright
+	// - "poor_lighting_low_contrast": Image has insufficient contrast
+	// - "poor_lighting_too_contrasty": Image has excessive contrast
+	// - "face_too_small": Detected face is too small relative to image size
+	// - "face_too_large": Detected face is too large (likely too close to camera)
+	// - "face_aspect_ratio_unusual": Face has unusual proportions
+	// - "unknown_error": Unexpected error occurred
+	FaceCount  int
+	Confidence float32
+	Lighting   string
+	Brightness float64
+	Contrast   float64
+}
+
+// verifyLightingQuality analyzes the lighting conditions of the face region
+func verifyLightingQuality(imgMat gocv.Mat, faceRect image.Rectangle) (string, float64, float64) {
+	faceMat := imgMat.Region(faceRect)
+	defer faceMat.Close()
+
+	// Convert to grayscale for lighting analysis
+	gray := gocv.NewMat()
+	defer gray.Close()
+	gocv.CvtColor(faceMat, &gray, gocv.ColorBGRToGray)
+
+	// Calculate brightness using a simple approach
+	// Get the mean value of all pixels
+	total := 0.0
+	count := 0
+	for y := 0; y < gray.Rows(); y++ {
+		for x := 0; x < gray.Cols(); x++ {
+			val := gray.GetUCharAt(y, x)
+			total += float64(val)
+			count++
+		}
+	}
+	brightness := total / float64(count)
+
+	// Calculate contrast (standard deviation)
+	variance := 0.0
+	for y := 0; y < gray.Rows(); y++ {
+		for x := 0; x < gray.Cols(); x++ {
+			val := gray.GetUCharAt(y, x)
+			diff := float64(val) - brightness
+			variance += diff * diff
+		}
+	}
+	variance /= float64(count)
+	contrast := variance
+
+	// Determine lighting quality
+	var lightingQuality string
+	if brightness < 70 {
+		lightingQuality = "too_dark"
+	} else if brightness > 250 {
+		lightingQuality = "too_bright"
+	} else if contrast < 500 {
+		lightingQuality = "low_contrast"
+	} else if contrast > 3000 {
+		lightingQuality = "too_contrasty"
+	} else {
+		lightingQuality = "good"
+	}
+
+	return lightingQuality, brightness, contrast
+}
+
+// findMostProminentFace selects the most prominent face when multiple faces are detected
+func findMostProminentFace(faces []image.Rectangle, scores []float32, imgWidth, imgHeight int) (image.Rectangle, float32, bool) {
+	if len(faces) == 0 {
+		return image.Rectangle{}, 0, false
+	}
+
+	if len(faces) == 1 {
+		return faces[0], scores[0], true
+	}
+
+	// Find the face closest to the center of the image
+	centerX := imgWidth / 2
+	centerY := imgHeight / 2
+
+	bestIdx := 0
+	bestScore := scores[0]
+
+	for i, face := range faces {
+		// Calculate center of face
+		faceCenterX := face.Min.X + face.Dx()/2
+		faceCenterY := face.Min.Y + face.Dy()/2
+
+		// Calculate distance from image center
+		dx := faceCenterX - centerX
+		dy := faceCenterY - centerY
+		distance := float64(dx*dx + dy*dy)
+
+		// Calculate face size (area)
+		faceArea := face.Dx() * face.Dy()
+
+		// Combined score: confidence + centrality + size factor
+		centralityScore := 1.0 - (distance / float64(imgWidth*imgWidth+imgHeight*imgHeight))
+		sizeScore := float64(faceArea) / float64(imgWidth*imgHeight)
+		combinedScore := float32(centralityScore*0.4 + sizeScore*0.3 + float64(scores[i])*0.3)
+
+		log.Printf("Face %d: confidence=%.3f, distance=%.1f, area=%d, combined_score=%.3f",
+			i+1, scores[i], distance, faceArea, combinedScore)
+
+		if combinedScore > bestScore {
+			bestScore = combinedScore
+			bestIdx = i
+		}
+	}
+
+	// Check if the best face is significantly better than others
+	for i, face := range faces {
+		if i == bestIdx {
+			continue
+		}
+
+		faceCenterX := face.Min.X + face.Dx()/2
+		faceCenterY := face.Min.Y + face.Dy()/2
+		dx := faceCenterX - centerX
+		dy := faceCenterY - centerY
+		distance := float64(dx*dx + dy*dy)
+
+		faceArea := face.Dx() * face.Dy()
+		centralityScore := 1.0 - (distance / float64(imgWidth*imgWidth+imgHeight*imgHeight))
+		sizeScore := float64(faceArea) / float64(imgWidth*imgHeight)
+		combinedScore := float32(centralityScore*0.4 + sizeScore*0.3 + float64(scores[i])*0.3)
+
+		// If another face is within 20% of the best score, consider it ambiguous
+		if combinedScore > bestScore*0.8 {
+			log.Printf("Multiple prominent faces detected - ambiguous selection")
+			return image.Rectangle{}, 0, false
+		}
+	}
+
+	log.Printf("Selected most prominent face: %v (score: %.3f)", faces[bestIdx], bestScore)
+	return faces[bestIdx], bestScore, true
+}
+
+// VerifyImageQuality checks if an image is suitable for face verification
+func VerifyImageQuality(imgURL string) ImageQualityResult {
+	result := ImageQualityResult{
+		IsValid: false,
+		Reason:  "unknown_error",
+	}
+
+	// Download image
+	imgBytes, err := downloadImage(imgURL)
+	if err != nil {
+		result.Reason = "download_failed"
+		return result
+	}
+
+	// Get detector from pool
+	detector := globalPool.Get()
+	defer globalPool.Put(detector)
+
+	// Detect faces
+	faces, scores, mat, err := detectSingleFace(imgBytes, detector)
+	if err != nil {
+		result.Reason = "face_detection_failed"
+		return result
+	}
+	defer mat.Close()
+
+	// Check if any faces were detected
+	if len(faces) == 0 {
+		result.Reason = "no_face_detected"
+		result.FaceCount = 0
+		return result
+	}
+
+	result.FaceCount = len(faces)
+
+	// If multiple faces, try to find the most prominent one
+	if len(faces) > 1 {
+		imgHeight := mat.Rows()
+		imgWidth := mat.Cols()
+
+		selectedFace, confidence, found := findMostProminentFace(faces, scores, imgWidth, imgHeight)
+		if !found {
+			result.Reason = "multiple_faces_no_clear_primary"
+			return result
+		}
+
+		// Use only the selected face
+		faces = []image.Rectangle{selectedFace}
+		result.Confidence = confidence
+	} else {
+		result.Confidence = scores[0]
+	}
+
+	// Verify lighting quality
+	lightingQuality, brightness, contrast := verifyLightingQuality(mat, faces[0])
+	result.Lighting = lightingQuality
+	result.Brightness = brightness
+	result.Contrast = contrast
+
+	// Check if lighting is acceptable
+	if lightingQuality != "good" {
+		result.Reason = "poor_lighting_" + lightingQuality
+		return result
+	}
+
+	// Additional quality checks
+	faceRect := faces[0]
+	faceWidth := faceRect.Dx()
+	faceHeight := faceRect.Dy()
+
+	// Check face size (should be reasonably large)
+	imgArea := mat.Rows() * mat.Cols()
+	faceArea := faceWidth * faceHeight
+	faceAreaRatio := float64(faceArea) / float64(imgArea)
+
+	if faceAreaRatio < 0.01 { // Face should be at least 1% of image
+		result.Reason = "face_too_small"
+		return result
+	}
+
+	if faceAreaRatio > 0.8 { // Face shouldn't be too large (likely too close)
+		result.Reason = "face_too_large"
+		return result
+	}
+
+	// Check face aspect ratio (should be roughly square-ish)
+	aspectRatio := float64(faceWidth) / float64(faceHeight)
+	if aspectRatio < 0.5 || aspectRatio > 10.0 {
+		result.Reason = "face_aspect_ratio_unusual"
+		return result
+	}
+
+	// All checks passed
+	result.IsValid = true
+	result.Reason = "valid"
+
+	log.Printf("Image quality verification passed: %d face(s), lighting=%s, brightness=%.1f, contrast=%.1f",
+		result.FaceCount, result.Lighting, result.Brightness, result.Contrast)
+
+	return result
+}
+
+// TestImageQuality is a helper function to test image quality verification
+func TestImageQuality(imgURL string) {
+	result := VerifyImageQuality(imgURL)
+
+	log.Printf("Image Quality Test Results:")
+	log.Printf("  Valid: %t", result.IsValid)
+	log.Printf("  Reason: %s", result.Reason)
+	log.Printf("  Face Count: %d", result.FaceCount)
+	log.Printf("  Confidence: %.3f", result.Confidence)
+	log.Printf("  Lighting: %s", result.Lighting)
+	log.Printf("  Brightness: %.1f", result.Brightness)
+	log.Printf("  Contrast: %.1f", result.Contrast)
 }
