@@ -4,10 +4,13 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha512"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"io"
 	mathRand "math/rand"
 	"net"
+	"net/http"
 	"regexp"
 	"strings"
 	"time"
@@ -132,4 +135,41 @@ func GenerateAccountRecoveryCodes(amount int) []string {
 		uniqueCodeArr = append(uniqueCodeArr, code)
 	}
 	return uniqueCodeArr
+}
+
+func IsBase64Image(input string) bool {
+	if strings.HasPrefix(input, "data:image/") {
+		return true
+	}
+
+	if len(input) > 100 && !strings.Contains(input, "http") && !strings.Contains(input, "://") {
+		if len(input) > 50 {
+			testStr := input[:50]
+			_, err := base64.StdEncoding.DecodeString(testStr)
+			return err == nil
+		}
+	}
+
+	return false
+}
+
+func DecodeBase64Image(input string) ([]byte, error) {
+	if strings.HasPrefix(input, "data:image/") {
+		parts := strings.Split(input, ",")
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid data URL format")
+		}
+		return base64.StdEncoding.DecodeString(parts[1])
+	}
+
+	return base64.StdEncoding.DecodeString(input)
+}
+
+func DownloadImage(url string) ([]byte, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	return io.ReadAll(resp.Body)
 }
