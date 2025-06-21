@@ -5,7 +5,6 @@ go 1.22
 toolchain go1.22.9
 
 require (
-	github.com/Kagami/go-face v0.0.0-20210630145111-0c14797b4d0e
 	github.com/apitoolkit/apitoolkit-go v0.0.0-20240522110710-6bb2e576e73a
 	github.com/aws/aws-sdk-go-v2 v1.34.0
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.55

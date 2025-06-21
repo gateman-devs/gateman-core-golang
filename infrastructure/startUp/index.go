@@ -4,7 +4,6 @@ import (
 	"gateman.io/infrastructure/biometric"
 	"gateman.io/infrastructure/database"
 	"gateman.io/infrastructure/database/connection/datastore"
-	"gateman.io/infrastructure/facematch"
 	fileupload "gateman.io/infrastructure/file_upload"
 	identityverification "gateman.io/infrastructure/identity_verification"
 	"gateman.io/infrastructure/logger"
@@ -15,7 +14,6 @@ import (
 // Used to start services such as loggers, databases, queues, etc.
 func StartServices() {
 	logger.InitializeLogger()
-	facematch.Init()
 	database.SetUpDatabase()
 	logger.RequestMetricMonitor.Init()
 	fileupload.InitialiseFileUploader()

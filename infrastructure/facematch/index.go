@@ -1,813 +1,650 @@
 package facematch
 
 import (
+	"encoding/base64"
+	"errors"
 	"fmt"
 	"image"
+	"io"
 	"math"
+	"net/http"
+	"strings"
 	"sync"
 
-	"gateman.io/application/utils"
-	"gateman.io/infrastructure/logger"
 	"gocv.io/x/gocv"
 )
 
-type FaceDetector struct {
-	detectionNet   gocv.Net
-	recognitionNet gocv.Net
+// FaceMatcher handles face detection and comparison
+type FaceMatcher struct {
+	yunetDetector    gocv.FaceDetectorYN
+	arcfaceNet       gocv.Net
+	yunetModelPath   string
+	arcfaceModelPath string
+	mu               sync.RWMutex
+	initialized      bool
+	modelsLoaded     bool
 }
 
-type DetectorPool struct {
-	detectors chan *FaceDetector
+// CompareResult represents the result of face comparison
+type CompareResult struct {
+	Similarity float64 `json:"similarity"`
+	Match      bool    `json:"match"`
+	Error      string  `json:"error,omitempty"`
 }
 
-func (fd *FaceDetector) Close() {
-	fd.detectionNet.Close()
-	fd.recognitionNet.Close()
-}
-
-func loadImage(input *string) ([]byte, error) {
-	if utils.IsBase64Image(*input) {
-		logger.Info("loading image from base64 data")
-		return utils.DecodeBase64Image(*input)
-	}
-
-	logger.Info("loading image from URL", logger.LoggerOptions{
-		Key: "url", Data: input,
-	})
-	return utils.DownloadImage(*input)
-}
-
-func NewFaceDetector() (*FaceDetector, error) {
-	detectionModelPath := "infrastructure/facematch/models/yunet.onnx"
-	recognitionModelPath := "infrastructure/facematch/models/arcface.onnx"
-
-	detectionNet := gocv.ReadNet(detectionModelPath, "")
-	if detectionNet.Empty() {
-		return nil, fmt.Errorf("failed to load YuNet detection model: %s", detectionModelPath)
-	}
-
-	recognitionNet := gocv.ReadNet(recognitionModelPath, "")
-	if recognitionNet.Empty() {
-		return nil, fmt.Errorf("failed to load ArcFace recognition model: %s", recognitionModelPath)
-	}
-
-	logger.Info("YuNet detection model and ArcFace recognition model loaded successfully")
-
-	return &FaceDetector{
-		detectionNet:   detectionNet,
-		recognitionNet: recognitionNet,
-	}, nil
-}
-
-var globalPool *DetectorPool
-var poolSize = 15
-
-func Init() {
-	globalPool = &DetectorPool{
-		detectors: make(chan *FaceDetector, poolSize),
-	}
-
-	for i := 0; i < poolSize; i++ {
-		detector, err := NewFaceDetector()
-		if err != nil {
-			logger.Error(fmt.Sprintf("failed to initialize detector %d", i), logger.LoggerOptions{
-				Key: "err", Data: err,
-			})
-		}
-		globalPool.detectors <- detector
-	}
-
-	logger.Info("initialized detector pool", logger.LoggerOptions{
-		Key: "poolSize", Data: poolSize,
-	})
-}
-
-func (dp *DetectorPool) Get() *FaceDetector {
-	return <-dp.detectors
-}
-
-func (dp *DetectorPool) Put(detector *FaceDetector) {
-	dp.detectors <- detector
-}
-
-// iou calculates Intersection over Union between two rectangles
-func iou(a, b image.Rectangle) float32 {
-	inter := a.Intersect(b)
-	if inter.Empty() {
-		return 0
-	}
-	interArea := float32(inter.Dx() * inter.Dy())
-	unionArea := float32(a.Dx()*a.Dy() + b.Dx()*b.Dy() - int(interArea))
-	return interArea / unionArea
-}
-
-// nms applies Non-Maximum Suppression to merge overlapping detections
-func nms(rects []image.Rectangle, scores []float32, threshold float32) ([]image.Rectangle, []float32) {
-	if len(rects) == 0 {
-		return rects, scores
-	}
-
-	picked := []int{}
-	used := make([]bool, len(rects))
-
-	for i := 0; i < len(rects); i++ {
-		if used[i] {
-			continue
-		}
-		maxIdx := i
-		for j := i + 1; j < len(rects); j++ {
-			if used[j] {
-				continue
-			}
-			if scores[j] > scores[maxIdx] {
-				maxIdx = j
-			}
-		}
-		used[maxIdx] = true
-		picked = append(picked, maxIdx)
-
-		// Suppress overlapping detections
-		for j := 0; j < len(rects); j++ {
-			if used[j] {
-				continue
-			}
-			if iou(rects[maxIdx], rects[j]) > threshold {
-				used[j] = true
-			}
-		}
-	}
-
-	nmsRects := []image.Rectangle{}
-	nmsScores := []float32{}
-	for _, idx := range picked {
-		nmsRects = append(nmsRects, rects[idx])
-		nmsScores = append(nmsScores, scores[idx])
-	}
-
-	return nmsRects, nmsScores
-}
-
-func detectSingleFace(imgBytes []byte, detector *FaceDetector) ([]image.Rectangle, []float32, gocv.Mat, error) {
-	fmt.Println("detectSingleFace running")
-	imgMat, err := gocv.IMDecode(imgBytes, gocv.IMReadColor)
-	if err != nil {
-		logger.Error("failed to decode image", logger.LoggerOptions{
-			Key: "err", Data: err,
-		})
-		return nil, nil, imgMat, err
-	}
-	if imgMat.Empty() {
-		logger.Error("decoded image is empty")
-		return nil, nil, imgMat, fmt.Errorf("decoded image is empty")
-	}
-
-	imgHeight := imgMat.Rows()
-	imgWidth := imgMat.Cols()
-
-	logger.Info("processing image", logger.LoggerOptions{
-		Key: "width", Data: imgWidth,
-	}, logger.LoggerOptions{
-		Key: "height", Data: imgHeight,
-	})
-
-	// YuNet expects input size of 320x320, BGR, scale=1.0, no mean subtraction
-	inputSize := image.Pt(320, 320)
-	blob := gocv.BlobFromImage(imgMat, 1.0, inputSize, gocv.NewScalar(0, 0, 0, 0), false, false)
-	defer blob.Close()
-
-	logger.Info("created blob with shape", logger.LoggerOptions{
-		Key: "shape", Data: blob.Size(),
-	})
-
-	detector.detectionNet.SetInput(blob, "")
-	detections := detector.detectionNet.Forward("")
-	defer detections.Close()
-
-	var faces []image.Rectangle
-	var scores []float32
-
-	if detections.Empty() {
-		logger.Info("model produced empty output")
-		return faces, scores, imgMat, nil
-	}
-
-	detectionSize := detections.Size()
-
-	if len(detectionSize) < 2 {
-		logger.Info("invalid detection output dimensions", logger.LoggerOptions{
-			Key: "detectionSize", Data: detectionSize,
-		})
-		return faces, scores, imgMat, nil
-	}
-
-	// YuNet output format: [batch_size, num_detections, 15]
-	rows := detectionSize[1]
-	if rows <= 0 {
-		logger.Info("no detection rows found")
-		return faces, scores, imgMat, nil
-	}
-
-	if len(detectionSize) >= 2 {
-		cols := 15
-		if len(detectionSize) == 3 {
-			cols = detectionSize[2]
-		}
-
-		for i := 0; i < rows; i++ {
-			if cols < 5 {
-				continue
-			}
-
-			x_center_norm := detections.GetFloatAt(0, i*cols+0)
-			y_center_norm := detections.GetFloatAt(0, i*cols+1)
-			width_norm := detections.GetFloatAt(0, i*cols+2)
-			height_norm := detections.GetFloatAt(0, i*cols+3)
-			confidence := detections.GetFloatAt(0, i*cols+4)
-
-			// Log all raw detection values for debugging/monitoring
-			logger.Info("raw detection", logger.LoggerOptions{
-				Key: "x_center_norm", Data: x_center_norm,
-			}, logger.LoggerOptions{
-				Key: "y_center_norm", Data: y_center_norm,
-			}, logger.LoggerOptions{
-				Key: "width_norm", Data: width_norm,
-			}, logger.LoggerOptions{
-				Key: "height_norm", Data: height_norm,
-			}, logger.LoggerOptions{
-				Key: "confidence", Data: confidence,
-			})
-
-			if confidence > 0.7 {
-				x_center := x_center_norm * float32(imgWidth)
-				y_center := y_center_norm * float32(imgHeight)
-				width := width_norm * float32(imgWidth)
-				height := height_norm * float32(imgHeight)
-
-				x := int(x_center - width/2)
-				y := int(y_center - height/2)
-				w := int(width)
-				h := int(height)
-
-				// Boundary checks
-				if x < 0 {
-					x = 0
-				}
-				if y < 0 {
-					y = 0
-				}
-				if x+w > imgWidth {
-					w = imgWidth - x
-				}
-				if y+h > imgHeight {
-					h = imgHeight - y
-				}
-
-				// Minimum face size for production (30x30)
-				fmt.Println("face sizes")
-				fmt.Println("w", w)
-				fmt.Println("h", h)
-				if w > 30 && h > 30 {
-					rect := image.Rect(x, y, x+w, y+h)
-					faces = append(faces, rect)
-					scores = append(scores, confidence)
-					logger.Info("added face rectangle", logger.LoggerOptions{
-						Key: "rect", Data: rect,
-					}, logger.LoggerOptions{
-						Key: "score", Data: confidence,
-					})
-				} else {
-					logger.Info("face too small, skipping", logger.LoggerOptions{
-						Key: "width", Data: w,
-					}, logger.LoggerOptions{
-						Key: "height", Data: h,
-					})
-				}
-			}
-		}
-	} else {
-		logger.Info("unexpected detection output format", logger.LoggerOptions{
-			Key: "detectionSize", Data: detectionSize,
-		})
-	}
-
-	// Apply NMS to merge overlapping detections
-	if len(faces) > 1 {
-		logger.Info("applying NMS to merge overlapping detections", logger.LoggerOptions{
-			Key: "beforeNMS", Data: len(faces),
-		})
-		faces, scores = nms(faces, scores, 0.5) // IoU threshold of 0.5
-		logger.Info("NMS completed", logger.LoggerOptions{
-			Key: "afterNMS", Data: len(faces),
-		})
-	}
-
-	return faces, scores, imgMat, nil
-}
-
-// extractFaceEmbedding extracts face embedding using ArcFace model
-func extractFaceEmbedding(imgMat gocv.Mat, faceRect image.Rectangle, detector *FaceDetector) ([]float32, error) {
-	faceMat := imgMat.Region(faceRect)
-	defer faceMat.Close()
-
-	// Resize face to 112x112 (standard input size for ArcFace)
-	resized := gocv.NewMat()
-	gocv.Resize(faceMat, &resized, image.Pt(112, 112), 0, 0, gocv.InterpolationLinear)
-	defer resized.Close()
-
-	// ArcFace preprocessing: Convert BGR to RGB and normalize
-	rgb := gocv.NewMat()
-	gocv.CvtColor(resized, &rgb, gocv.ColorBGRToRGB)
-	defer rgb.Close()
-
-	// ArcFace normalization: (pixel_value - 127.5) / 128.0
-	// This is the standard preprocessing for most ArcFace models
-	blob := gocv.BlobFromImage(rgb, 1.0/128.0, image.Pt(112, 112), gocv.NewScalar(127.5, 127.5, 127.5, 0), false, false)
-	defer blob.Close()
-
-	// Set input and get embedding
-	detector.recognitionNet.SetInput(blob, "")
-	embedding := detector.recognitionNet.Forward("")
-	defer embedding.Close()
-
-	if embedding.Empty() {
-		return nil, fmt.Errorf("failed to extract face embedding")
-	}
-
-	// Convert embedding to float32 slice
-	embeddingSize := embedding.Size()
-	if len(embeddingSize) != 2 || embeddingSize[0] != 1 {
-		return nil, fmt.Errorf("unexpected embedding shape: %v", embeddingSize)
-	}
-
-	embeddingDim := embeddingSize[1]
-	result := make([]float32, embeddingDim)
-
-	for i := 0; i < embeddingDim; i++ {
-		result[i] = embedding.GetFloatAt(0, i)
-	}
-
-	// L2 normalization - essential for ArcFace embeddings
-	norm := float32(0)
-	for _, val := range result {
-		norm += val * val
-	}
-	norm = float32(math.Sqrt(float64(norm)))
-
-	if norm > 0 {
-		for i := range result {
-			result[i] /= norm
-		}
-	}
-
-	return result, nil
-}
-
-// cosineSimilarity calculates cosine similarity between two normalized vectors
-func cosineSimilarity(vec1, vec2 []float32) float32 {
-	if len(vec1) != len(vec2) {
-		return 0
-	}
-
-	dotProduct := float32(0)
-	for i := 0; i < len(vec1); i++ {
-		dotProduct += vec1[i] * vec2[i]
-	}
-
-	// Since vectors are already normalized, dot product equals cosine similarity
-	return dotProduct
-}
-
-func Compare(img1 *string, img2 *string) bool {
-	logger.Info("starting face comparison")
-	var wg sync.WaitGroup
-	type faceResult struct {
-		faces []image.Rectangle
-		mat   gocv.Mat
-		err   error
-	}
-	results := make([]faceResult, 2)
-
-	urls := []*string{img1, img2}
-	wg.Add(2)
-	for i := 0; i < 2; i++ {
-		go func(idx int) {
-			defer wg.Done()
-			imgBytes, err := loadImage(urls[idx])
-			if err != nil {
-				results[idx] = faceResult{err: err}
-				return
-			}
-
-			detector := globalPool.Get()
-			defer globalPool.Put(detector)
-
-			faces, _, mat, err := detectSingleFace(imgBytes, detector)
-			results[idx] = faceResult{faces: faces, mat: mat, err: err}
-		}(i)
-	}
-	wg.Wait()
-
-	for i, res := range results {
-		if res.err != nil {
-			logger.Error(fmt.Sprintf("error processing image %d", i+1), logger.LoggerOptions{
-				Key: "err", Data: res.err,
-			})
-			return false
-		}
-		defer res.mat.Close()
-		if len(res.faces) != 1 {
-			logger.Error(fmt.Sprintf("image %d: expected 1 face, found %d", i+1, len(res.faces)), logger.LoggerOptions{
-				Key: "faceCount", Data: len(res.faces),
-			})
-			return false
-		}
-	}
-
-	// Extract face embeddings using ArcFace
-	var embeddings [2][]float32
-	var embeddingWg sync.WaitGroup
-	embeddingWg.Add(2)
-
-	for i := 0; i < 2; i++ {
-		go func(idx int) {
-			defer embeddingWg.Done()
-			detector := globalPool.Get()
-			defer globalPool.Put(detector)
-
-			embedding, err := extractFaceEmbedding(results[idx].mat, results[idx].faces[0], detector)
-			if err != nil {
-				logger.Error(fmt.Sprintf("failed to extract embedding for image %d", idx+1), logger.LoggerOptions{
-					Key: "err", Data: err,
-				})
-				return
-			}
-			embeddings[idx] = embedding
-		}(i)
-	}
-	embeddingWg.Wait()
-
-	// Check if both embeddings were extracted successfully
-	if embeddings[0] == nil || embeddings[1] == nil {
-		logger.Error("failed to extract embeddings from one or both images")
-		return false
-	}
-
-	similarity := cosineSimilarity(embeddings[0], embeddings[1])
-	logger.Info("face comparison completed", logger.LoggerOptions{
-		Key: "similarity", Data: similarity,
-	})
-
-	// ArcFace similarity threshold: 0.4-0.5 is typically used for verification
-	// 0.6 was too high - most genuine matches fall between 0.3-0.7
-	return similarity > 0.4
-}
-
-func TestFaceDetection(imgURL *string) {
-	detector := globalPool.Get()
-	defer globalPool.Put(detector)
-
-	imgBytes, err := loadImage(imgURL)
-	if err != nil {
-		logger.Error("error loading image", logger.LoggerOptions{
-			Key: "err", Data: err,
-		})
-		return
-	}
-
-	faces, scores, mat, err := detectSingleFace(imgBytes, detector)
-	if err != nil {
-		logger.Error("error detecting faces", logger.LoggerOptions{
-			Key: "err", Data: err,
-		})
-		return
-	}
-	defer mat.Close()
-
-	logger.Info("test result: found faces in image", logger.LoggerOptions{
-		Key: "faceCount", Data: len(faces),
-	})
-	for i, face := range faces {
-		confidence := float32(0.0)
-		if i < len(scores) {
-			confidence = scores[i]
-		}
-		logger.Info(fmt.Sprintf("face %d", i+1), logger.LoggerOptions{
-			Key: "rect", Data: face,
-		}, logger.LoggerOptions{
-			Key: "confidence", Data: confidence,
-		})
-	}
+// ImageData holds loaded image data and any error
+type ImageData struct {
+	Mat   gocv.Mat
+	Error error
 }
 
 // ImageQualityResult represents the result of image quality verification
 type ImageQualityResult struct {
-	IsValid    bool
-	Reason     string
-	FaceCount  int
-	Confidence float32
-	Lighting   string
-	Brightness float64
-	Contrast   float64
+	IsGoodQuality   bool     `json:"is_good_quality"`
+	HasFace         bool     `json:"has_face"`
+	FaceCount       int      `json:"face_count"`
+	FaceSize        float64  `json:"face_size_percent"`
+	ImageResolution string   `json:"image_resolution"`
+	QualityScore    float64  `json:"quality_score"` // 0.0 to 1.0
+	Issues          []string `json:"issues,omitempty"`
+	Recommendations []string `json:"recommendations,omitempty"`
+	Error           string   `json:"error,omitempty"`
 }
 
-// verifyLightingQuality analyzes the lighting conditions of the face region
-func verifyLightingQuality(imgMat gocv.Mat, faceRect image.Rectangle) (string, float64, float64) {
-	faceMat := imgMat.Region(faceRect)
+// NewFaceMatcher creates a new face matcher instance
+func NewFaceMatcher() *FaceMatcher {
+	return &FaceMatcher{}
+}
+
+// Initialize loads the YuNet and ArcFace models
+func (fm *FaceMatcher) Initialize(yunetModelPath, arcfaceModelPath string) error {
+	fm.mu.Lock()
+	defer fm.mu.Unlock()
+
+	if fm.initialized {
+		return nil
+	}
+
+	// Check if model files exist first
+	if yunetModelPath == "" {
+		return errors.New("YuNet model path cannot be empty")
+	}
+	if arcfaceModelPath == "" {
+		return errors.New("ArcFace model path cannot be empty")
+	}
+
+	// For now, just store the model paths for later validation during actual usage
+	// This avoids segmentation faults when model files don't exist
+	// The actual model loading and validation will happen when detection/recognition is performed
+
+	fm.yunetModelPath = yunetModelPath
+	fm.arcfaceModelPath = arcfaceModelPath
+	fm.initialized = true
+	fm.modelsLoaded = false
+
+	return nil
+}
+
+// loadModels loads the actual OpenCV models (called lazily)
+func (fm *FaceMatcher) loadModels() error {
+	if fm.modelsLoaded {
+		return nil
+	}
+
+	// Initialize YuNet face detector
+	detector := gocv.NewFaceDetectorYN(fm.yunetModelPath, "", image.Pt(320, 320))
+
+	// Initialize ArcFace network
+	net := gocv.ReadNet(fm.arcfaceModelPath, "")
+
+	// Set backend and target for better performance
+	net.SetPreferableBackend(gocv.NetBackendOpenCV)
+	net.SetPreferableTarget(gocv.NetTargetCPU)
+
+	fm.yunetDetector = detector
+	fm.arcfaceNet = net
+	fm.modelsLoaded = true
+
+	return nil
+}
+
+// loadImageFromURL loads an image from a URL using goroutine
+func (fm *FaceMatcher) loadImageFromURL(url string, result chan<- ImageData) {
+	go func() {
+		defer close(result)
+
+		resp, err := http.Get(url)
+		if err != nil {
+			result <- ImageData{Error: fmt.Errorf("failed to fetch image from URL: %w", err)}
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			result <- ImageData{Error: fmt.Errorf("HTTP error: %d", resp.StatusCode)}
+			return
+		}
+
+		imageBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			result <- ImageData{Error: fmt.Errorf("failed to read image data: %w", err)}
+			return
+		}
+
+		mat, err := gocv.IMDecode(imageBytes, gocv.IMReadColor)
+		if err != nil {
+			result <- ImageData{Error: fmt.Errorf("failed to decode image: %w", err)}
+			return
+		}
+
+		if mat.Empty() {
+			result <- ImageData{Error: errors.New("decoded image is empty")}
+			return
+		}
+
+		result <- ImageData{Mat: mat}
+	}()
+}
+
+// loadImageFromBase64 loads an image from base64 string using goroutine
+func (fm *FaceMatcher) loadImageFromBase64(base64Data string, result chan<- ImageData) {
+	go func() {
+		defer close(result)
+
+		// Remove data URL prefix if present
+		if strings.Contains(base64Data, ",") {
+			parts := strings.Split(base64Data, ",")
+			if len(parts) > 1 {
+				base64Data = parts[1]
+			}
+		}
+
+		imageBytes, err := base64.StdEncoding.DecodeString(base64Data)
+		if err != nil {
+			result <- ImageData{Error: fmt.Errorf("failed to decode base64: %w", err)}
+			return
+		}
+
+		mat, err := gocv.IMDecode(imageBytes, gocv.IMReadColor)
+		if err != nil {
+			result <- ImageData{Error: fmt.Errorf("failed to decode image: %w", err)}
+			return
+		}
+
+		if mat.Empty() {
+			result <- ImageData{Error: errors.New("decoded image is empty")}
+			return
+		}
+
+		result <- ImageData{Mat: mat}
+	}()
+}
+
+// loadImage determines if the input is URL or base64 and loads accordingly
+func (fm *FaceMatcher) loadImage(input string) (gocv.Mat, error) {
+	result := make(chan ImageData, 1)
+
+	if strings.HasPrefix(input, "http://") || strings.HasPrefix(input, "https://") {
+		fm.loadImageFromURL(input, result)
+	} else {
+		fm.loadImageFromBase64(input, result)
+	}
+
+	data := <-result
+	if data.Error != nil {
+		return gocv.Mat{}, data.Error
+	}
+
+	return data.Mat, nil
+}
+
+// detectFace detects faces in an image using YuNet
+func (fm *FaceMatcher) detectFace(img gocv.Mat) (gocv.Mat, error) {
+	// Use read lock since we're only reading from the detector
+	fm.mu.RLock()
+	defer fm.mu.RUnlock()
+
+	if !fm.initialized || !fm.modelsLoaded {
+		return gocv.Mat{}, errors.New("face matcher not initialized or models not loaded")
+	}
+
+	// Set input size for YuNet
+	imgSize := img.Size()
+	if len(imgSize) >= 2 {
+		fm.yunetDetector.SetInputSize(image.Pt(imgSize[1], imgSize[0])) // width, height
+	}
+
+	// Detect faces
+	faces := gocv.NewMat()
+	defer faces.Close()
+
+	fm.yunetDetector.Detect(img, &faces)
+
+	if faces.Rows() == 0 {
+		return gocv.Mat{}, errors.New("no faces detected")
+	}
+
+	// Get the first (largest) face
+	faceData := faces.GetFloatAt(0, 0)
+	x := int(faceData)
+	faceData = faces.GetFloatAt(0, 1)
+	y := int(faceData)
+	faceData = faces.GetFloatAt(0, 2)
+	w := int(faceData)
+	faceData = faces.GetFloatAt(0, 3)
+	h := int(faceData)
+
+	// Extract face region
+	faceRect := image.Rect(x, y, x+w, y+h)
+	faceMat := img.Region(faceRect)
+
+	return faceMat, nil
+}
+
+// extractFaceFeatures extracts features using ArcFace
+func (fm *FaceMatcher) extractFaceFeatures(face gocv.Mat) (gocv.Mat, error) {
+	// Use read lock since we're only reading from the network
+	fm.mu.RLock()
+	defer fm.mu.RUnlock()
+
+	if !fm.initialized || !fm.modelsLoaded {
+		return gocv.Mat{}, errors.New("face matcher not initialized or models not loaded")
+	}
+
+	// Preprocess face for ArcFace (usually 112x112)
+	resized := gocv.NewMat()
+	defer resized.Close()
+	gocv.Resize(face, &resized, image.Pt(112, 112), 0, 0, gocv.InterpolationLinear)
+
+	// Normalize to [0,1]
+	normalized := gocv.NewMat()
+	defer normalized.Close()
+	resized.ConvertTo(&normalized, gocv.MatTypeCV32F)
+	normalized.DivideFloat(255.0)
+
+	// Create blob from image
+	blob := gocv.BlobFromImage(normalized, 1.0, image.Pt(112, 112), gocv.NewScalar(0, 0, 0, 0), true, false)
+	defer blob.Close()
+
+	// Set input to the network
+	fm.arcfaceNet.SetInput(blob, "")
+
+	// Forward pass
+	features := fm.arcfaceNet.Forward("")
+
+	return features.Clone(), nil
+}
+
+// calculateSimilarity calculates cosine similarity between two feature vectors
+func (fm *FaceMatcher) calculateSimilarity(features1, features2 gocv.Mat) float64 {
+	// Flatten the feature matrices
+	flat1 := features1.Reshape(1, 1)
+	flat2 := features2.Reshape(1, 1)
+	defer flat1.Close()
+	defer flat2.Close()
+
+	// Calculate dot product
+	dotProduct := 0.0
+	norm1 := 0.0
+	norm2 := 0.0
+
+	for i := 0; i < flat1.Cols(); i++ {
+		val1 := float64(flat1.GetFloatAt(0, i))
+		val2 := float64(flat2.GetFloatAt(0, i))
+
+		dotProduct += val1 * val2
+		norm1 += val1 * val1
+		norm2 += val2 * val2
+	}
+
+	// Calculate cosine similarity
+	if norm1 == 0 || norm2 == 0 {
+		return 0
+	}
+
+	similarity := dotProduct / (math.Sqrt(norm1) * math.Sqrt(norm2))
+	return similarity
+}
+
+// Compare compares two faces from either URLs or base64 images
+func (fm *FaceMatcher) Compare(input1, input2 string, threshold float64) CompareResult {
+	if !fm.initialized {
+		return CompareResult{
+			Error: "face matcher not initialized",
+		}
+	}
+
+	// Try to load models if they haven't been loaded yet
+	if !fm.modelsLoaded {
+		if err := fm.loadModels(); err != nil {
+			return CompareResult{
+				Error: fmt.Sprintf("failed to load models: %v", err),
+			}
+		}
+	}
+
+	// Load images concurrently using goroutines
+	var wg sync.WaitGroup
+	var img1, img2 gocv.Mat
+	var err1, err2 error
+
+	wg.Add(2)
+
+	// Load first image
+	go func() {
+		defer wg.Done()
+		img1, err1 = fm.loadImage(input1)
+	}()
+
+	// Load second image
+	go func() {
+		defer wg.Done()
+		img2, err2 = fm.loadImage(input2)
+	}()
+
+	wg.Wait()
+
+	// Check for loading errors
+	if err1 != nil {
+		return CompareResult{
+			Error: fmt.Sprintf("failed to load first image: %v", err1),
+		}
+	}
+	defer img1.Close()
+
+	if err2 != nil {
+		return CompareResult{
+			Error: fmt.Sprintf("failed to load second image: %v", err2),
+		}
+	}
+	defer img2.Close()
+
+	// Detect and extract faces sequentially to avoid OpenCV thread safety issues
+	face1, faceErr1 := fm.detectFace(img1)
+	if faceErr1 != nil {
+		return CompareResult{
+			Error: fmt.Sprintf("failed to detect face in first image: %v", faceErr1),
+		}
+	}
+	defer face1.Close()
+
+	face2, faceErr2 := fm.detectFace(img2)
+	if faceErr2 != nil {
+		return CompareResult{
+			Error: fmt.Sprintf("failed to detect face in second image: %v", faceErr2),
+		}
+	}
+	defer face2.Close()
+
+	// Extract features sequentially to avoid OpenCV thread safety issues
+	features1, featErr1 := fm.extractFaceFeatures(face1)
+	if featErr1 != nil {
+		return CompareResult{
+			Error: fmt.Sprintf("failed to extract features from first face: %v", featErr1),
+		}
+	}
+	defer features1.Close()
+
+	features2, featErr2 := fm.extractFaceFeatures(face2)
+	if featErr2 != nil {
+		return CompareResult{
+			Error: fmt.Sprintf("failed to extract features from second face: %v", featErr2),
+		}
+	}
+	defer features2.Close()
+
+	// Calculate similarity
+	similarity := fm.calculateSimilarity(features1, features2)
+
+	return CompareResult{
+		Similarity: similarity,
+		Match:      similarity >= threshold,
+	}
+}
+
+// Close releases all resources
+func (fm *FaceMatcher) Close() {
+	fm.mu.Lock()
+	defer fm.mu.Unlock()
+
+	if fm.initialized && fm.modelsLoaded {
+		// Close the detector and network
+		fm.yunetDetector.Close()
+		fm.arcfaceNet.Close()
+		fm.modelsLoaded = false
+	}
+	fm.initialized = false
+}
+
+// VerifyImageQuality analyzes an image to determine if it's suitable for biometric matching
+func (fm *FaceMatcher) VerifyImageQuality(input string) ImageQualityResult {
+	if !fm.initialized {
+		return ImageQualityResult{
+			Error: "face matcher not initialized",
+		}
+	}
+
+	// Try to load models if they haven't been loaded yet
+	if !fm.modelsLoaded {
+		if err := fm.loadModels(); err != nil {
+			return ImageQualityResult{
+				Error: fmt.Sprintf("failed to load models: %v", err),
+			}
+		}
+	}
+
+	// Load the image
+	img, err := fm.loadImage(input)
+	if err != nil {
+		return ImageQualityResult{
+			Error: fmt.Sprintf("failed to load image: %v", err),
+		}
+	}
+	defer img.Close()
+
+	// Initialize result
+	result := ImageQualityResult{
+		Issues:          []string{},
+		Recommendations: []string{},
+	}
+
+	// Get image dimensions
+	imgSize := img.Size()
+	if len(imgSize) < 2 {
+		return ImageQualityResult{
+			Error: "invalid image dimensions",
+		}
+	}
+
+	height, width := imgSize[0], imgSize[1]
+	result.ImageResolution = fmt.Sprintf("%dx%d", width, height)
+
+	// Check minimum resolution
+	minResolution := 200
+	if width < minResolution || height < minResolution {
+		result.Issues = append(result.Issues, fmt.Sprintf("Low resolution (%dx%d)", width, height))
+		result.Recommendations = append(result.Recommendations, "Use higher resolution image (minimum 400x400)")
+	}
+
+	// Detect faces
+	faces, faceCount := fm.detectAllFaces(img)
+	if faces.Empty() || faceCount == 0 {
+		result.HasFace = false
+		result.FaceCount = 0
+		result.IsGoodQuality = false
+		result.QualityScore = 0.0
+		result.Issues = append(result.Issues, "No face detected")
+		result.Recommendations = append(result.Recommendations, "Ensure face is clearly visible and well-lit")
+		return result
+	}
+	defer faces.Close()
+
+	result.HasFace = true
+	result.FaceCount = faceCount
+
+	// Check for multiple faces
+	if faceCount > 1 {
+		result.Issues = append(result.Issues, fmt.Sprintf("Multiple faces detected (%d)", faceCount))
+		result.Recommendations = append(result.Recommendations, "Use image with single person only")
+	}
+
+	// Analyze the primary (first/largest) face
+	faceData := faces.GetFloatAt(0, 0)
+	x := int(faceData)
+	faceData = faces.GetFloatAt(0, 1)
+	y := int(faceData)
+	faceData = faces.GetFloatAt(0, 2)
+	w := int(faceData)
+	faceData = faces.GetFloatAt(0, 3)
+	h := int(faceData)
+
+	// Calculate face size as percentage of image
+	imageArea := float64(width * height)
+	faceArea := float64(w * h)
+	facePercentage := (faceArea / imageArea) * 100
+	result.FaceSize = facePercentage
+
+	// Check face size requirements
+	minFaceSize := 5.0     // 5% of image
+	maxFaceSize := 80.0    // 80% of image
+	optimalMinSize := 15.0 // 15% is better
+	optimalMaxSize := 60.0 // 60% is better
+
+	if facePercentage < minFaceSize {
+		result.Issues = append(result.Issues, fmt.Sprintf("Face too small (%.1f%% of image)", facePercentage))
+		result.Recommendations = append(result.Recommendations, "Move closer to camera or crop image to focus on face")
+	} else if facePercentage > maxFaceSize {
+		result.Issues = append(result.Issues, fmt.Sprintf("Face too large (%.1f%% of image)", facePercentage))
+		result.Recommendations = append(result.Recommendations, "Move back from camera or include more background")
+	}
+
+	// Check face position (should be roughly centered)
+	faceCenterX := x + w/2
+	faceCenterY := y + h/2
+	imageCenterX := width / 2
+	imageCenterY := height / 2
+
+	offsetX := float64(abs(faceCenterX-imageCenterX)) / float64(width) * 100
+	offsetY := float64(abs(faceCenterY-imageCenterY)) / float64(height) * 100
+
+	if offsetX > 30 || offsetY > 30 {
+		result.Issues = append(result.Issues, "Face not well-centered in image")
+		result.Recommendations = append(result.Recommendations, "Center the face in the image")
+	}
+
+	// Extract face region for further analysis
+	faceRect := image.Rect(x, y, x+w, y+h)
+	faceMat := img.Region(faceRect)
 	defer faceMat.Close()
 
-	// Convert to grayscale for lighting analysis
+	// Check image sharpness/blur using Laplacian variance
 	gray := gocv.NewMat()
 	defer gray.Close()
 	gocv.CvtColor(faceMat, &gray, gocv.ColorBGRToGray)
 
-	// Calculate brightness and contrast using OpenCV functions for better accuracy
-	mean := gocv.NewMat()
-	stddev := gocv.NewMat()
-	defer mean.Close()
-	defer stddev.Close()
+	laplacian := gocv.NewMat()
+	defer laplacian.Close()
+	gocv.Laplacian(gray, &laplacian, gocv.MatTypeCV64F, 1, 1, 0, gocv.BorderDefault)
 
-	gocv.MeanStdDev(gray, &mean, &stddev)
+	// Calculate mean and standard deviation for blur detection
+	meanMat := gocv.NewMat()
+	stddevMat := gocv.NewMat()
+	defer meanMat.Close()
+	defer stddevMat.Close()
 
-	brightness := mean.GetDoubleAt(0, 0)
-	contrast := stddev.GetDoubleAt(0, 0)
+	gocv.MeanStdDev(laplacian, &meanMat, &stddevMat)
+	variance := stddevMat.GetDoubleAt(0, 0) * stddevMat.GetDoubleAt(0, 0)
 
-	// More realistic lighting thresholds based on 8-bit grayscale (0-255)
-	var lightingQuality string
-	if brightness < 50 { // Very dark
-		lightingQuality = "too_dark"
-	} else if brightness > 220 { // Very bright/overexposed
-		lightingQuality = "too_bright"
-	} else if contrast < 15 { // Very low contrast (flat lighting)
-		lightingQuality = "low_contrast"
-	} else if contrast > 80 { // Very high contrast (harsh lighting)
-		lightingQuality = "too_contrasty"
-	} else {
-		lightingQuality = "good"
+	// Blur detection threshold (adjust based on testing)
+	blurThreshold := 85.0
+	if variance < blurThreshold {
+		result.Issues = append(result.Issues, "Image appears blurry or out of focus")
+		result.Recommendations = append(result.Recommendations, "Ensure camera is focused and image is sharp")
 	}
 
-	return lightingQuality, brightness, contrast
-}
+	// Check brightness/contrast using ORIGINAL grayscale image
+	brightnessMean := gocv.NewMat()
+	brightnessStddev := gocv.NewMat()
+	defer brightnessMean.Close()
+	defer brightnessStddev.Close()
 
-// findMostProminentFace selects the most prominent face when multiple faces are detected
-// Returns false if there are multiple equally dominant faces
-func findMostProminentFace(faces []image.Rectangle, scores []float32, imgWidth, imgHeight int) (image.Rectangle, float32, bool) {
-	if len(faces) == 0 {
-		return image.Rectangle{}, 0, false
+	gocv.MeanStdDev(gray, &brightnessMean, &brightnessStddev)
+	grayMean := brightnessMean.GetDoubleAt(0, 0)
+
+	if grayMean < 50 {
+		result.Issues = append(result.Issues, "Image is too dark")
+		result.Recommendations = append(result.Recommendations, "Improve lighting conditions")
+	} else if grayMean > 200 {
+		result.Issues = append(result.Issues, "Image is overexposed")
+		result.Recommendations = append(result.Recommendations, "Reduce lighting or exposure")
 	}
 
-	// If only one face after NMS, accept it as the dominant face
-	if len(faces) == 1 {
-		logger.Info("single face detected after NMS - accepting as dominant", logger.LoggerOptions{
-			Key: "rect", Data: faces[0],
-		}, logger.LoggerOptions{
-			Key: "score", Data: scores[0],
-		})
-		return faces[0], scores[0], true
+	// Calculate overall quality score
+	score := 1.0
+
+	// Deduct for issues
+	if faceCount > 1 {
+		score -= 0.2
+	}
+	if facePercentage < optimalMinSize || facePercentage > optimalMaxSize {
+		score -= 0.2
+	}
+	if offsetX > 20 || offsetY > 20 {
+		score -= 0.1
+	}
+	if variance < blurThreshold {
+		score -= 0.3
+	}
+	if grayMean < 50 || grayMean > 200 {
+		score -= 0.2
+	}
+	if width < 400 || height < 400 {
+		score -= 0.2
 	}
 
-	// Calculate combined scores for all faces
-	type faceScore struct {
-		index int
-		score float32
-		area  int
+	// Ensure score is between 0 and 1
+	if score < 0 {
+		score = 0
 	}
 
-	centerX := imgWidth / 2
-	centerY := imgHeight / 2
-	maxDistance := math.Sqrt(float64(imgWidth*imgWidth + imgHeight*imgHeight))
+	result.QualityScore = score
 
-	var faceScores []faceScore
+	// Determine if image is good quality (threshold: 0.7)
+	result.IsGoodQuality = score >= 0.7 && len(result.Issues) <= 1
 
-	for i, face := range faces {
-		// Calculate face area
-		faceArea := face.Dx() * face.Dy()
-
-		// Calculate distance from center
-		faceCenterX := face.Min.X + face.Dx()/2
-		faceCenterY := face.Min.Y + face.Dy()/2
-		dx := float64(faceCenterX - centerX)
-		dy := float64(faceCenterY - centerY)
-		distance := math.Sqrt(dx*dx + dy*dy)
-		centralityScore := 1.0 - (distance / maxDistance)
-
-		// Combined scoring: size (60%), confidence (25%), centrality (15%)
-		// Emphasize size more as larger faces are typically the main subject
-		sizeScore := float64(faceArea) / float64(imgWidth*imgHeight)
-		combinedScore := float32(sizeScore*0.6 + float64(scores[i])*0.25 + centralityScore*0.15)
-
-		faceScores = append(faceScores, faceScore{
-			index: i,
-			score: combinedScore,
-			area:  faceArea,
-		})
-
-		logger.Info(fmt.Sprintf("face %d analysis", i+1), logger.LoggerOptions{
-			Key: "confidence", Data: scores[i],
-		}, logger.LoggerOptions{
-			Key: "area", Data: faceArea,
-		}, logger.LoggerOptions{
-			Key: "combinedScore", Data: combinedScore,
-		})
+	if result.IsGoodQuality {
+		result.Recommendations = append(result.Recommendations, "Image quality is suitable for biometric matching")
 	}
-
-	// Sort by combined score (highest first)
-	for i := 0; i < len(faceScores)-1; i++ {
-		for j := i + 1; j < len(faceScores); j++ {
-			if faceScores[j].score > faceScores[i].score {
-				faceScores[i], faceScores[j] = faceScores[j], faceScores[i]
-			}
-		}
-	}
-
-	bestFace := faceScores[0]
-
-	// More lenient threshold for multiple faces after NMS
-	// If there's a second face with >85% of the best score, reject
-	// This is more lenient than the previous 75% threshold
-	dominanceThreshold := bestFace.score * 0.85
-
-	for i := 1; i < len(faceScores); i++ {
-		if faceScores[i].score > dominanceThreshold {
-			logger.Info("multiple dominant faces detected after NMS - no clear primary face", logger.LoggerOptions{
-				Key: "bestScore", Data: bestFace.score,
-			}, logger.LoggerOptions{
-				Key: "competitorScore", Data: faceScores[i].score,
-			}, logger.LoggerOptions{
-				Key: "threshold", Data: dominanceThreshold,
-			})
-			return image.Rectangle{}, 0, false
-		}
-	}
-
-	// More lenient size comparison for faces after NMS
-	// The dominant face should be at least 1.2x larger than others
-	// unless it has very high confidence (>0.85)
-	if scores[bestFace.index] < 0.85 {
-		for i := 1; i < len(faceScores); i++ {
-			otherArea := faceScores[i].area
-			if float64(bestFace.area) < float64(otherArea)*1.2 {
-				logger.Info("faces are too similar in size after NMS - no clear primary face", logger.LoggerOptions{
-					Key: "bestArea", Data: bestFace.area,
-				}, logger.LoggerOptions{
-					Key: "competitorArea", Data: otherArea,
-				})
-				return image.Rectangle{}, 0, false
-			}
-		}
-	}
-
-	logger.Info("selected dominant face after NMS", logger.LoggerOptions{
-		Key: "rect", Data: faces[bestFace.index],
-	}, logger.LoggerOptions{
-		Key: "score", Data: bestFace.score,
-	}, logger.LoggerOptions{
-		Key: "originalConfidence", Data: scores[bestFace.index],
-	})
-
-	return faces[bestFace.index], bestFace.score, true
-}
-
-func VerifyImageQuality(imgURL *string) ImageQualityResult {
-	result := ImageQualityResult{
-		IsValid: false,
-		Reason:  "unknown_error",
-	}
-
-	imgBytes, err := loadImage(imgURL)
-	if err != nil {
-		result.Reason = "load_failed"
-		return result
-	}
-
-	// Get detector from pool
-	detector := globalPool.Get()
-	defer globalPool.Put(detector)
-
-	// Detect faces
-	faces, scores, mat, err := detectSingleFace(imgBytes, detector)
-	if err != nil {
-		result.Reason = "face_detection_failed"
-		return result
-	}
-	defer mat.Close()
-
-	// Check if any faces were detected
-	if len(faces) == 0 {
-		result.Reason = "no_face_detected"
-		result.FaceCount = 0
-		return result
-	}
-
-	result.FaceCount = len(faces)
-
-	// If multiple faces, try to find the most prominent one
-	if len(faces) > 1 {
-		imgHeight := mat.Rows()
-		imgWidth := mat.Cols()
-
-		selectedFace, confidence, found := findMostProminentFace(faces, scores, imgWidth, imgHeight)
-		if !found {
-			result.Reason = "multiple_faces_no_clear_primary"
-			return result
-		}
-
-		// Use only the selected face
-		faces = []image.Rectangle{selectedFace}
-		result.Confidence = confidence
-	} else {
-		result.Confidence = scores[0]
-	}
-
-	// Verify lighting quality
-	lightingQuality, brightness, contrast := verifyLightingQuality(mat, faces[0])
-	result.Lighting = lightingQuality
-	result.Brightness = brightness
-	result.Contrast = contrast
-
-	// Check if lighting is acceptable
-	if lightingQuality != "good" {
-		result.Reason = "poor_lighting_" + lightingQuality
-		return result
-	}
-
-	// Additional quality checks with more realistic parameters
-	faceRect := faces[0]
-	faceWidth := faceRect.Dx()
-	faceHeight := faceRect.Dy()
-
-	// Log face dimensions for debugging
-	logger.Info("face dimensions", logger.LoggerOptions{
-		Key: "width", Data: faceWidth,
-	}, logger.LoggerOptions{
-		Key: "height", Data: faceHeight,
-	})
-
-	// Check face size - more reasonable thresholds
-	imgArea := mat.Rows() * mat.Cols()
-	faceArea := faceWidth * faceHeight
-	faceAreaRatio := float64(faceArea) / float64(imgArea)
-
-	if faceAreaRatio < 0.005 { // Face should be at least 0.5% of image
-		result.Reason = "face_too_small"
-		return result
-	}
-
-	if faceAreaRatio > 0.6 { // Face shouldn't be more than 60% (allows for closer shots)
-		result.Reason = "face_too_large"
-		return result
-	}
-
-	// Check face aspect ratio - more lenient for real faces
-	// Handle edge cases where height might be very small or negative
-	if faceHeight <= 0 {
-		logger.Info("invalid face height detected", logger.LoggerOptions{
-			Key: "height", Data: faceHeight,
-		})
-		// If height is invalid, skip aspect ratio check but log it
-	} else {
-		aspectRatio := float64(faceWidth) / float64(faceHeight)
-		logger.Info("face aspect ratio", logger.LoggerOptions{
-			Key: "aspectRatio", Data: aspectRatio,
-		})
-		if aspectRatio < 0.5 || aspectRatio > 4.0 { // Much more lenient range for face proportions
-			result.Reason = "face_aspect_ratio_unusual"
-			return result
-		}
-	}
-
-	// All checks passed
-	result.IsValid = true
-	result.Reason = "valid"
-
-	logger.Info("image quality verification passed", logger.LoggerOptions{
-		Key: "faceCount", Data: result.FaceCount,
-	}, logger.LoggerOptions{
-		Key: "lighting", Data: result.Lighting,
-	}, logger.LoggerOptions{
-		Key: "brightness", Data: result.Brightness,
-	}, logger.LoggerOptions{
-		Key: "contrast", Data: result.Contrast,
-	})
 
 	return result
 }
 
-func TestImageQuality(imgURL *string) {
-	result := VerifyImageQuality(imgURL)
+// detectAllFaces detects all faces in an image and returns count
+func (fm *FaceMatcher) detectAllFaces(img gocv.Mat) (gocv.Mat, int) {
+	fm.mu.RLock()
+	defer fm.mu.RUnlock()
 
-	logger.Info("image quality test results", logger.LoggerOptions{
-		Key: "valid", Data: result.IsValid,
-	}, logger.LoggerOptions{
-		Key: "reason", Data: result.Reason,
-	}, logger.LoggerOptions{
-		Key: "faceCount", Data: result.FaceCount,
-	}, logger.LoggerOptions{
-		Key: "confidence", Data: result.Confidence,
-	}, logger.LoggerOptions{
-		Key: "lighting", Data: result.Lighting,
-	}, logger.LoggerOptions{
-		Key: "brightness", Data: result.Brightness,
-	}, logger.LoggerOptions{
-		Key: "contrast", Data: result.Contrast,
-	})
+	if !fm.initialized || !fm.modelsLoaded {
+		return gocv.Mat{}, 0
+	}
+
+	// Set input size for YuNet
+	imgSize := img.Size()
+	if len(imgSize) >= 2 {
+		fm.yunetDetector.SetInputSize(image.Pt(imgSize[1], imgSize[0])) // width, height
+	}
+
+	// Detect faces
+	faces := gocv.NewMat()
+	fm.yunetDetector.Detect(img, &faces)
+
+	return faces, faces.Rows()
+}
+
+// abs returns absolute value of integer
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
 }
