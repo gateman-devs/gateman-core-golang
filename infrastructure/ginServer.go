@@ -43,17 +43,26 @@ func (s *ginServer) Start() {
 	}
 	logger.Info("Performing face matcher liveness check...")
 
-	result := facematch.GlobalFaceMatcher.DetectAntiSpoof("https://res.cloudinary.com/themizehq/image/upload/v1750726459/Photo_on_24-06-2025_at_01.28.jpg")
-	fmt.Println("result")
-	fmt.Println("result")
-	fmt.Println("result")
-	fmt.Println("result")
-	fmt.Println("result")
-	fmt.Println("result")
-	fmt.Println("result")
-	fmt.Println("result")
-
-	fmt.Println(result)
+	// Test the FULL STRICT advanced anti-spoof method
+	advancedResult := facematch.GlobalFaceMatcher.DetectAdvancedAntiSpoof("https://res.cloudinary.com/themizehq/image/upload/v1750726459/Photo_on_24-06-2025_at_01.28.jpg")
+	fmt.Println("STRICT Advanced Anti-Spoof Result:")
+	fmt.Printf("Is Real: %t\n", advancedResult.IsReal)
+	fmt.Printf("Spoof Score: %.3f\n", advancedResult.SpoofScore)
+	fmt.Printf("Confidence: %.3f\n", advancedResult.Confidence)
+	fmt.Printf("Has Face: %t\n", advancedResult.HasFace)
+	fmt.Printf("Texture Score: %.3f\n", advancedResult.TextureScore)
+	fmt.Printf("Reflection Score: %.3f\n", advancedResult.ReflectionScore)
+	fmt.Printf("Color Consistency: %.3f\n", advancedResult.ColorConsistency)
+	fmt.Printf("Processing Time: %d ms\n", advancedResult.ProcessTime)
+	if len(advancedResult.SpoofReasons) > 0 {
+		fmt.Printf("Spoof Reasons: %v\n", advancedResult.SpoofReasons)
+	}
+	if advancedResult.Error != "" {
+		fmt.Printf("Error: %s\n", advancedResult.Error)
+		logger.Error(fmt.Sprintf("STRICT advanced anti-spoof check failed: %s", advancedResult.Error))
+	} else {
+		logger.Info("STRICT advanced anti-spoof check completed successfully")
+	}
 
 	if err != nil {
 		logger.Info("error loading env variables")
