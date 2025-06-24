@@ -28,12 +28,12 @@ func InitializeFaceMatcherService() error {
 	// Get model paths from environment variables with fallback defaults
 	yunetModelPath := os.Getenv("YUNET_MODEL_PATH")
 	if yunetModelPath == "" {
-		yunetModelPath = "./models/face_detection_yunet_2023mar.onnx"
+		yunetModelPath = "./infrastructure/facematch/models/yunet.onnx"
 	}
 
 	arcfaceModelPath := os.Getenv("ARCFACE_MODEL_PATH")
 	if arcfaceModelPath == "" {
-		arcfaceModelPath = "./models/face_recognition_sface_2021dec.onnx"
+		arcfaceModelPath = "./infrastructure/facematch/models/arcface.onnx"
 	}
 
 	// For anti-spoofing, we'll use a simpler approach without requiring a separate model
