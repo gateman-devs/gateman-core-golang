@@ -4,6 +4,7 @@ import (
 	"crypto/ecdh"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"gateman.io/application/controller/dto"
 	"gateman.io/application/interfaces"
 	"gateman.io/application/subscription"
+	"gateman.io/infrastructure/facematch"
 	"gateman.io/infrastructure/logger"
 	middlewares "gateman.io/infrastructure/middleware"
 	publicRouter "gateman.io/infrastructure/routes/ginRouter/web/publicAPI/v1"
@@ -31,6 +33,27 @@ type ginServer struct{}
 func (s *ginServer) Start() {
 	err := godotenv.Load()
 	startup.StartServices()
+
+	// Perform liveness check immediately after starting services
+
+	err = facematch.InitializeFaceMatcherService()
+	if err != nil {
+		log.Fatalf("Failed to initialize: %v", err)
+		return
+	}
+	logger.Info("Performing face matcher liveness check...")
+
+	result := facematch.GlobalFaceMatcher.DetectAntiSpoof("https://t4.ftcdn.net/jpg/01/24/84/83/360_F_124848388_cjx0VIF3BdR6yveB7ZguDSlEpM91tbrM.jpg")
+	fmt.Println("result")
+	fmt.Println("result")
+	fmt.Println("result")
+	fmt.Println("result")
+	fmt.Println("result")
+	fmt.Println("result")
+	fmt.Println("result")
+	fmt.Println("result")
+
+	fmt.Println(result)
 
 	if err != nil {
 		logger.Info("error loading env variables")
