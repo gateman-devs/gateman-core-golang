@@ -43,7 +43,7 @@ func (s *ginServer) Start() {
 	}
 	logger.Info("Performing face matcher liveness check...")
 
-	result := facematch.GlobalFaceMatcher.DetectAntiSpoof("https://t4.ftcdn.net/jpg/01/24/84/83/360_F_124848388_cjx0VIF3BdR6yveB7ZguDSlEpM91tbrM.jpg")
+	result := facematch.GlobalFaceMatcher.DetectAntiSpoof("https://res.cloudinary.com/themizehq/image/upload/v1750726459/Photo_on_24-06-2025_at_01.28.jpg")
 	fmt.Println("result")
 	fmt.Println("result")
 	fmt.Println("result")

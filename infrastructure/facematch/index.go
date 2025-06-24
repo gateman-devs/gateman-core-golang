@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"gateman.io/infrastructure/logger"
 	"gocv.io/x/gocv"
 )
 
@@ -546,42 +547,120 @@ func (fm *FaceMatcher) detectPrimaryFace(img gocv.Mat) (gocv.Mat, error) {
 		return gocv.Mat{}, errors.New("face matcher not properly initialized")
 	}
 
-	// Set input size for YuNet
+	// Get original image dimensions
 	imgSize := img.Size()
-	if len(imgSize) >= 2 {
-		fm.yunetDetector.SetInputSize(image.Pt(imgSize[1], imgSize[0])) // width, height
+	if len(imgSize) < 2 {
+		return gocv.Mat{}, errors.New("invalid image dimensions")
 	}
 
-	// Detect faces
-	faces := gocv.NewMat()
-	defer faces.Close()
+	origHeight, origWidth := imgSize[0], imgSize[1]
+	logger.Info(fmt.Sprintf("Original image: %dx%d (HxW)", origHeight, origWidth))
 
-	fm.yunetDetector.Detect(img, &faces)
+	// Calculate optimal size for YuNet detection
+	maxDim := 640.0 // Optimal size for YuNet
+	scale := 1.0
 
-	if faces.Rows() == 0 {
+	if origWidth > int(maxDim) || origHeight > int(maxDim) {
+		// Scale down large images
+		scale = maxDim / math.Max(float64(origWidth), float64(origHeight))
+		logger.Info(fmt.Sprintf("Large image detected, scaling down by %.2fx for detection", scale))
+	}
+
+	// Create working image for detection
+	var workingImg gocv.Mat
+	var workingWidth, workingHeight int
+
+	if scale < 1.0 {
+		// Scale down the image
+		workingWidth = int(float64(origWidth) * scale)
+		workingHeight = int(float64(origHeight) * scale)
+
+		workingImg = gocv.NewMat()
+		gocv.Resize(img, &workingImg, image.Pt(workingWidth, workingHeight), 0, 0, gocv.InterpolationLinear)
+		logger.Info(fmt.Sprintf("Scaled image for detection: %dx%d", workingHeight, workingWidth))
+	} else {
+		// Use original image
+		workingImg = img.Clone()
+		workingWidth = origWidth
+		workingHeight = origHeight
+		logger.Info("Using original size for detection")
+	}
+	defer workingImg.Close()
+
+	// Set YuNet input size
+	fm.yunetDetector.SetInputSize(image.Pt(workingWidth, workingHeight))
+
+	// Try detection with different confidence thresholds
+	thresholds := []float32{0.9, 0.5, 0.3, 0.1}
+	var faces gocv.Mat
+	found := false
+
+	for _, threshold := range thresholds {
+		fm.yunetDetector.SetScoreThreshold(threshold)
+		fm.yunetDetector.SetNMSThreshold(0.3)
+
+		faces = gocv.NewMat()
+		workingImg.CopyTo(&faces)
+		faces.Close()
+		faces = gocv.NewMat()
+
+		fm.yunetDetector.Detect(workingImg, &faces)
+		numFaces := faces.Rows()
+
+		logger.Info(fmt.Sprintf("Detection with threshold %.1f: found %d faces", threshold, numFaces))
+
+		if numFaces > 0 {
+			found = true
+			break
+		}
+		faces.Close()
+	}
+
+	if !found {
 		return gocv.Mat{}, errors.New("no faces detected in image")
 	}
 
-	// Get the primary (first/largest) face
+	defer faces.Close()
+
+	// Get the first face coordinates (from scaled image)
 	x := int(faces.GetFloatAt(0, 0))
 	y := int(faces.GetFloatAt(0, 1))
 	w := int(faces.GetFloatAt(0, 2))
 	h := int(faces.GetFloatAt(0, 3))
 
-	// Validate face coordinates
-	imgHeight, imgWidth := imgSize[0], imgSize[1]
-	if x < 0 || y < 0 || x+w > imgWidth || y+h > imgHeight {
+	logger.Info(fmt.Sprintf("Detected face in scaled image: x=%d, y=%d, w=%d, h=%d", x, y, w, h))
+
+	// Scale coordinates back to original image size
+	if scale < 1.0 {
+		invScale := 1.0 / scale
+		x = int(float64(x) * invScale)
+		y = int(float64(y) * invScale)
+		w = int(float64(w) * invScale)
+		h = int(float64(h) * invScale)
+		logger.Info(fmt.Sprintf("Scaled coordinates back to original: x=%d, y=%d, w=%d, h=%d", x, y, w, h))
+	}
+
+	// Validate coordinates against original image
+	if x < 0 || y < 0 || x+w > origWidth || y+h > origHeight {
+		logger.Info(fmt.Sprintf("Invalid coordinates after scaling: (%d,%d,%d,%d) vs image (%d,%d)", x, y, w, h, origWidth, origHeight))
 		return gocv.Mat{}, errors.New("detected face coordinates are invalid")
 	}
 
 	// Validate face size
 	if w < 20 || h < 20 {
+		logger.Info(fmt.Sprintf("Face too small: %dx%d pixels", w, h))
 		return gocv.Mat{}, errors.New("detected face is too small")
 	}
 
-	// Extract face region
+	// Extract face region from original image
 	faceRect := image.Rect(x, y, x+w, y+h)
 	faceMat := img.Region(faceRect)
+
+	// Calculate face size percentage of original image
+	faceArea := w * h
+	imageArea := origWidth * origHeight
+	facePercentage := (float64(faceArea) / float64(imageArea)) * 100
+	logger.Info(fmt.Sprintf("Extracted face: %dx%d (%.2f%% of original image)", w, h, facePercentage))
 
 	return faceMat, nil
 }
@@ -603,25 +682,161 @@ func (fm *FaceMatcher) loadImageFromURL(url string, result chan<- ImageData) {
 			return
 		}
 
+		// Check content type
+		contentType := resp.Header.Get("Content-Type")
+		log.Printf("Content-Type: %s", contentType)
+
 		imageBytes, err := io.ReadAll(resp.Body)
 		if err != nil {
 			result <- ImageData{Error: fmt.Errorf("failed to read image data: %w", err)}
 			return
 		}
 
-		mat, err := gocv.IMDecode(imageBytes, gocv.IMReadColor)
+		// Debug: Check what we downloaded
+		log.Printf("Downloaded %d bytes from URL: %s", len(imageBytes), url)
+		if len(imageBytes) == 0 {
+			result <- ImageData{Error: errors.New("downloaded image data is empty")}
+			return
+		}
+
+		// Check if data looks like an image by examining first few bytes
+		if len(imageBytes) < 8 {
+			result <- ImageData{Error: errors.New("downloaded data too small to be an image")}
+			return
+		}
+
+		// Check for common image signatures
+		imageType := detectImageType(imageBytes)
+		logger.Info(fmt.Sprintf("Detected image type: %s", imageType))
+
+		// Handle unsupported formats with specific error messages
+		if imageType == "HEIC" {
+			result <- ImageData{Error: errors.New("HEIC format not supported - please convert to JPEG or PNG. HEIC files are commonly from iPhones and need conversion before processing")}
+			return
+		}
+
+		if imageType == "unknown" {
+			logger.Info(fmt.Sprintf("Detected unknown image type: %s", imageType))
+		}
+
+		// Try different decoding approaches
+		mat, err := fm.tryDecodeImage(imageBytes)
 		if err != nil {
-			result <- ImageData{Error: fmt.Errorf("failed to decode image: %w", err)}
+			result <- ImageData{Error: fmt.Errorf("failed to decode image (%s): %w", imageType, err)}
 			return
 		}
 
 		if mat.Empty() {
-			result <- ImageData{Error: errors.New("decoded image is empty")}
+			result <- ImageData{Error: fmt.Errorf("decoded image is empty (type: %s, size: %d bytes)", imageType, len(imageBytes))}
 			return
 		}
 
+		log.Printf("Successfully decoded image: %dx%d", mat.Cols(), mat.Rows())
 		result <- ImageData{Mat: mat}
 	}()
+}
+
+// detectImageType detects the image type from the first few bytes
+func detectImageType(data []byte) string {
+	if len(data) < 8 {
+		return "unknown"
+	}
+
+	// JPEG
+	if data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF {
+		return "JPEG"
+	}
+
+	// PNG
+	if data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47 {
+		return "PNG"
+	}
+
+	// GIF
+	if string(data[0:3]) == "GIF" {
+		return "GIF"
+	}
+
+	// BMP
+	if data[0] == 0x42 && data[1] == 0x4D {
+		return "BMP"
+	}
+
+	// WEBP
+	if len(data) >= 12 && string(data[0:4]) == "RIFF" && string(data[8:12]) == "WEBP" {
+		return "WEBP"
+	}
+
+	// HEIC/HEIF detection (Apple's format)
+	if len(data) >= 12 {
+		// HEIC files start with specific patterns
+		if string(data[4:8]) == "ftyp" {
+			// Check for HEIC variants
+			if len(data) >= 16 {
+				brand := string(data[8:12])
+				if brand == "heic" || brand == "mif1" || brand == "msf1" || brand == "hevc" || brand == "heix" {
+					return "HEIC"
+				}
+			}
+		}
+	}
+
+	// Check if it looks like HTML (common issue with URLs)
+	if len(data) > 5 && (string(data[0:5]) == "<!DOC" || string(data[0:5]) == "<html" || string(data[0:4]) == "<HTM") {
+		return "HTML"
+	}
+
+	return "unknown"
+}
+
+// tryDecodeImage tries multiple approaches to decode the image
+func (fm *FaceMatcher) tryDecodeImage(imageBytes []byte) (gocv.Mat, error) {
+	// Try 1: Standard decode with color
+	mat, err := gocv.IMDecode(imageBytes, gocv.IMReadColor)
+	if err == nil && !mat.Empty() {
+		return mat, nil
+	}
+	if !mat.Empty() {
+		mat.Close()
+	}
+
+	// Try 2: Decode as grayscale then convert to color
+	mat, err = gocv.IMDecode(imageBytes, gocv.IMReadGrayScale)
+	if err == nil && !mat.Empty() {
+		colorMat := gocv.NewMat()
+		gocv.CvtColor(mat, &colorMat, gocv.ColorGrayToBGR)
+		mat.Close()
+		if !colorMat.Empty() {
+			return colorMat, nil
+		}
+		colorMat.Close()
+	}
+	if !mat.Empty() {
+		mat.Close()
+	}
+
+	// Try 3: Decode with unchanged flag
+	mat, err = gocv.IMDecode(imageBytes, gocv.IMReadUnchanged)
+	if err == nil && !mat.Empty() {
+		// Convert to BGR if needed
+		if mat.Channels() == 1 {
+			colorMat := gocv.NewMat()
+			gocv.CvtColor(mat, &colorMat, gocv.ColorGrayToBGR)
+			mat.Close()
+			return colorMat, nil
+		} else if mat.Channels() == 4 {
+			colorMat := gocv.NewMat()
+			gocv.CvtColor(mat, &colorMat, gocv.ColorBGRAToBGR)
+			mat.Close()
+			return colorMat, nil
+		}
+		return mat, nil
+	}
+	if !mat.Empty() {
+		mat.Close()
+	}
+
+	return gocv.Mat{}, fmt.Errorf("all decode attempts failed: %v", err)
 }
 
 // loadImageFromBase64 loads an image from base64 string using goroutine
@@ -630,10 +845,12 @@ func (fm *FaceMatcher) loadImageFromBase64(base64Data string, result chan<- Imag
 		defer close(result)
 
 		// Remove data URL prefix if present
+		originalData := base64Data
 		if strings.Contains(base64Data, ",") {
 			parts := strings.Split(base64Data, ",")
 			if len(parts) > 1 {
 				base64Data = parts[1]
+				log.Printf("Detected data URL format, extracted base64 part")
 			}
 		}
 
@@ -643,17 +860,58 @@ func (fm *FaceMatcher) loadImageFromBase64(base64Data string, result chan<- Imag
 			return
 		}
 
-		mat, err := gocv.IMDecode(imageBytes, gocv.IMReadColor)
+		// Debug: Check what we decoded
+		log.Printf("Decoded %d bytes from base64", len(imageBytes))
+		if len(imageBytes) == 0 {
+			result <- ImageData{Error: errors.New("decoded base64 data is empty")}
+			return
+		}
+
+		// Check if data looks like an image
+		if len(imageBytes) < 8 {
+			result <- ImageData{Error: errors.New("decoded data too small to be an image")}
+			return
+		}
+
+		// Check for common image signatures
+		imageType := detectImageType(imageBytes)
+		log.Printf("Base64 image type: %s", imageType)
+
+		// Handle unsupported formats with specific error messages
+		if imageType == "HEIC" {
+			result <- ImageData{Error: errors.New("HEIC format not supported - please convert to JPEG or PNG. HEIC files are commonly from iPhones and need conversion before processing")}
+			return
+		}
+
+		if imageType == "unknown" {
+			// Try to show first few bytes for debugging
+			preview := imageBytes
+			if len(preview) > 50 {
+				preview = preview[:50]
+			}
+			log.Printf("First 50 bytes: %v", preview)
+			log.Printf("First 50 bytes as string: %q", string(preview))
+
+			// Also show the original data URL prefix if present
+			if strings.Contains(originalData, ",") {
+				parts := strings.Split(originalData, ",")
+				log.Printf("Data URL prefix was: %s", parts[0])
+			}
+		}
+
+		// Try different decoding approaches
+		mat, err := fm.tryDecodeImage(imageBytes)
 		if err != nil {
-			result <- ImageData{Error: fmt.Errorf("failed to decode image: %w", err)}
+			result <- ImageData{Error: fmt.Errorf("failed to decode base64 image (%s): %w", imageType, err)}
 			return
 		}
 
 		if mat.Empty() {
-			result <- ImageData{Error: errors.New("decoded image is empty")}
+			result <- ImageData{Error: fmt.Errorf("decoded base64 image is empty (type: %s, size: %d bytes)", imageType, len(imageBytes))}
 			return
 		}
 
+		log.Printf("Successfully decoded base64 image: %dx%d", mat.Cols(), mat.Rows())
 		result <- ImageData{Mat: mat}
 	}()
 }
