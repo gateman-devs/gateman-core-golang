@@ -6,3 +6,6 @@ dump.rdb
 *.mmdb
 *.ps1
 main
+.models
+# ML Models - downloaded via script
+infrastructure/facematch/models/
