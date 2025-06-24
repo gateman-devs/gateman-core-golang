@@ -8,4 +8,4 @@ dump.rdb
 main
 .models
 # ML Models - downloaded via script
-infrastructure/facematch/models/
+infrastructure/facematch/models/*.onnx
