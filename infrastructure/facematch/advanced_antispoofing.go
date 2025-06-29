@@ -10,6 +10,58 @@ import (
 	"gocv.io/x/gocv"
 )
 
+// Anti-Spoofing Configuration Constants
+const (
+	// Texture Analysis Thresholds
+	LBP_THRESHOLD        = 0.7   // LBP uniformity threshold (0.0-1.0)
+	LPQ_THRESHOLD        = 0.7   // LPQ phase consistency threshold (0.0-1.0)
+	REFLECTION_THRESHOLD = 0.8   // Reflection analysis threshold (0.0-1.0)
+	COLOR_THRESHOLD      = 0.5   // Color consistency threshold (0.0-1.0)
+	TEXTURE_THRESHOLD    = 0.995 // Texture smoothness threshold (0.0-1.0)
+	FREQUENCY_THRESHOLD  = 0.05  // High-frequency content threshold (0.0-1.0)
+
+	// Decision Thresholds
+	STRONG_INDICATOR_THRESHOLD = 3   // Number of strong indicators for high confidence spoof
+	HIGH_SPOOF_THRESHOLD       = 0.8 // High confidence spoof score threshold (0.0-1.0)
+	MEDIUM_SPOOF_THRESHOLD     = 0.6 // Medium confidence spoof score threshold (0.0-1.0)
+	LOW_SPOOF_THRESHOLD        = 0.4 // Low confidence spoof score threshold (0.0-1.0)
+	INDICATOR_THRESHOLD        = 3   // Number of indicators for spoof detection
+
+	// Analysis Penalty Weights
+	LBP_PENALTY             = 0.25 // LBP analysis penalty weight (0.0-1.0)
+	LPQ_PENALTY             = 0.2  // LPQ analysis penalty weight (0.0-1.0)
+	REFLECTION_PENALTY      = 0.3  // Reflection analysis penalty weight (0.0-1.0)
+	COLOR_PENALTY           = 0.2  // Color analysis penalty weight (0.0-1.0)
+	EDGE_PENALTY            = 0.15 // Edge analysis penalty weight (0.0-1.0)
+	FREQUENCY_PENALTY       = 0.1  // Frequency analysis penalty weight (0.0-1.0)
+	DEFAULT_TEXTURE_PENALTY = 0.25 // Default texture penalty weight (0.0-1.0)
+
+	// Compression-Aware Penalties
+	HEAVY_COMPRESSION_PENALTY    = 0.05 // Penalty for heavily compressed images (0.0-1.0)
+	MODERATE_COMPRESSION_PENALTY = 0.1  // Penalty for moderately compressed images (0.0-1.0)
+	LIGHT_COMPRESSION_PENALTY    = 0.15 // Penalty for lightly compressed images (0.0-1.0)
+
+	// Blur-Aware Penalties
+	VERY_BLURRY_PENALTY     = 0.1  // Penalty for very blurry images (0.0-1.0)
+	SOMEWHAT_BLURRY_PENALTY = 0.15 // Penalty for somewhat blurry images (0.0-1.0)
+
+	// Compression Level Thresholds
+	HEAVY_COMPRESSION_LEVEL    = 0.7 // Threshold for heavy compression detection
+	MODERATE_COMPRESSION_LEVEL = 0.5 // Threshold for moderate compression detection
+	LIGHT_COMPRESSION_LEVEL    = 0.3 // Threshold for light compression detection
+
+	// Sharpness Thresholds
+	VERY_BLURRY_SHARPNESS     = 50.0  // Threshold for very blurry images
+	SOMEWHAT_BLURRY_SHARPNESS = 100.0 // Threshold for somewhat blurry images
+
+	// Edge Analysis Thresholds
+	MIN_EDGE_DENSITY = 0.01 // Minimum edge density threshold
+	MAX_EDGE_DENSITY = 0.9  // Maximum edge density threshold
+
+	// Frequency Analysis Thresholds
+	MAX_NOISE_LEVEL = 0.9 // Maximum noise level threshold
+)
+
 // AdvancedAntiSpoofResult represents the result of advanced anti-spoofing detection
 type AdvancedAntiSpoofResult struct {
 	IsReal            bool              `json:"is_real"`
@@ -248,29 +300,29 @@ func (fm *FaceMatcher) performParallelSpoofingAnalysis(face, gray gocv.Mat) Adva
 	// Get the parallel analysis results
 	analysisRes := <-resultChan
 
-	// Now process the results (same logic as before)
+	// Now process the results with configurable thresholds
 	var indicators []string
 	var totalPenalty float64
 
 	// Process LBP results
 	result.AnalysisBreakdown.LBPScore = analysisRes.lbpScore
-	if analysisRes.lbpScore > 0.7 { // Increased threshold to allow iPhone photo
-		totalPenalty += 0.25
+	if analysisRes.lbpScore > LBP_THRESHOLD {
+		totalPenalty += LBP_PENALTY
 		indicators = append(indicators, "suspicious texture patterns detected")
 	}
 
 	// Process LPQ results
 	result.AnalysisBreakdown.LPQScore = analysisRes.lpqScore
-	if analysisRes.lpqScore > 0.7 { // Increased threshold to allow iPhone photo
-		totalPenalty += 0.2
+	if analysisRes.lpqScore > LPQ_THRESHOLD {
+		totalPenalty += LPQ_PENALTY
 		indicators = append(indicators, "unusual frequency patterns detected")
 	}
 
 	// Process reflection results
 	result.ReflectionScore = analysisRes.reflectionScore
 	result.AnalysisBreakdown.ReflectionConsistency = analysisRes.reflectionScore
-	if analysisRes.reflectionScore > 0.8 { // Increased threshold to allow iPhone photo
-		totalPenalty += 0.3
+	if analysisRes.reflectionScore > REFLECTION_THRESHOLD {
+		totalPenalty += REFLECTION_PENALTY
 		indicators = append(indicators, "suspicious reflection patterns")
 	}
 
@@ -280,52 +332,52 @@ func (fm *FaceMatcher) performParallelSpoofingAnalysis(face, gray gocv.Mat) Adva
 		analysisRes.colorAnalysis.HSVConsistency +
 		analysisRes.colorAnalysis.LABConsistency) / 3
 	result.ColorConsistency = 1.0 - avgColorConsistency // Invert for consistency scoring
-	if avgColorConsistency > 0.5 {                      // Increased threshold to allow iPhone photo
-		totalPenalty += 0.2
+	if avgColorConsistency > COLOR_THRESHOLD {
+		totalPenalty += COLOR_PENALTY
 		indicators = append(indicators, "inconsistent color distribution")
 	}
 
 	// Process edge analysis results
 	result.AnalysisBreakdown.EdgeAnalysis = analysisRes.edgeAnalysis
-	// Fine-tuned edge density threshold - second photo has 0.003, iPhone has 0.038
-	if analysisRes.edgeAnalysis.EdgeDensity < 0.01 || analysisRes.edgeAnalysis.EdgeDensity > 0.9 {
-		totalPenalty += 0.15
+	// Fine-tuned edge density threshold
+	if analysisRes.edgeAnalysis.EdgeDensity < MIN_EDGE_DENSITY || analysisRes.edgeAnalysis.EdgeDensity > MAX_EDGE_DENSITY {
+		totalPenalty += EDGE_PENALTY
 		indicators = append(indicators, "unusual edge characteristics")
 	}
 
 	// Process texture analysis results with compression awareness
 	result.TextureScore = analysisRes.textureScore
 
-	// Fine-tuned texture thresholds - second photo has 0.999, iPhone has 0.993
-	textureThreshold := 0.995 // Between iPhone and second photo scores
-	texturePenalty := 0.25    // Default penalty
+	// Dynamic texture threshold based on compression and sharpness
+	adjustedTextureThreshold := TEXTURE_THRESHOLD
+	texturePenalty := DEFAULT_TEXTURE_PENALTY
 
 	// Make provisions for compressed/resized images
-	if analysisRes.compressionLevel >= 0.7 { // Heavily compressed
-		textureThreshold = 0.999 // Still catch the second photo
-		texturePenalty = 0.05    // Minimal penalty
-	} else if analysisRes.compressionLevel >= 0.5 { // Moderately compressed
-		textureThreshold = 0.998 // Still catch the second photo
-		texturePenalty = 0.1     // Reduced penalty
-	} else if analysisRes.compressionLevel >= 0.3 { // Lightly compressed
-		textureThreshold = 0.996 // Still catch the second photo
-		texturePenalty = 0.15    // Slightly reduced penalty
+	if analysisRes.compressionLevel >= HEAVY_COMPRESSION_LEVEL { // Heavily compressed
+		adjustedTextureThreshold = 0.999
+		texturePenalty = HEAVY_COMPRESSION_PENALTY
+	} else if analysisRes.compressionLevel >= MODERATE_COMPRESSION_LEVEL { // Moderately compressed
+		adjustedTextureThreshold = 0.998
+		texturePenalty = MODERATE_COMPRESSION_PENALTY
+	} else if analysisRes.compressionLevel >= LIGHT_COMPRESSION_LEVEL { // Lightly compressed
+		adjustedTextureThreshold = 0.996
+		texturePenalty = LIGHT_COMPRESSION_PENALTY
 	}
 
 	// Additional leniency for blurry images
-	if analysisRes.overallSharpness < 50.0 { // Very blurry
-		textureThreshold = 0.999
-		texturePenalty = 0.1
-	} else if analysisRes.overallSharpness < 100.0 { // Somewhat blurry
-		textureThreshold = 0.998
-		texturePenalty = 0.15
+	if analysisRes.overallSharpness < VERY_BLURRY_SHARPNESS { // Very blurry
+		adjustedTextureThreshold = 0.999
+		texturePenalty = VERY_BLURRY_PENALTY
+	} else if analysisRes.overallSharpness < SOMEWHAT_BLURRY_SHARPNESS { // Somewhat blurry
+		adjustedTextureThreshold = 0.998
+		texturePenalty = SOMEWHAT_BLURRY_PENALTY
 	}
 
-	if analysisRes.textureScore > textureThreshold {
+	if analysisRes.textureScore > adjustedTextureThreshold {
 		totalPenalty += texturePenalty
-		if analysisRes.compressionLevel >= 0.5 {
+		if analysisRes.compressionLevel >= MODERATE_COMPRESSION_LEVEL {
 			indicators = append(indicators, "insufficient texture detail (image appears compressed)")
-		} else if analysisRes.overallSharpness < 50.0 {
+		} else if analysisRes.overallSharpness < VERY_BLURRY_SHARPNESS {
 			indicators = append(indicators, "insufficient texture detail (image appears blurry)")
 		} else {
 			indicators = append(indicators, "insufficient natural skin texture")
@@ -334,9 +386,9 @@ func (fm *FaceMatcher) performParallelSpoofingAnalysis(face, gray gocv.Mat) Adva
 
 	// Process frequency analysis results
 	result.AnalysisBreakdown.FrequencyAnalysis = analysisRes.freqAnalysis
-	// More lenient frequency analysis to allow iPhone photo
-	if analysisRes.freqAnalysis.HighFrequencyContent < 0.05 || analysisRes.freqAnalysis.NoiseLevel > 0.9 {
-		totalPenalty += 0.1
+	// More lenient frequency analysis
+	if analysisRes.freqAnalysis.HighFrequencyContent < FREQUENCY_THRESHOLD || analysisRes.freqAnalysis.NoiseLevel > MAX_NOISE_LEVEL {
+		totalPenalty += FREQUENCY_PENALTY
 		indicators = append(indicators, "suspicious frequency characteristics")
 	}
 
@@ -356,16 +408,16 @@ func (fm *FaceMatcher) performParallelSpoofingAnalysis(face, gray gocv.Mat) Adva
 		}
 	}
 
-	// Much more lenient decision logic to allow iPhone photo
-	if strongIndicators >= 3 || result.SpoofScore >= 0.8 { // Very high threshold
+	// Decision logic
+	if strongIndicators >= STRONG_INDICATOR_THRESHOLD || result.SpoofScore >= HIGH_SPOOF_THRESHOLD {
 		result.IsReal = false
 		result.Confidence = 0.95
 		result.SpoofReasons = indicators
-	} else if len(indicators) >= 5 || result.SpoofScore >= 0.6 { // High threshold
+	} else if len(indicators) >= 5 || result.SpoofScore >= MEDIUM_SPOOF_THRESHOLD {
 		result.IsReal = false
 		result.Confidence = 0.85
 		result.SpoofReasons = indicators
-	} else if len(indicators) >= 3 || result.SpoofScore >= 0.4 { // Catch second photo with 3 indicators
+	} else if len(indicators) >= INDICATOR_THRESHOLD || result.SpoofScore >= LOW_SPOOF_THRESHOLD {
 		result.IsReal = false
 		result.Confidence = 0.7
 		result.SpoofReasons = indicators

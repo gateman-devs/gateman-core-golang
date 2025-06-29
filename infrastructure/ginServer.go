@@ -44,7 +44,7 @@ func (s *ginServer) Start() {
 	logger.Info("Performing face matcher liveness check...")
 
 	// Test the FULL STRICT advanced anti-spoof method
-	advancedResult := facematch.GlobalFaceMatcher.DetectAdvancedAntiSpoof("https://res.cloudinary.com/themizehq/image/upload/v1750726459/Photo_on_24-06-2025_at_01.28.jpg")
+	advancedResult := facematch.GlobalFaceMatcher.DetectAdvancedAntiSpoof("https://res.cloudinary.com/themizehq/image/upload/v1750725491/IMG_5680.jpg")
 	fmt.Println("STRICT Advanced Anti-Spoof Result:")
 	fmt.Printf("Is Real: %t\n", advancedResult.IsReal)
 	fmt.Printf("Spoof Score: %.3f\n", advancedResult.SpoofScore)

@@ -17,6 +17,41 @@ import (
 	"gocv.io/x/gocv"
 )
 
+// Face Matcher Configuration Constants
+const (
+	// Model Paths
+	DEFAULT_YUNET_MODEL_PATH   = "./models/yunet.onnx"
+	DEFAULT_ARCFACE_MODEL_PATH = "./models/arcface.onnx"
+
+	// Image Processing Constants
+	MIN_IMAGE_DIMENSION     = 50
+	MAX_IMAGE_DIMENSION     = 4000
+	MIN_ASPECT_RATIO        = 0.3
+	MAX_ASPECT_RATIO        = 3.0
+	MIN_FACE_SIZE           = 20
+	MAX_DETECTION_DIMENSION = 640.0
+
+	// Face Detection Thresholds
+	HIGH_CONFIDENCE_THRESHOLD   = 0.9
+	MEDIUM_CONFIDENCE_THRESHOLD = 0.5
+	LOW_CONFIDENCE_THRESHOLD    = 0.3
+	MIN_CONFIDENCE_THRESHOLD    = 0.1
+	NMS_THRESHOLD               = 0.3
+
+	// Image Quality Constants
+	MIN_RESOLUTION             = 200
+	RECOMMENDED_MIN_RESOLUTION = 400
+	MIN_FACE_SIZE_PERCENT      = 5.0
+	MAX_FACE_SIZE_PERCENT      = 80.0
+	OPTIMAL_MIN_FACE_SIZE      = 15.0
+	OPTIMAL_MAX_FACE_SIZE      = 60.0
+	MAX_FACE_OFFSET_PERCENT    = 30.0
+	BLUR_THRESHOLD             = 85.0
+	MIN_BRIGHTNESS             = 50
+	MAX_BRIGHTNESS             = 200
+	QUALITY_SCORE_THRESHOLD    = 0.7
+)
+
 // Global FaceMatcher instance
 var GlobalFaceMatcher *FaceMatcher
 
@@ -27,17 +62,13 @@ func InitializeFaceMatcherService() error {
 	// Get model paths from environment variables with fallback defaults
 	yunetModelPath := os.Getenv("YUNET_MODEL_PATH")
 	if yunetModelPath == "" {
-		yunetModelPath = "./models/yunet.onnx"
+		yunetModelPath = DEFAULT_YUNET_MODEL_PATH
 	}
 
 	arcfaceModelPath := os.Getenv("ARCFACE_MODEL_PATH")
 	if arcfaceModelPath == "" {
-		arcfaceModelPath = "./models/arcface.onnx"
+		arcfaceModelPath = DEFAULT_ARCFACE_MODEL_PATH
 	}
-
-	// For anti-spoofing, we'll use a simpler approach without requiring a separate model
-	// since the face_anti_spoofing.onnx doesn't exist in the models directory
-	// We'll implement rule-based anti-spoofing detection using image analysis
 
 	// Check if required model files exist
 	if _, err := os.Stat(yunetModelPath); os.IsNotExist(err) {
@@ -48,54 +79,6 @@ func InitializeFaceMatcherService() error {
 	}
 
 	return GlobalFaceMatcher.Initialize(yunetModelPath, arcfaceModelPath)
-}
-
-// TestLivenessCheck performs a liveness check to verify the service is working
-// input can be either a URL (starting with http:// or https://) or a base64 encoded image
-// if input is empty, uses a default test image
-func TestLivenessCheck(input ...string) error {
-	if GlobalFaceMatcher == nil {
-		return errors.New("global face matcher not initialized")
-	}
-
-	var testImage string
-	if len(input) > 0 && input[0] != "" {
-		testImage = input[0]
-	} else {
-		// Default test image - a simple 1x1 pixel image for basic functionality test
-		testImage = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-	}
-	InitializeFaceMatcherService()
-	result := GlobalFaceMatcher.DetectAntiSpoof(testImage)
-	if result.Error != "" {
-		return fmt.Errorf("face matcher liveness check failed: %s", result.Error)
-	}
-
-	return nil
-}
-
-// TestImageQuality tests the image quality verification functionality
-func TestImageQuality(input string) (ImageQualityResult, error) {
-	if GlobalFaceMatcher == nil {
-		return ImageQualityResult{}, errors.New("global face matcher not initialized")
-	}
-
-	result := GlobalFaceMatcher.VerifyImageQuality(input)
-	return result, nil
-}
-
-// TestFaceComparison tests face comparison functionality between two images
-func TestFaceComparison(input1, input2 string, threshold float64) (CompareResult, error) {
-	if GlobalFaceMatcher == nil {
-		return CompareResult{}, errors.New("global face matcher not initialized")
-	}
-
-	if threshold == 0 {
-		threshold = 0.8 // Default threshold
-	}
-
-	result := GlobalFaceMatcher.Compare(input1, input2, threshold)
-	return result, nil
 }
 
 // FaceMatcher handles face detection and comparison
@@ -259,20 +242,20 @@ func (fm *FaceMatcher) loadImageWithValidation(input string) (gocv.Mat, error) {
 	height, width := size[0], size[1]
 
 	// Check minimum dimensions
-	if width < 50 || height < 50 {
+	if width < MIN_IMAGE_DIMENSION || height < MIN_IMAGE_DIMENSION {
 		img.Close()
-		return gocv.Mat{}, fmt.Errorf("image too small (%dx%d), minimum required: 50x50", width, height)
+		return gocv.Mat{}, fmt.Errorf("image too small (%dx%d), minimum required: %dx%d", width, height, MIN_IMAGE_DIMENSION, MIN_IMAGE_DIMENSION)
 	}
 
 	// Check maximum dimensions (prevent DoS attacks)
-	if width > 4000 || height > 4000 {
+	if width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION {
 		img.Close()
-		return gocv.Mat{}, fmt.Errorf("image too large (%dx%d), maximum allowed: 4000x4000", width, height)
+		return gocv.Mat{}, fmt.Errorf("image too large (%dx%d), maximum allowed: %dx%d", width, height, MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION)
 	}
 
 	// Check aspect ratio (prevent extremely distorted images)
 	aspectRatio := float64(width) / float64(height)
-	if aspectRatio < 0.3 || aspectRatio > 3.0 {
+	if aspectRatio < MIN_ASPECT_RATIO || aspectRatio > MAX_ASPECT_RATIO {
 		img.Close()
 		return gocv.Mat{}, fmt.Errorf("invalid aspect ratio: %.2f", aspectRatio)
 	}
@@ -299,7 +282,7 @@ func (fm *FaceMatcher) detectPrimaryFace(img gocv.Mat) (gocv.Mat, error) {
 	logger.Info(fmt.Sprintf("Original image: %dx%d (HxW)", origHeight, origWidth))
 
 	// Calculate optimal size for YuNet detection
-	maxDim := 640.0 // Optimal size for YuNet
+	maxDim := MAX_DETECTION_DIMENSION // Optimal size for YuNet
 	scale := 1.0
 
 	if origWidth > int(maxDim) || origHeight > int(maxDim) {
@@ -333,13 +316,13 @@ func (fm *FaceMatcher) detectPrimaryFace(img gocv.Mat) (gocv.Mat, error) {
 	fm.yunetDetector.SetInputSize(image.Pt(workingWidth, workingHeight))
 
 	// Try detection with different confidence thresholds
-	thresholds := []float32{0.9, 0.5, 0.3, 0.1}
+	thresholds := []float32{HIGH_CONFIDENCE_THRESHOLD, MEDIUM_CONFIDENCE_THRESHOLD, LOW_CONFIDENCE_THRESHOLD, MIN_CONFIDENCE_THRESHOLD}
 	var faces gocv.Mat
 	found := false
 
 	for _, threshold := range thresholds {
 		fm.yunetDetector.SetScoreThreshold(threshold)
-		fm.yunetDetector.SetNMSThreshold(0.3)
+		fm.yunetDetector.SetNMSThreshold(NMS_THRESHOLD)
 
 		faces = gocv.NewMat()
 		workingImg.CopyTo(&faces)
@@ -389,7 +372,7 @@ func (fm *FaceMatcher) detectPrimaryFace(img gocv.Mat) (gocv.Mat, error) {
 	}
 
 	// Validate face size
-	if w < 20 || h < 20 {
+	if w < MIN_FACE_SIZE || h < MIN_FACE_SIZE {
 		logger.Info(fmt.Sprintf("Face too small: %dx%d pixels", w, h))
 		return gocv.Mat{}, errors.New("detected face is too small")
 	}
@@ -720,10 +703,9 @@ func (fm *FaceMatcher) VerifyImageQuality(input string) ImageQualityResult {
 	result.ImageResolution = fmt.Sprintf("%dx%d", width, height)
 
 	// Check minimum resolution
-	minResolution := 200
-	if width < minResolution || height < minResolution {
+	if width < MIN_RESOLUTION || height < MIN_RESOLUTION {
 		result.Issues = append(result.Issues, fmt.Sprintf("Low resolution (%dx%d)", width, height))
-		result.Recommendations = append(result.Recommendations, "Use higher resolution image (minimum 400x400)")
+		result.Recommendations = append(result.Recommendations, fmt.Sprintf("Use higher resolution image (minimum %dx%d)", RECOMMENDED_MIN_RESOLUTION, RECOMMENDED_MIN_RESOLUTION))
 	}
 
 	// Detect faces
@@ -765,10 +747,10 @@ func (fm *FaceMatcher) VerifyImageQuality(input string) ImageQualityResult {
 	result.FaceSize = facePercentage
 
 	// Check face size requirements
-	minFaceSize := 5.0     // 5% of image
-	maxFaceSize := 80.0    // 80% of image
-	optimalMinSize := 15.0 // 15% is better
-	optimalMaxSize := 60.0 // 60% is better
+	minFaceSize := MIN_FACE_SIZE_PERCENT    // 5% of image
+	maxFaceSize := MAX_FACE_SIZE_PERCENT    // 80% of image
+	optimalMinSize := OPTIMAL_MIN_FACE_SIZE // 15% is better
+	optimalMaxSize := OPTIMAL_MAX_FACE_SIZE // 60% is better
 
 	if facePercentage < minFaceSize {
 		result.Issues = append(result.Issues, fmt.Sprintf("Face too small (%.1f%% of image)", facePercentage))
@@ -787,7 +769,7 @@ func (fm *FaceMatcher) VerifyImageQuality(input string) ImageQualityResult {
 	offsetX := float64(abs(faceCenterX-imageCenterX)) / float64(width) * 100
 	offsetY := float64(abs(faceCenterY-imageCenterY)) / float64(height) * 100
 
-	if offsetX > 30 || offsetY > 30 {
+	if offsetX > MAX_FACE_OFFSET_PERCENT || offsetY > MAX_FACE_OFFSET_PERCENT {
 		result.Issues = append(result.Issues, "Face not well-centered in image")
 		result.Recommendations = append(result.Recommendations, "Center the face in the image")
 	}
@@ -816,7 +798,7 @@ func (fm *FaceMatcher) VerifyImageQuality(input string) ImageQualityResult {
 	variance := stddevMat.GetDoubleAt(0, 0) * stddevMat.GetDoubleAt(0, 0)
 
 	// Blur detection threshold (adjust based on testing)
-	blurThreshold := 85.0
+	blurThreshold := BLUR_THRESHOLD
 	if variance < blurThreshold {
 		result.Issues = append(result.Issues, "Image appears blurry or out of focus")
 		result.Recommendations = append(result.Recommendations, "Ensure camera is focused and image is sharp")
@@ -831,10 +813,10 @@ func (fm *FaceMatcher) VerifyImageQuality(input string) ImageQualityResult {
 	gocv.MeanStdDev(gray, &brightnessMean, &brightnessStddev)
 	grayMean := brightnessMean.GetDoubleAt(0, 0)
 
-	if grayMean < 50 {
+	if grayMean < MIN_BRIGHTNESS {
 		result.Issues = append(result.Issues, "Image is too dark")
 		result.Recommendations = append(result.Recommendations, "Improve lighting conditions")
-	} else if grayMean > 200 {
+	} else if grayMean > MAX_BRIGHTNESS {
 		result.Issues = append(result.Issues, "Image is overexposed")
 		result.Recommendations = append(result.Recommendations, "Reduce lighting or exposure")
 	}
@@ -855,10 +837,10 @@ func (fm *FaceMatcher) VerifyImageQuality(input string) ImageQualityResult {
 	if variance < blurThreshold {
 		score -= 0.3
 	}
-	if grayMean < 50 || grayMean > 200 {
+	if grayMean < MIN_BRIGHTNESS || grayMean > MAX_BRIGHTNESS {
 		score -= 0.2
 	}
-	if width < 400 || height < 400 {
+	if width < RECOMMENDED_MIN_RESOLUTION || height < RECOMMENDED_MIN_RESOLUTION {
 		score -= 0.2
 	}
 
@@ -870,7 +852,7 @@ func (fm *FaceMatcher) VerifyImageQuality(input string) ImageQualityResult {
 	result.QualityScore = score
 
 	// Determine if image is good quality (threshold: 0.7)
-	result.IsGoodQuality = score >= 0.7 && len(result.Issues) <= 1
+	result.IsGoodQuality = score >= QUALITY_SCORE_THRESHOLD && len(result.Issues) <= 1
 
 	if result.IsGoodQuality {
 		result.Recommendations = append(result.Recommendations, "Image quality is suitable for biometric matching")
