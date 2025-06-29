@@ -6,4 +6,5 @@ dump.rdb
 *.mmdb
 *.ps1
 main
-infrastructure/facematch/models/*.onnx
+# Model files
+models/*.onnx

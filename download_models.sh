@@ -11,7 +11,7 @@ NC='\033[0m' # No Color
 
 # Get the directory where this script is located and set models directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MODELS_DIR="$SCRIPT_DIR/infrastructure/facematch/models"
+MODELS_DIR="$SCRIPT_DIR/models"
 
 # Function to print colored output
 print_status() {
