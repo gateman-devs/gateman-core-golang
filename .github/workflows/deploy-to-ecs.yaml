@@ -1,0 +1,105 @@
+name: Docker image build, publish and deploy to Amazon ECS
+on:
+  workflow_dispatch:
+    inputs:
+      path_to_dockerfile:
+        description: Path to the dockerfile (default = 'Dockerfile')
+        default: "Dockerfile"
+        type: string
+      docker_build_dir:
+        description: Docker build directory (default = '.')
+        default: "."
+        type: string
+      aws_account_id:
+        description: AWS Account ID
+        type: string
+        default: "848153449302"
+        required: true
+      aws_region:
+        description: Target AWS Region
+        default: "eu-west-1"
+        type: string
+        required: true
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    env:
+      ECR_REPOSITORY: gateman-ecr-registry
+      ECS_SERVICE: gateman-backend-ecs-service-prod
+      ECS_CLUSTER: gateman-ecs-cluster-prod
+      CONTAINER_NAME: gateman-backend-prod
+      TASK_DEFINITION: gateman-backend-prod-ecs-task
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@0e613a0980cbf65ed5b322eb7a1e075d28913a83
+        with:
+          role-to-assume: arn:aws:iam::${{ inputs.aws_account_id }}:role/gateman-deployment-role
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@62f4f872db3836360b72999f4b87f1ff13310f3a
+        with:
+          registries: ${{ inputs.aws_account_id }}
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REPOSITORY: gateman-ecr-registry
+          ECS_SERVICE: gateman-backend-ecs-service-prod
+          ECS_CLUSTER: gateman-ecs-cluster-prod
+          CONTAINER_NAME: gateman-backend-prod
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: gateman-backend-prod-latest
+          TASK_DEFINITION: gateman-backend-prod-ecs-task
+        run: |
+          docker build "${{ inputs.docker_build_dir }}" \
+            -f "${{ inputs.path_to_dockerfile }}" \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Download task definition 
+        run: |
+          aws ecs describe-task-definition --task-definition ${{ env.TASK_DEFINITION }} --query taskDefinition > ${{ env.TASK_DEFINITION }}.json
+
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        env:
+          CONTAINER_NAME: gateman-backend-prod
+          TASK_DEFINITION: gateman-backend-prod-ecs-task
+        uses: aws-actions/amazon-ecs-render-task-definition@c804dfbdd57f713b6c079302a4c01db7017a36fc
+        with:
+          task-definition: ${{ env.TASK_DEFINITION }}.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.build-image.outputs.image }}
+
+      - name: Deploy Amazon ECS task definition
+        env:
+          ECS_SERVICE: gateman-backend-ecs-service-prod
+          ECS_CLUSTER: gateman-ecs-cluster-prod
+        uses: aws-actions/amazon-ecs-deploy-task-definition@df9643053eda01f169e64a0e60233aacca83799a
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+          deployment-configuration: |
+            {
+              "deploymentCircuitBreaker": {
+                "enable": true,
+                "rollback": true
+              },
+              "maximumPercent": 200,
+              "minimumHealthyPercent": 100
+            }
+          
