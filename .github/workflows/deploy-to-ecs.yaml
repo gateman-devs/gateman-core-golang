@@ -40,14 +40,14 @@ jobs:
         uses: actions/checkout@v4
       
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@0e613a0980cbf65ed5b322eb7a1e075d28913a83
+        uses: aws-actions/configure-aws-credentials@1c58a3a8518e8759bf075b76b750d4f2df264fcd
         with:
           role-to-assume: arn:aws:iam::${{ inputs.aws_account_id }}:role/gateman-deployment-role
           aws-region: ${{ inputs.aws_region }}
 
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@62f4f872db3836360b72999f4b87f1ff13310f3a
+        uses: aws-actions/amazon-ecr-login@1c58a3a8518e8759bf075b76b750d4f2df264fcd
         with:
           registries: ${{ inputs.aws_account_id }}
 
@@ -77,7 +77,7 @@ jobs:
         env:
           CONTAINER_NAME: gateman-backend-prod
           TASK_DEFINITION: gateman-backend-prod-ecs-task
-        uses: aws-actions/amazon-ecs-render-task-definition@c804dfbdd57f713b6c079302a4c01db7017a36fc
+        uses: aws-actions/amazon-ecs-render-task-definition@1c58a3a8518e8759bf075b76b750d4f2df264fcd
         with:
           task-definition: ${{ env.TASK_DEFINITION }}.json
           container-name: ${{ env.CONTAINER_NAME }}
@@ -87,7 +87,7 @@ jobs:
         env:
           ECS_SERVICE: gateman-backend-ecs-service-prod
           ECS_CLUSTER: gateman-ecs-cluster-prod
-        uses: aws-actions/amazon-ecs-deploy-task-definition@df9643053eda01f169e64a0e60233aacca83799a
+        uses: aws-actions/amazon-ecs-deploy-task-definition@1c58a3a8518e8759bf075b76b750d4f2df264fcd
         with:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
           service: ${{ env.ECS_SERVICE }}
