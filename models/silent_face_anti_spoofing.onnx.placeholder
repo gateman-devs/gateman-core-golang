@@ -1,0 +1,3 @@
+# This is a placeholder for the Silent Face Anti-Spoofing model
+# The system will use advanced computer vision techniques for liveness detection
+# To use the original MiniFASNet model, convert it to ONNX and place it here

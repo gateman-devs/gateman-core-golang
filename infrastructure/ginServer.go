@@ -15,6 +15,7 @@ import (
 	"gateman.io/application/controller/dto"
 	"gateman.io/application/interfaces"
 	"gateman.io/application/subscription"
+	"gateman.io/infrastructure/biometric"
 	"gateman.io/infrastructure/facematch"
 	"gateman.io/infrastructure/logger"
 	middlewares "gateman.io/infrastructure/middleware"
@@ -43,30 +44,22 @@ func (s *ginServer) Start() {
 	}
 	logger.Info("Performing face matcher liveness check...")
 
-	// Test the FULL STRICT advanced anti-spoof method
-	advancedResult := facematch.GlobalFaceMatcher.DetectAdvancedAntiSpoof("https://res.cloudinary.com/themizehq/image/upload/v1750725491/IMG_5680.jpg")
-	fmt.Println("STRICT Advanced Anti-Spoof Result:")
-	fmt.Printf("Is Real: %t\n", advancedResult.IsReal)
-	fmt.Printf("Spoof Score: %.3f\n", advancedResult.SpoofScore)
-	fmt.Printf("Confidence: %.3f\n", advancedResult.Confidence)
-	fmt.Printf("Has Face: %t\n", advancedResult.HasFace)
-	fmt.Printf("Texture Score: %.3f\n", advancedResult.TextureScore)
-	fmt.Printf("Reflection Score: %.3f\n", advancedResult.ReflectionScore)
-	fmt.Printf("Color Consistency: %.3f\n", advancedResult.ColorConsistency)
-	fmt.Printf("Processing Time: %d ms\n", advancedResult.ProcessTime)
-	if len(advancedResult.SpoofReasons) > 0 {
-		fmt.Printf("Spoof Reasons: %v\n", advancedResult.SpoofReasons)
+	err = biometric.InitializeBiometricSystem()
+	if err != nil {
+		log.Fatal("Failed to initialize biometric system:", err)
 	}
-	if advancedResult.Error != "" {
-		fmt.Printf("Error: %s\n", advancedResult.Error)
-		logger.Error(fmt.Sprintf("STRICT advanced anti-spoof check failed: %s", advancedResult.Error))
-	} else {
-		logger.Info("STRICT advanced anti-spoof check completed successfully")
-	}
+	defer biometric.GlobalBiometricSystem.Close()
+
+	// Perform biometric verification
+	result := biometric.GlobalBiometricSystem.VerifyBiometric("https://res.cloudinary.com/themizehq/image/upload/v1750725491/IMG_5680.jpg", "https://res.cloudinary.com/themizehq/image/upload/v1750725491/IMG_5680.jpg")
+	fmt.Printf("Verification successful: %v\n", result.OverallMatch)
+	fmt.Printf("Liveness score: %.3f\n", result.LivenessCheck.LivenessScore)
+	fmt.Printf("Face similarity: %.3f\n", result.FaceComparison.Similarity)
 
 	if err != nil {
 		logger.Info("error loading env variables")
 	}
+	return
 
 	defer startup.CleanUpServices()
 
