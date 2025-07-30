@@ -15,9 +15,9 @@ import (
 	"gateman.io/application/utils"
 	"gateman.io/entities"
 	"gateman.io/infrastructure/auth"
-	"gateman.io/infrastructure/biometric"
 	"gateman.io/infrastructure/cryptography"
 	"gateman.io/infrastructure/database/repository/cache"
+	"gateman.io/infrastructure/facematch"
 	fileupload "gateman.io/infrastructure/file_upload"
 	"gateman.io/infrastructure/file_upload/types"
 	identityverification "gateman.io/infrastructure/identity_verification"
@@ -42,7 +42,13 @@ func SetAccountImage(ctx *interfaces.ApplicationContext[any]) {
 	url, _ := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), "accountimage"), types.SignedURLPermission{
 		Read: true,
 	}, time.Minute*1)
-	alive, err := biometric.BiometricService.LivenessCheck(url)
+	result := facematch.GlobalFaceMatcher.DetectAntiSpoof(*url)
+	alive := result.IsReal
+	if result.Error != "" {
+		err = fmt.Errorf(result.Error)
+	} else {
+		err = nil
+	}
 	if err != nil {
 		logger.Error("something went wrong when verifying image", logger.LoggerOptions{
 			Key:  "error",
@@ -668,11 +674,11 @@ func SetDriversLicenseDetails(ctx *interfaces.ApplicationContext[dto.SetDriversL
 	}
 	userRepo := repository.UserRepo()
 	account, _ := userRepo.FindByID(ctx.GetStringContextData("UserID"), options.FindOne().SetProjection(map[string]any{
-		"driverID": 1,
-		"image":    1,
-		"firstName":    1,
-		"lastName":    1,
-		"dob":    1,
+		"driverID":  1,
+		"image":     1,
+		"firstName": 1,
+		"lastName":  1,
+		"dob":       1,
 	}))
 	if account.DriverID != nil {
 		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Seems you have verified your Drivers License already. You're good to go!", nil, nil, nil, &ctx.DeviceID)
@@ -721,7 +727,8 @@ func SetDriversLicenseDetails(ctx *interfaces.ApplicationContext[dto.SetDriversL
 	accountImgURL, _ := fileupload.FileUploader.GeneratedSignedURL(account.Image, types.SignedURLPermission{
 		Read: true,
 	}, time.Minute*1)
-	success, _ := biometric.BiometricService.FaceMatch(&driverID.Photo, accountImgURL)
+	compareResult := facematch.GlobalFaceMatcher.Compare(driverID.Photo, *accountImgURL, 0.7)
+	success := compareResult.Match
 	if !success {
 		parsedDriverIDDOB, err := time.Parse("02-01-2006", driverID.BirthDate)
 		if err != nil {

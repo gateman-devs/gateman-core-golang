@@ -18,9 +18,9 @@ import (
 	"gateman.io/application/utils"
 	"gateman.io/entities"
 	"gateman.io/infrastructure/auth"
-	"gateman.io/infrastructure/biometric"
 	"gateman.io/infrastructure/cryptography"
 	"gateman.io/infrastructure/database/repository/cache"
+	"gateman.io/infrastructure/facematch"
 	fileupload "gateman.io/infrastructure/file_upload"
 	"gateman.io/infrastructure/file_upload/types"
 	"gateman.io/infrastructure/ipresolver"
@@ -452,7 +452,13 @@ func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) 
 	url, _ := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), ctx.DeviceID), types.SignedURLPermission{
 		Read: true,
 	}, time.Minute*1)
-	alive, err := biometric.BiometricService.LivenessCheck(url)
+	result := facematch.GlobalFaceMatcher.DetectAntiSpoof(*url)
+	alive := result.IsReal
+	if result.Error != "" {
+		err = fmt.Errorf(result.Error)
+	} else {
+		err = nil
+	}
 	if err != nil {
 		logger.Error("something went wrong when verifying image", logger.LoggerOptions{
 			Key:  "error",
@@ -468,7 +474,11 @@ func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) 
 	accountImgURL, _ := fileupload.FileUploader.GeneratedSignedURL(account.Image, types.SignedURLPermission{
 		Read: true,
 	}, time.Minute*1)
-	match, err := biometric.BiometricService.FaceMatch(url, accountImgURL)
+	compareResult := facematch.GlobalFaceMatcher.Compare(*url, *accountImgURL, 0.7)
+	match := compareResult.Match
+	if compareResult.Error != "" {
+		err = fmt.Errorf(compareResult.Error)
+	}
 	if err != nil {
 		logger.Error("something went wrong when match images", logger.LoggerOptions{
 			Key:  "error",

@@ -1,7 +1,6 @@
 package startup
 
 import (
-	"gateman.io/infrastructure/biometric"
 	"gateman.io/infrastructure/database"
 	"gateman.io/infrastructure/database/connection/datastore"
 	"gateman.io/infrastructure/facematch"
@@ -19,7 +18,7 @@ func StartServices() {
 	logger.RequestMetricMonitor.Init()
 	fileupload.InitialiseFileUploader()
 	identityverification.InitialiseIdentityVerifier()
-	biometric.InitialiseBiometricService()
+	// Biometric service removed - using facematch service instead
 
 	// Initialize face matcher service with error handling
 	if err := facematch.InitializeFaceMatcherService(); err != nil {

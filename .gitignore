@@ -8,3 +8,6 @@ dump.rdb
 main
 # Model files
 models/*.onnx
+data
+docs
+kiro

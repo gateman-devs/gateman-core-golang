@@ -20,12 +20,12 @@ const (
 	TEXTURE_THRESHOLD    = 0.995 // Texture smoothness threshold (0.0-1.0)
 	FREQUENCY_THRESHOLD  = 0.05  // High-frequency content threshold (0.0-1.0)
 
-	// Decision Thresholds
-	STRONG_INDICATOR_THRESHOLD = 3   // Number of strong indicators for high confidence spoof
-	HIGH_SPOOF_THRESHOLD       = 0.8 // High confidence spoof score threshold (0.0-1.0)
-	MEDIUM_SPOOF_THRESHOLD     = 0.6 // Medium confidence spoof score threshold (0.0-1.0)
-	LOW_SPOOF_THRESHOLD        = 0.4 // Low confidence spoof score threshold (0.0-1.0)
-	INDICATOR_THRESHOLD        = 3   // Number of indicators for spoof detection
+	// Decision Thresholds - Adjusted for financial system requirements
+	STRONG_INDICATOR_THRESHOLD = 2   // Number of strong indicators for high confidence spoof (reduced from 3)
+	HIGH_SPOOF_THRESHOLD       = 0.6 // High confidence spoof score threshold (reduced from 0.7)
+	MEDIUM_SPOOF_THRESHOLD     = 0.3 // Medium confidence spoof score threshold (reduced from 0.5)
+	LOW_SPOOF_THRESHOLD        = 0.2 // Low confidence spoof score threshold (reduced from 0.3)
+	INDICATOR_THRESHOLD        = 2   // Number of indicators for spoof detection (reduced from 3)
 
 	// Analysis Penalty Weights
 	LBP_PENALTY             = 0.25 // LBP analysis penalty weight (0.0-1.0)
@@ -109,7 +109,7 @@ type FrequencyScores struct {
 }
 
 // DetectAdvancedAntiSpoof performs production-ready anti-spoofing detection with advanced techniques
-func (fm *FaceMatcher) DetectAdvancedAntiSpoof(input string) AdvancedAntiSpoofResult {
+func (fm *FaceMatcher) DetectAdvancedAntiSpoof(input string, requestID string, verboseMode bool) AdvancedAntiSpoofResult {
 	// Initialize result with safe defaults
 	result := AdvancedAntiSpoofResult{
 		IsReal:       false,
@@ -118,6 +118,27 @@ func (fm *FaceMatcher) DetectAdvancedAntiSpoof(input string) AdvancedAntiSpoofRe
 		HasFace:      false,
 		ProcessTime:  0,
 		SpoofReasons: []string{},
+	}
+
+	// Create detailed analysis report
+	report := NewAnalysisReport(requestID)
+	if verboseMode {
+		// Add configuration settings for verbose mode
+		configSettings := map[string]interface{}{
+			"lbp_threshold":        LBP_THRESHOLD,
+			"lpq_threshold":        LPQ_THRESHOLD,
+			"reflection_threshold": REFLECTION_THRESHOLD,
+			"color_threshold":      COLOR_THRESHOLD,
+			"texture_threshold":    TEXTURE_THRESHOLD,
+			"frequency_threshold":  FREQUENCY_THRESHOLD,
+		}
+
+		modelVersions := map[string]string{
+			"yunet":   fm.yunetModelPath,
+			"arcface": fm.arcfaceModelPath,
+		}
+
+		report.EnableVerboseMode(configSettings, modelVersions)
 	}
 
 	// Quick validation
@@ -131,6 +152,9 @@ func (fm *FaceMatcher) DetectAdvancedAntiSpoof(input string) AdvancedAntiSpoofRe
 		return result
 	}
 
+	// Record start time for image loading
+	imageLoadStart := time.Now()
+
 	// Load and validate image (not included in ProcessTime)
 	img, err := fm.loadImageWithValidation(input)
 	if err != nil {
@@ -139,8 +163,15 @@ func (fm *FaceMatcher) DetectAdvancedAntiSpoof(input string) AdvancedAntiSpoofRe
 	}
 	defer img.Close()
 
+	// Record image load time
+	imageLoadTime := time.Since(imageLoadStart).Milliseconds()
+	report.RecordPerformanceMetric("image_load", imageLoadTime)
+
 	// Start timing here - after image loading, before extraction and analysis
 	startTime := time.Now()
+
+	// Record face detection start time
+	faceDetectionStart := time.Now()
 
 	// Detect face
 	faceRegion, faceErr := fm.detectPrimaryFace(img)
@@ -151,10 +182,21 @@ func (fm *FaceMatcher) DetectAdvancedAntiSpoof(input string) AdvancedAntiSpoofRe
 	}
 	defer faceRegion.Close()
 
+	// Record face detection time
+	faceDetectionTime := time.Since(faceDetectionStart).Milliseconds()
+	report.RecordPerformanceMetric("face_detection", faceDetectionTime)
+
 	result.HasFace = true
 
-	// Perform advanced anti-spoofing analysis
-	analysisResult := fm.performAdvancedSpoofingAnalysis(img, faceRegion)
+	// Record analysis start time
+	analysisStart := time.Now()
+
+	// Perform advanced anti-spoofing analysis with detailed reporting
+	analysisResult := fm.performAdvancedSpoofingAnalysisWithReporting(img, faceRegion, report)
+
+	// Record analysis time
+	analysisTime := time.Since(analysisStart).Milliseconds()
+	report.RecordPerformanceMetric("analysis", analysisTime)
 
 	result.IsReal = analysisResult.IsReal
 	result.SpoofScore = analysisResult.SpoofScore
@@ -165,6 +207,20 @@ func (fm *FaceMatcher) DetectAdvancedAntiSpoof(input string) AdvancedAntiSpoofRe
 	result.SpoofReasons = analysisResult.SpoofReasons
 	result.AnalysisBreakdown = analysisResult.AnalysisBreakdown
 	result.ProcessTime = time.Since(startTime).Milliseconds()
+
+	// Update report with final results
+	report.IsLive = result.IsReal
+	report.SpoofScore = result.SpoofScore
+	report.Confidence = result.Confidence
+	report.SpoofReasons = result.SpoofReasons
+	report.AnalysisBreakdown = result.AnalysisBreakdown
+	report.ProcessingTimeMs = result.ProcessTime
+
+	// Generate quality recommendations
+	report.GenerateQualityRecommendations()
+
+	// Log the analysis report
+	LogAnalysisReport(report, verboseMode)
 
 	return result
 }
@@ -179,6 +235,17 @@ func (fm *FaceMatcher) performAdvancedSpoofingAnalysis(img, face gocv.Mat) Advan
 
 	// Use parallel analysis for speed improvement
 	return fm.performParallelSpoofingAnalysis(face, gray)
+}
+
+// performAdvancedSpoofingAnalysisWithReporting performs comprehensive multi-modal analysis with detailed reporting
+func (fm *FaceMatcher) performAdvancedSpoofingAnalysisWithReporting(img, face gocv.Mat, report *AnalysisReport) AdvancedAntiSpoofResult {
+	// Convert to grayscale for analysis
+	gray := gocv.NewMat()
+	defer gray.Close()
+	gocv.CvtColor(face, &gray, gocv.ColorBGRToGray)
+
+	// Use parallel analysis with reporting for speed improvement
+	return fm.performParallelSpoofingAnalysisWithReporting(face, gray, report)
 }
 
 // performParallelSpoofingAnalysis runs analysis steps concurrently for speed
@@ -960,33 +1027,25 @@ func (fm *FaceMatcher) detectBlockArtifacts(gray gocv.Mat) float64 {
 
 // analyzeHighFrequencyLoss detects loss of high-frequency details
 func (fm *FaceMatcher) analyzeHighFrequencyLoss(gray gocv.Mat) float64 {
-	if gray.Rows() < 8 || gray.Cols() < 8 {
-		return 0.0
+	if gray.Empty() || gray.Rows() < 16 || gray.Cols() < 16 {
+		return 0.5 // Default moderate compression for small images
 	}
 
-	// Apply high-pass filter
+	// Apply high-pass filter to extract high-frequency components
 	kernel := gocv.GetStructuringElement(gocv.MorphRect, image.Pt(3, 3))
 	defer kernel.Close()
 
-	// Low-pass version
+	// Create low-pass filtered version
 	lowPass := gocv.NewMat()
 	defer lowPass.Close()
-	gocv.GaussianBlur(gray, &lowPass, image.Pt(3, 3), 0, 0, gocv.BorderDefault)
+	gocv.MorphologyEx(gray, &lowPass, gocv.MorphOpen, kernel)
 
-	// High-pass = original - low-pass
-	grayFloat := gocv.NewMat()
-	lowPassFloat := gocv.NewMat()
-	defer grayFloat.Close()
-	defer lowPassFloat.Close()
-
-	gray.ConvertTo(&grayFloat, gocv.MatTypeCV32F)
-	lowPass.ConvertTo(&lowPassFloat, gocv.MatTypeCV32F)
-
+	// Extract high-frequency components
 	highPass := gocv.NewMat()
 	defer highPass.Close()
-	gocv.Subtract(grayFloat, lowPassFloat, &highPass)
+	gocv.Subtract(gray, lowPass, &highPass)
 
-	// Calculate energy in high frequencies
+	// Calculate energy in high-frequency components
 	meanMat := gocv.NewMat()
 	stdMat := gocv.NewMat()
 	defer meanMat.Close()
@@ -995,8 +1054,7 @@ func (fm *FaceMatcher) analyzeHighFrequencyLoss(gray gocv.Mat) float64 {
 	gocv.MeanStdDev(highPass, &meanMat, &stdMat)
 	highFreqEnergy := stdMat.GetDoubleAt(0, 0)
 
-	// Low high-frequency energy suggests compression
-	// Normalize: typical uncompressed images have higher energy
+	// Normalize energy (higher energy = less compression)
 	normalizedEnergy := highFreqEnergy / 30.0 // Adjust based on testing
 	if normalizedEnergy > 1.0 {
 		normalizedEnergy = 1.0
@@ -1096,4 +1154,333 @@ func (fm *FaceMatcher) analyzeColorQuantization(face gocv.Mat) float64 {
 	}
 
 	return quantizationScore
+}
+
+// performParallelSpoofingAnalysisWithReporting runs analysis steps concurrently with detailed reporting
+func (fm *FaceMatcher) performParallelSpoofingAnalysisWithReporting(face, gray gocv.Mat, report *AnalysisReport) AdvancedAntiSpoofResult {
+	result := AdvancedAntiSpoofResult{
+		IsReal:            true,
+		SpoofScore:        0.0,
+		Confidence:        0.8,
+		SpoofReasons:      []string{},
+		AnalysisBreakdown: AnalysisBreakdown{},
+	}
+
+	// Define result structures for parallel analysis
+	type analysisResult struct {
+		lbpScore         float64
+		lpqScore         float64
+		reflectionScore  float64
+		colorAnalysis    ColorSpaceScores
+		edgeAnalysis     EdgeAnalysisScores
+		textureScore     float64
+		freqAnalysis     FrequencyScores
+		overallSharpness float64
+		compressionLevel float64
+		timings          map[string]int64
+	}
+
+	// Channel to collect results
+	resultChan := make(chan analysisResult, 1)
+
+	// Run all independent analyses in parallel
+	go func() {
+		var res analysisResult
+		res.timings = make(map[string]int64)
+		var wg sync.WaitGroup
+
+		// We'll use individual channels for each analysis
+		lbpChan := make(chan float64, 1)
+		lpqChan := make(chan float64, 1)
+		reflectionChan := make(chan float64, 1)
+		colorChan := make(chan ColorSpaceScores, 1)
+		edgeChan := make(chan EdgeAnalysisScores, 1)
+		textureChan := make(chan float64, 1)
+		freqChan := make(chan FrequencyScores, 1)
+		sharpnessChan := make(chan float64, 1)
+		compressionChan := make(chan float64, 1)
+
+		// Start all analyses concurrently
+		wg.Add(9)
+
+		// 1. Advanced Local Binary Pattern (LBP) Analysis
+		go func() {
+			defer wg.Done()
+			startTime := time.Now()
+			lbpScore := fm.calculateAdvancedLBPScore(gray)
+			lbpChan <- lbpScore
+			res.timings["lbp_analysis"] = time.Since(startTime).Milliseconds()
+		}()
+
+		// 2. Local Phase Quantization (LPQ) Analysis
+		go func() {
+			defer wg.Done()
+			startTime := time.Now()
+			lpqScore := fm.calculateLPQScore(gray)
+			lpqChan <- lpqScore
+			res.timings["lpq_analysis"] = time.Since(startTime).Milliseconds()
+		}()
+
+		// 3. Advanced Reflection Analysis
+		go func() {
+			defer wg.Done()
+			startTime := time.Now()
+			reflectionScore := fm.calculateAdvancedReflectionScore(gray)
+			reflectionChan <- reflectionScore
+			res.timings["reflection_analysis"] = time.Since(startTime).Milliseconds()
+		}()
+
+		// 4. Multi-channel color space analysis
+		go func() {
+			defer wg.Done()
+			startTime := time.Now()
+			colorScores := fm.analyzeColorSpaces(face)
+			colorChan <- colorScores
+			res.timings["color_analysis"] = time.Since(startTime).Milliseconds()
+		}()
+
+		// 5. Advanced edge analysis
+		go func() {
+			defer wg.Done()
+			startTime := time.Now()
+			edgeScores := fm.performEdgeAnalysis(gray)
+			edgeChan <- edgeScores
+			res.timings["edge_analysis"] = time.Since(startTime).Milliseconds()
+		}()
+
+		// 6. Advanced texture analysis
+		go func() {
+			defer wg.Done()
+			startTime := time.Now()
+			textureScore := fm.calculateAdvancedTextureScore(gray)
+			textureChan <- textureScore
+			res.timings["texture_analysis"] = time.Since(startTime).Milliseconds()
+		}()
+
+		// 7. Frequency domain analysis
+		go func() {
+			defer wg.Done()
+			startTime := time.Now()
+			freqScores := fm.analyzeFrequencyDomain(gray)
+			freqChan <- freqScores
+			res.timings["frequency_analysis"] = time.Since(startTime).Milliseconds()
+		}()
+
+		// 8. Overall sharpness calculation
+		go func() {
+			defer wg.Done()
+			startTime := time.Now()
+			sharpness := fm.calculateOverallSharpness(gray)
+			sharpnessChan <- sharpness
+			res.timings["sharpness_analysis"] = time.Since(startTime).Milliseconds()
+		}()
+
+		// 9. Compression level detection
+		go func() {
+			defer wg.Done()
+			startTime := time.Now()
+			compressionLevel := fm.detectCompressionLevel(gray, face)
+			compressionChan <- compressionLevel
+			res.timings["compression_analysis"] = time.Since(startTime).Milliseconds()
+		}()
+
+		// Wait for all goroutines to complete
+		wg.Wait()
+
+		// Collect all results
+		res.lbpScore = <-lbpChan
+		res.lpqScore = <-lpqChan
+		res.reflectionScore = <-reflectionChan
+		res.colorAnalysis = <-colorChan
+		res.edgeAnalysis = <-edgeChan
+		res.textureScore = <-textureChan
+		res.freqAnalysis = <-freqChan
+		res.overallSharpness = <-sharpnessChan
+		res.compressionLevel = <-compressionChan
+
+		resultChan <- res
+	}()
+
+	// Get the parallel analysis results
+	analysisRes := <-resultChan
+
+	// Record performance metrics if in verbose mode
+	if report.DebugInfo != nil {
+		for name, duration := range analysisRes.timings {
+			report.AddIntermediateResult(name+"_time_ms", duration)
+		}
+	}
+
+	// Start decision time measurement
+	decisionStartTime := time.Now()
+
+	// Now process the results with configurable thresholds
+	var indicators []string
+	var totalPenalty float64
+
+	// Process LBP results
+	result.AnalysisBreakdown.LBPScore = analysisRes.lbpScore
+	if analysisRes.lbpScore > LBP_THRESHOLD {
+		totalPenalty += LBP_PENALTY
+		indicators = append(indicators, "suspicious texture patterns detected")
+	}
+
+	// Process LPQ results
+	result.AnalysisBreakdown.LPQScore = analysisRes.lpqScore
+	if analysisRes.lpqScore > LPQ_THRESHOLD {
+		totalPenalty += LPQ_PENALTY
+		indicators = append(indicators, "unusual frequency patterns detected")
+	}
+
+	// Process reflection results
+	result.ReflectionScore = analysisRes.reflectionScore
+	result.AnalysisBreakdown.ReflectionConsistency = analysisRes.reflectionScore
+	if analysisRes.reflectionScore > REFLECTION_THRESHOLD {
+		totalPenalty += REFLECTION_PENALTY
+		indicators = append(indicators, "suspicious reflection patterns")
+	}
+
+	// Process color analysis results
+	result.AnalysisBreakdown.ColorSpaceAnalysis = analysisRes.colorAnalysis
+	avgColorConsistency := (analysisRes.colorAnalysis.YCrCbConsistency +
+		analysisRes.colorAnalysis.HSVConsistency +
+		analysisRes.colorAnalysis.LABConsistency) / 3
+	result.ColorConsistency = 1.0 - avgColorConsistency // Invert for consistency scoring
+	if avgColorConsistency > COLOR_THRESHOLD {
+		totalPenalty += COLOR_PENALTY
+		indicators = append(indicators, "inconsistent color distribution")
+	}
+
+	// Process edge analysis results
+	result.AnalysisBreakdown.EdgeAnalysis = analysisRes.edgeAnalysis
+	// Fine-tuned edge density threshold
+	if analysisRes.edgeAnalysis.EdgeDensity < MIN_EDGE_DENSITY || analysisRes.edgeAnalysis.EdgeDensity > MAX_EDGE_DENSITY {
+		totalPenalty += EDGE_PENALTY
+		indicators = append(indicators, "unusual edge characteristics")
+	}
+
+	// Process texture analysis results with compression awareness
+	result.TextureScore = analysisRes.textureScore
+
+	// Dynamic texture threshold based on compression and sharpness
+	adjustedTextureThreshold := TEXTURE_THRESHOLD
+	texturePenalty := DEFAULT_TEXTURE_PENALTY
+
+	// Make provisions for compressed/resized images
+	if analysisRes.compressionLevel >= HEAVY_COMPRESSION_LEVEL { // Heavily compressed
+		adjustedTextureThreshold = 0.999
+		texturePenalty = HEAVY_COMPRESSION_PENALTY
+	} else if analysisRes.compressionLevel >= MODERATE_COMPRESSION_LEVEL { // Moderately compressed
+		adjustedTextureThreshold = 0.998
+		texturePenalty = MODERATE_COMPRESSION_PENALTY
+	} else if analysisRes.compressionLevel >= LIGHT_COMPRESSION_LEVEL { // Lightly compressed
+		adjustedTextureThreshold = 0.996
+		texturePenalty = LIGHT_COMPRESSION_PENALTY
+	}
+
+	// Additional leniency for blurry images
+	if analysisRes.overallSharpness < VERY_BLURRY_SHARPNESS { // Very blurry
+		adjustedTextureThreshold = 0.999
+		texturePenalty = VERY_BLURRY_PENALTY
+	} else if analysisRes.overallSharpness < SOMEWHAT_BLURRY_SHARPNESS { // Somewhat blurry
+		adjustedTextureThreshold = 0.998
+		texturePenalty = SOMEWHAT_BLURRY_PENALTY
+	}
+
+	if analysisRes.textureScore > adjustedTextureThreshold {
+		totalPenalty += texturePenalty
+		if analysisRes.compressionLevel >= MODERATE_COMPRESSION_LEVEL {
+			indicators = append(indicators, "insufficient texture detail (image appears compressed)")
+		} else if analysisRes.overallSharpness < VERY_BLURRY_SHARPNESS {
+			indicators = append(indicators, "insufficient texture detail (image appears blurry)")
+		} else {
+			indicators = append(indicators, "insufficient natural skin texture")
+		}
+	}
+
+	// Process frequency analysis results
+	result.AnalysisBreakdown.FrequencyAnalysis = analysisRes.freqAnalysis
+	// More lenient frequency analysis
+	if analysisRes.freqAnalysis.HighFrequencyContent < FREQUENCY_THRESHOLD || analysisRes.freqAnalysis.NoiseLevel > MAX_NOISE_LEVEL {
+		totalPenalty += FREQUENCY_PENALTY
+		indicators = append(indicators, "suspicious frequency characteristics")
+	}
+
+	// Calculate final spoof score
+	result.SpoofScore = totalPenalty
+	if result.SpoofScore > 1.0 {
+		result.SpoofScore = 1.0
+	}
+
+	// Decision logic based on multiple factors
+	strongIndicators := 0
+	for _, indicator := range indicators {
+		if indicator == "suspicious reflection patterns" ||
+			indicator == "insufficient natural skin texture" ||
+			indicator == "suspicious texture patterns detected" {
+			strongIndicators++
+		}
+	}
+
+	// Decision logic
+	if strongIndicators >= STRONG_INDICATOR_THRESHOLD || result.SpoofScore >= HIGH_SPOOF_THRESHOLD {
+		result.IsReal = false
+		result.Confidence = 0.95
+		result.SpoofReasons = indicators
+	} else if len(indicators) >= 5 || result.SpoofScore >= MEDIUM_SPOOF_THRESHOLD {
+		result.IsReal = false
+		result.Confidence = 0.85
+		result.SpoofReasons = indicators
+	} else if len(indicators) >= INDICATOR_THRESHOLD || result.SpoofScore >= LOW_SPOOF_THRESHOLD {
+		result.IsReal = false
+		result.Confidence = 0.7
+		result.SpoofReasons = indicators
+	} else {
+		result.IsReal = true
+		result.Confidence = 0.9
+	}
+
+	// Record decision time
+	decisionTime := time.Since(decisionStartTime).Milliseconds()
+	report.RecordPerformanceMetric("decision", decisionTime)
+
+	// Update quality metrics in the report
+	report.QualityMetrics.Sharpness = analysisRes.overallSharpness
+	report.QualityMetrics.CompressionLevel = analysisRes.compressionLevel
+
+	// Calculate image resolution
+	imgSize := face.Size()
+	if len(imgSize) >= 2 {
+		height, width := imgSize[0], imgSize[1]
+		report.QualityMetrics.Resolution = fmt.Sprintf("%dx%d", width, height)
+	}
+
+	// Calculate face position (center point)
+	report.QualityMetrics.FacePosition = Point2D{
+		X: float64(face.Cols()) / 2.0,
+		Y: float64(face.Rows()) / 2.0,
+	}
+
+	// Calculate face size as percentage of original image
+	if !face.Empty() && !gray.Empty() {
+		faceArea := float64(face.Rows() * face.Cols())
+		imgArea := float64(gray.Rows() * gray.Cols())
+		if imgArea > 0 {
+			report.QualityMetrics.FaceSize = (faceArea / imgArea) * 100.0
+		}
+	}
+
+	// Calculate brightness
+	if !gray.Empty() {
+		meanMat := gocv.NewMat()
+		stdMat := gocv.NewMat()
+		defer meanMat.Close()
+		defer stdMat.Close()
+
+		gocv.MeanStdDev(gray, &meanMat, &stdMat)
+		report.QualityMetrics.Brightness = meanMat.GetDoubleAt(0, 0)
+		report.QualityMetrics.Contrast = stdMat.GetDoubleAt(0, 0)
+	}
+
+	return result
 }

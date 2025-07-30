@@ -4,7 +4,6 @@ import (
 	"crypto/ecdh"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -15,10 +14,10 @@ import (
 	"gateman.io/application/controller/dto"
 	"gateman.io/application/interfaces"
 	"gateman.io/application/subscription"
-	"gateman.io/infrastructure/biometric"
 	"gateman.io/infrastructure/facematch"
 	"gateman.io/infrastructure/logger"
-	middlewares "gateman.io/infrastructure/middleware"
+
+	// middlewares "gateman.io/infrastructure/middleware"
 	publicRouter "gateman.io/infrastructure/routes/ginRouter/web/publicAPI/v1"
 	webRoutev1 "gateman.io/infrastructure/routes/ginRouter/web/v1"
 	server_response "gateman.io/infrastructure/serverResponse"
@@ -35,31 +34,20 @@ func (s *ginServer) Start() {
 	err := godotenv.Load()
 	startup.StartServices()
 
-	// Perform liveness check immediately after starting services
-
 	err = facematch.InitializeFaceMatcherService()
 	if err != nil {
-		log.Fatalf("Failed to initialize: %v", err)
-		return
+		logger.Error("Failed to initialize face matcher service", logger.LoggerOptions{
+			Key:  "error",
+			Data: err.Error(),
+		})
+		// Continue without face matcher service
+	} else {
+		logger.Info("Face matcher service initialized successfully")
 	}
-	logger.Info("Performing face matcher liveness check...")
-
-	err = biometric.InitializeBiometricSystem()
-	if err != nil {
-		log.Fatal("Failed to initialize biometric system:", err)
-	}
-	defer biometric.GlobalBiometricSystem.Close()
-
-	// Perform biometric verification
-	result := biometric.GlobalBiometricSystem.VerifyBiometric("https://res.cloudinary.com/themizehq/image/upload/v1750725491/IMG_5680.jpg", "https://res.cloudinary.com/themizehq/image/upload/v1750725491/IMG_5680.jpg")
-	fmt.Printf("Verification successful: %v\n", result.OverallMatch)
-	fmt.Printf("Liveness score: %.3f\n", result.LivenessCheck.LivenessScore)
-	fmt.Printf("Face similarity: %.3f\n", result.FaceComparison.Similarity)
 
 	if err != nil {
 		logger.Info("error loading env variables")
 	}
-	return
 
 	defer startup.CleanUpServices()
 
@@ -87,8 +75,7 @@ func (s *ginServer) Start() {
 	api := server.Group("/api")
 
 	routerV1 := api.Group("/v1")
-	routerV1.Use(middlewares.UserAgentMiddleware())
-
+	// routerV1.Use(middlewares.UserAgentMiddleware())
 	routerV1.POST("/key-exchange", func(ctx *gin.Context) {
 		// clientPubKeyBytes, _ := ctx.GetRawData()
 		var body map[string]any
@@ -108,10 +95,12 @@ func (s *ginServer) Start() {
 		})
 	})
 
-	routerV1.Use(middlewares.DecryptPayloadMiddleware())
+	// routerV1.Use(middlewares.DecryptPayloadMiddleware())
 	{
 		webRoutev1.AuthRouter(routerV1)
 		webRoutev1.AppRouter(routerV1)
+		// Biometric routers removed - using production liveness API only
+		webRoutev1.ProductionLivenessRouter(routerV1) // Production liveness system endpoints
 		webRoutev1.UserRouter(routerV1)
 		webRoutev1.WorkspaceRouter(routerV1)
 		webRoutev1.MiscRouter(routerV1)

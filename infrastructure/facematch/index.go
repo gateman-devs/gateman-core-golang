@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"gateman.io/infrastructure/logger"
 	"gocv.io/x/gocv"
@@ -204,8 +205,11 @@ func (fm *FaceMatcher) loadModels() error {
 // DetectAntiSpoof performs production-ready anti-spoofing detection on a single image
 // This is the main API for anti-spoofing detection
 func (fm *FaceMatcher) DetectAntiSpoof(input string) AntiSpoofResult {
-	// Use the advanced implementation directly
-	advancedResult := fm.DetectAdvancedAntiSpoof(input)
+	// Generate a request ID
+	requestID := fmt.Sprintf("req_%d", time.Now().UnixNano())
+
+	// Use the advanced implementation directly with standard verbosity
+	advancedResult := fm.DetectAdvancedAntiSpoof(input, requestID, false)
 
 	// Convert AdvancedAntiSpoofResult to AntiSpoofResult for compatibility
 	return AntiSpoofResult{
@@ -891,7 +895,7 @@ func abs(x int) int {
 	return x
 }
 
-// Compare compares two faces from either URLs or base64 images
+// Compare compares two faces from either URLs or base64 images with improved threshold
 func (fm *FaceMatcher) Compare(input1, input2 string, threshold float64) CompareResult {
 	if !fm.initialized {
 		return CompareResult{
@@ -981,9 +985,12 @@ func (fm *FaceMatcher) Compare(input1, input2 string, threshold float64) Compare
 	// Calculate similarity
 	similarity := fm.calculateSimilarity(features1, features2)
 
+	// Improve threshold for better accuracy (minimum 0.8 to reduce false positives)
+	adjustedThreshold := math.Max(threshold, 0.8)
+
 	return CompareResult{
 		Similarity: similarity,
-		Match:      similarity >= threshold,
+		Match:      similarity >= adjustedThreshold,
 	}
 }
 
