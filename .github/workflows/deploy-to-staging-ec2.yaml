@@ -20,6 +20,6 @@ jobs:
             cd /opt/gateman-staging/gateman-core-golang
             git pull origin ec2-staging
             docker-compose down
-            docker-compose build --no-cache
+            docker-compose build 
             docker-compose up -d
             docker image prune -f
