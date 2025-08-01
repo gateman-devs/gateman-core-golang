@@ -1,5 +1,5 @@
 package cache
 
 func ConnectToCache() {
-	connectRedis()
+	Connect(nil)
 }

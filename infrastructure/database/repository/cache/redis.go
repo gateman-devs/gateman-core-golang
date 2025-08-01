@@ -1,9 +1,10 @@
 package cache
 
 import (
+	"context"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/redis/go-redis/v9"
 
 	redisClient "gateman.io/infrastructure/database/connection/cache"
 	"gateman.io/infrastructure/logger"
@@ -14,19 +15,21 @@ var (
 )
 
 type RedisRepository struct {
-	Clinet *redis.Client
+	Client *redis.Client
 }
 
 func (redisRepo *RedisRepository) preRequest() {
-	if redisRepo.Clinet == nil {
-		redisRepo.Clinet = redisClient.Client
+	if redisRepo.Client == nil {
+		client, _ := redisClient.GetInstance()
+		redisRepo.Client = client.Client
 		logger.Info("redis repository initialisation complete")
 	}
 }
 
 func (redisRepo *RedisRepository) CreateEntry(key string, payload interface{}, ttl time.Duration) bool {
 	redisRepo.preRequest()
-	_, err := redisRepo.Clinet.Set(key, payload, ttl).Result()
+	ctx := context.Background()
+	_, err := redisRepo.Client.Set(ctx, key, payload, ttl).Result()
 	if err != nil {
 		logger.Error("redis error occured while running CreateEntry", logger.LoggerOptions{
 			Key:  "error",
@@ -44,8 +47,9 @@ func (redisRepo *RedisRepository) CreateEntry(key string, payload interface{}, t
 
 func (redisRepo *RedisRepository) FindOne(key string) *string {
 	redisRepo.preRequest()
+	ctx := context.Background()
 
-	result, err := redisRepo.Clinet.Get(key).Result()
+	result, err := redisRepo.Client.Get(ctx, key).Result()
 
 	if err != nil {
 		if err.Error() == "redis: nil" {
@@ -67,8 +71,9 @@ func (redisRepo *RedisRepository) FindOne(key string) *string {
 
 func (redisRepo *RedisRepository) FindOneByteArray(key string) *[]byte {
 	redisRepo.preRequest()
+	ctx := context.Background()
 
-	result, err := redisRepo.Clinet.Get(key).Bytes()
+	result, err := redisRepo.Client.Get(ctx, key).Bytes()
 
 	if err != nil {
 		if err.Error() == "redis: nil" {
@@ -90,8 +95,9 @@ func (redisRepo *RedisRepository) FindOneByteArray(key string) *[]byte {
 
 func (redisRepo *RedisRepository) DeleteOne(key string) bool {
 	redisRepo.preRequest()
+	ctx := context.Background()
 
-	result, err := redisRepo.Clinet.Del(key).Result()
+	result, err := redisRepo.Client.Del(ctx, key).Result()
 
 	if err != nil {
 		logger.Error("redis error occured while running DeleteOne", logger.LoggerOptions{
@@ -113,7 +119,8 @@ func (redisRepo *RedisRepository) DeleteOne(key string) bool {
 
 func (redisRepo *RedisRepository) CreateInSortedSet(key string, score float64, member interface{}) int64 {
 	redisRepo.preRequest()
-	added := redisRepo.Clinet.ZAdd(key, redis.Z{
+	ctx := context.Background()
+	added := redisRepo.Client.ZAdd(ctx, key, redis.Z{
 		Score: score, Member: member,
 	})
 
@@ -140,8 +147,9 @@ func (redisRepo *RedisRepository) CreateInSortedSet(key string, score float64, m
 
 func (redisRepo *RedisRepository) FindSortedSet(key string) *[]string {
 	redisRepo.preRequest()
+	ctx := context.Background()
 
-	result := redisRepo.Clinet.ZRange(key, 0, -1)
+	result := redisRepo.Client.ZRange(ctx, key, 0, -1)
 	if err := result.Err(); err != nil {
 		logger.Error("redis error occured while running FindSortedSet", logger.LoggerOptions{
 			Key:  "error",
@@ -163,7 +171,8 @@ func (redisRepo *RedisRepository) FindSortedSet(key string) *[]string {
 
 func (redisRepo *RedisRepository) CreateInSet(key string, member interface{}, ttl time.Duration) int64 {
 	redisRepo.preRequest()
-	added := redisRepo.Clinet.SAdd(key, member, ttl.Seconds())
+	ctx := context.Background()
+	added := redisRepo.Client.SAdd(ctx, key, member)
 
 	if err := added.Err(); err != nil {
 		logger.Error("redis error occured while running CreateInSet", logger.LoggerOptions{
@@ -178,14 +187,21 @@ func (redisRepo *RedisRepository) CreateInSet(key string, member interface{}, tt
 		})
 		return 0
 	}
+
+	// Set TTL for the key if specified
+	if ttl > 0 {
+		redisRepo.Client.Expire(ctx, key, ttl)
+	}
+
 	logger.Info("redis CreateInSet completed")
 	return added.Val()
 }
 
 func (redisRepo *RedisRepository) FindSet(key string) *[]string {
 	redisRepo.preRequest()
+	ctx := context.Background()
 
-	result := redisRepo.Clinet.SMembers(key)
+	result := redisRepo.Client.SMembers(ctx, key)
 	if err := result.Err(); err != nil {
 		logger.Error("redis error occured while running FindSet", logger.LoggerOptions{
 			Key:  "error",
@@ -207,10 +223,11 @@ func (redisRepo *RedisRepository) FindSet(key string) *[]string {
 
 func (redisRepo *RedisRepository) CountSetMembers(key string) *int64 {
 	redisRepo.preRequest()
+	ctx := context.Background()
 
-	result := redisRepo.Clinet.SCard(key)
+	result := redisRepo.Client.SCard(ctx, key)
 	if err := result.Err(); err != nil {
-		logger.Error("redis error occured while running FindSet", logger.LoggerOptions{
+		logger.Error("redis error occured while running CountSetMembers", logger.LoggerOptions{
 			Key:  "error",
 			Data: err,
 		}, logger.LoggerOptions{
@@ -223,15 +240,16 @@ func (redisRepo *RedisRepository) CountSetMembers(key string) *int64 {
 		return nil
 	}
 
-	logger.Info("redis FindSet completed")
+	logger.Info("redis CountSetMembers completed")
 	val := result.Val()
 	return &val
 }
 
 func (redisRepo *RedisRepository) DoesItemExistInSet(key string, item string) bool {
 	redisRepo.preRequest()
+	ctx := context.Background()
 
-	result := redisRepo.Clinet.SIsMember(key, item)
+	result := redisRepo.Client.SIsMember(ctx, key, item)
 	if err := result.Err(); err != nil {
 		logger.Error("redis error occured while running DoesItemExistInSet", logger.LoggerOptions{
 			Key:  "error",
@@ -251,8 +269,9 @@ func (redisRepo *RedisRepository) DoesItemExistInSet(key string, item string) bo
 
 func (redisRepo *RedisRepository) IncrementField(key string, amount int64) int64 {
 	redisRepo.preRequest()
+	ctx := context.Background()
 
-	result := redisRepo.Clinet.IncrBy(key, amount)
+	result := redisRepo.Client.IncrBy(ctx, key, amount)
 	if err := result.Err(); err != nil {
 		logger.Error("redis error occured while running IncrementField", logger.LoggerOptions{
 			Key:  "error",

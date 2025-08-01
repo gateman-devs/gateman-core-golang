@@ -1,13 +1,11 @@
 package datastore
 
-import "context"
-
-var cancelCtx *context.CancelFunc
+var client *MongoClient
 
 func ConnectToDatabase() {
-	cancelCtx = connectMongo()
+	Connect(nil)
 }
 
 func CleanUp() {
-	(*cancelCtx)()
+	client.Disconnect()
 }
