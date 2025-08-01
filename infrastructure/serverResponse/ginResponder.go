@@ -21,7 +21,7 @@ type ginResponder struct{}
 
 // Sends an encrypted payload to the client
 func (gr ginResponder) Respond(ctx interface{}, code int, message string, payload any, errs []error, responseCode *uint, deviceID *string) {
-	if os.Getenv("ENV") == "dev" || deviceID == nil {
+	if os.Getenv("APP_ENV") == "dev" || deviceID == nil {
 		gr.UnEncryptedRespond(ctx, code, message, payload, errs, responseCode)
 		return
 	}

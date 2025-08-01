@@ -17,7 +17,7 @@ const otpChars = "1234567890"
 
 func GenerateOTP(length int, channel string) (*string, error) {
 	var otp string
-	if os.Getenv("ENV") == "staging" || os.Getenv("ENV") == "dev" {
+	if os.Getenv("APP_ENV") == "staging" || os.Getenv("APP_ENV") == "dev" {
 		otp = "000000"
 	} else {
 		buffer := make([]byte, length)

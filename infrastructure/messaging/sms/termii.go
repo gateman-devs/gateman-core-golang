@@ -16,7 +16,7 @@ type TermiiService struct {
 }
 
 func (ts *TermiiService) SendOTP(phone string, whatsapp bool, otp *string) *string {
-	if os.Getenv("ENV") != "production" {
+	if os.Getenv("APP_ENV") != "production" {
 		return utils.GetStringPointer(utils.GenerateUULDString())
 	}
 	var response *[]byte
@@ -77,7 +77,7 @@ func (ts *TermiiService) SendOTP(phone string, whatsapp bool, otp *string) *stri
 }
 
 func (ts *TermiiService) VerifyOTP(otpID string, otp string) bool {
-	if os.Getenv("ENV") != "production" {
+	if os.Getenv("APP_ENV") != "production" {
 		return otp == "000000"
 	}
 	response, statusCode, err := ts.Network.Post("/sms/otp/verify", nil, map[string]any{

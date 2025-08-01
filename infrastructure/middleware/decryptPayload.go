@@ -12,7 +12,7 @@ import (
 
 func DecryptPayloadMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		if os.Getenv("ENV") == "dev" {
+		if os.Getenv("APP_ENV") == "dev" {
 			ctx.Next()
 			return
 		}

@@ -166,7 +166,7 @@ func GenerateAuthTokens(payload map[string]any, app *entities.Application, userA
 	}
 	var accessTokenTTL uint16
 	var refreshTokenTTL uint32
-	if os.Getenv("ENV") == "production" {
+	if os.Getenv("APP_ENV") == "production" {
 		accessTokenTTL = app.AccessTokenTTL
 		refreshTokenTTL = app.RefreshTokenTTL
 	} else {

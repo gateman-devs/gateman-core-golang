@@ -28,7 +28,7 @@ func UserRouter(router *gin.RouterGroup) {
 		userRouter.POST("/set-nin", middlewares.UserAuthenticationMiddleware(nil), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.SetNINDetails
-			if os.Getenv("ENV") != "dev" {
+			if os.Getenv("APP_ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -52,7 +52,7 @@ func UserRouter(router *gin.RouterGroup) {
 		userRouter.POST("/drivers-license", middlewares.UserAuthenticationMiddleware(nil), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.SetDriversLicenseDetails
-			if os.Getenv("ENV") != "dev" {
+			if os.Getenv("APP_ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -85,7 +85,7 @@ func UserRouter(router *gin.RouterGroup) {
 		userRouter.POST("/set-bvn", middlewares.UserAuthenticationMiddleware(nil), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.SetBVNDetails
-			if os.Getenv("ENV") != "dev" {
+			if os.Getenv("APP_ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -118,7 +118,7 @@ func UserRouter(router *gin.RouterGroup) {
 		userRouter.POST("/set-voter-id", middlewares.UserAuthenticationMiddleware(nil), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.SetVoterIDDetails
-			if os.Getenv("ENV") != "dev" {
+			if os.Getenv("APP_ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))

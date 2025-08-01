@@ -218,11 +218,12 @@ func GeneratePaymentLink(ctx *interfaces.ApplicationContext[dto.GeneratePaymentL
 		}
 	}
 	var amount uint32
-	if ctx.Body.Frequency == entities.Annually {
+	switch ctx.Body.Frequency {
+	case entities.Annually:
 		amount = newSubscription.AnnualPrice
-	} else if ctx.Body.Frequency == entities.Monthly {
+	case entities.Monthly:
 		amount = newSubscription.MonthlyPrice
-	} else {
+	default:
 		apperrors.ClientError(ctx.Ctx, "Invalid frequency selected", nil, nil, ctx.DeviceID)
 		return
 	}

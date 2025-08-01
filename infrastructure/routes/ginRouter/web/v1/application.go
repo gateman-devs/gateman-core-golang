@@ -19,7 +19,7 @@ func AppRouter(router *gin.RouterGroup) {
 		appRouter.POST("/create", middlewares.WorkspaceAuthenticationMiddleware(nil, &[]entities.MemberPermissions{entities.WORKSPACE_CREATE_APPLICATIONS}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.ApplicationDTO
-			if os.Getenv("ENV") != "dev" {
+			if os.Getenv("APP_ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -42,7 +42,7 @@ func AppRouter(router *gin.RouterGroup) {
 		appRouter.PATCH("/ip-whitelist/update/:id", middlewares.WorkspaceAuthenticationMiddleware(nil, &[]entities.MemberPermissions{entities.WORKSPACE_CREATE_APPLICATIONS}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.UpdateWhitelistIPDTO
-			if os.Getenv("ENV") != "dev" {
+			if os.Getenv("APP_ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -65,7 +65,7 @@ func AppRouter(router *gin.RouterGroup) {
 		appRouter.PATCH("/update/:id", middlewares.WorkspaceAuthenticationMiddleware(nil, &[]entities.MemberPermissions{entities.WORKSPACE_EDIT_APPLICATIONS}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.UpdateApplications
-			if os.Getenv("ENV") != "dev" {
+			if os.Getenv("APP_ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -184,7 +184,7 @@ func AppRouter(router *gin.RouterGroup) {
 		appRouter.POST("/signup", middlewares.UserAuthenticationMiddleware(nil), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.ApplicationSignUpDTO
-			if os.Getenv("ENV") != "dev" {
+			if os.Getenv("APP_ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -211,7 +211,7 @@ func AppRouter(router *gin.RouterGroup) {
 		}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.FetchAppUsersDTO
-			if os.Getenv("ENV") != "dev" {
+			if os.Getenv("APP_ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -236,7 +236,7 @@ func AppRouter(router *gin.RouterGroup) {
 		}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.ToggleMFAProtectionSettingDTO
-			if os.Getenv("ENV") != "dev" {
+			if os.Getenv("APP_ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -261,7 +261,7 @@ func AppRouter(router *gin.RouterGroup) {
 		}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.BlockAccountsDTO
-			if os.Getenv("ENV") != "dev" {
+			if os.Getenv("APP_ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -290,7 +290,7 @@ func AppRouter(router *gin.RouterGroup) {
 		}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.BlockAccountsDTO
-			if os.Getenv("ENV") != "dev" {
+			if os.Getenv("APP_ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -319,7 +319,7 @@ func AppRouter(router *gin.RouterGroup) {
 		}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.UpdateAccessRefreshTokenTTL
-			if os.Getenv("ENV") != "dev" {
+			if os.Getenv("APP_ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -348,7 +348,7 @@ func AppRouter(router *gin.RouterGroup) {
 		}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.FetchAppMetrics
-			if os.Getenv("ENV") != "dev" {
+			if os.Getenv("APP_ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -372,7 +372,7 @@ func AppRouter(router *gin.RouterGroup) {
 		appRouter.POST("/custom-form/submit", middlewares.UserAuthenticationMiddleware(nil), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.SubmitCustomAppFormDTO
-			if os.Getenv("ENV") != "dev" {
+			if os.Getenv("APP_ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))

@@ -31,7 +31,7 @@ func AppAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], ipAddr
 		return nil, false
 	}
 	var appAPIKey string
-	if os.Getenv("ENV") != "production" {
+	if os.Getenv("APP_ENV") != "production" {
 		appAPIKey = app.SandboxAPIKey
 	} else {
 		appAPIKey = app.APIKey
@@ -41,11 +41,11 @@ func AppAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], ipAddr
 		apperrors.ClientError(ctx.Ctx, "invalid credentials", nil, nil, ctx.DeviceID)
 		return nil, false
 	}
-	if os.Getenv("ENV") == "production" && app.WhiteListedIPs == nil {
+	if os.Getenv("APP_ENV") == "production" && app.WhiteListedIPs == nil {
 		apperrors.ClientError(ctx.Ctx, "no ip address whitelisted", nil, nil, ctx.DeviceID)
 		return nil, false
 	}
-	if os.Getenv("ENV") == "production" {
+	if os.Getenv("APP_ENV") == "production" {
 		validIP := false
 		for _, wIP := range *app.WhiteListedIPs {
 			if wIP == ipAddress {

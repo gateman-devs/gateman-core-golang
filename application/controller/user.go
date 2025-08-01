@@ -15,9 +15,9 @@ import (
 	"gateman.io/application/utils"
 	"gateman.io/entities"
 	"gateman.io/infrastructure/auth"
+	"gateman.io/infrastructure/biometric"
 	"gateman.io/infrastructure/cryptography"
 	"gateman.io/infrastructure/database/repository/cache"
-	"gateman.io/infrastructure/facematch"
 	fileupload "gateman.io/infrastructure/file_upload"
 	"gateman.io/infrastructure/file_upload/types"
 	identityverification "gateman.io/infrastructure/identity_verification"
@@ -42,13 +42,7 @@ func SetAccountImage(ctx *interfaces.ApplicationContext[any]) {
 	url, _ := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), "accountimage"), types.SignedURLPermission{
 		Read: true,
 	}, time.Minute*1)
-	result := facematch.GlobalFaceMatcher.DetectAntiSpoof(*url)
-	alive := result.IsReal
-	if result.Error != "" {
-		err = fmt.Errorf(result.Error)
-	} else {
-		err = nil
-	}
+	alive, err := biometric.BiometricService.LivenessCheck(url)
 	if err != nil {
 		logger.Error("something went wrong when verifying image", logger.LoggerOptions{
 			Key:  "error",
@@ -197,7 +191,7 @@ func SetNINDetails(ctx *interfaces.ApplicationContext[dto.SetNINDetails]) {
 			cache.Cache.CreateEntry(string(hashedNIN), ninByte, time.Hour*24*365) // save fetched nin details for a year
 		}
 	}
-	if os.Getenv("ENV") != "production" {
+	if os.Getenv("APP_ENV") != "production" {
 		nin.PhoneNumber = utils.GetStringPointer("00000000000")
 	} else {
 		nin.PhoneNumber = utils.GetStringPointer(fmt.Sprintf("234%s", *nin.PhoneNumber))
@@ -212,7 +206,7 @@ func SetNINDetails(ctx *interfaces.ApplicationContext[dto.SetNINDetails]) {
 		return
 	}
 	if ctx.GetStringContextData("Phone") != "" && nin.PhoneNumber != nil {
-		if *nin.PhoneNumber == ctx.GetStringContextData("Phone") || (nin.FirstName == *account.FirstName.Value && nin.LastName == *account.LastName.Value && parsedNINDOB == *account.DOB.Value) {
+		if *nin.PhoneNumber == ctx.GetStringContextData("Phone") || (nin.FirstName == *account.FirstName.Value && nin.LastName == *account.LastName.Value && parsedNINDOB.Equal(*account.DOB.Value)) {
 			parsedNINDOB, err := time.Parse("2006-01-02", nin.DateOfBirth)
 			if err != nil {
 				logger.Error("failed to parse NIN DOB", logger.LoggerOptions{
@@ -456,7 +450,7 @@ func SetBVNDetails(ctx *interfaces.ApplicationContext[dto.SetBVNDetails]) {
 			cache.Cache.CreateEntry(string(hashedBVN), bvnByte, time.Hour*24*365) // save fetched bvn details for a year
 		}
 	}
-	if os.Getenv("ENV") != "production" {
+	if os.Getenv("APP_ENV") != "production" {
 		bvn.PhoneNumber = "00000000000"
 	} else {
 		bvn.PhoneNumber = fmt.Sprintf("234%s", bvn.PhoneNumber)
@@ -471,7 +465,7 @@ func SetBVNDetails(ctx *interfaces.ApplicationContext[dto.SetBVNDetails]) {
 			})
 			return
 		}
-		if bvn.PhoneNumber == ctx.GetStringContextData("Phone") || (bvn.FirstName == *account.FirstName.Value && bvn.LastName == *account.LastName.Value && parsedBVNDOB == *account.DOB.Value) {
+		if bvn.PhoneNumber == ctx.GetStringContextData("Phone") || (bvn.FirstName == *account.FirstName.Value && bvn.LastName == *account.LastName.Value && parsedBVNDOB.Equal(*account.DOB.Value)) {
 			parsedBVNDOB, err := time.Parse("2006-01-02", bvn.DateOfBirth)
 			if err != nil {
 				logger.Error("failed to parse BVN DOB", logger.LoggerOptions{
@@ -727,8 +721,7 @@ func SetDriversLicenseDetails(ctx *interfaces.ApplicationContext[dto.SetDriversL
 	accountImgURL, _ := fileupload.FileUploader.GeneratedSignedURL(account.Image, types.SignedURLPermission{
 		Read: true,
 	}, time.Minute*1)
-	compareResult := facematch.GlobalFaceMatcher.Compare(driverID.Photo, *accountImgURL, 0.7)
-	success := compareResult.Match
+	success, _ := biometric.BiometricService.FaceMatch(&driverID.Photo, accountImgURL)
 	if !success {
 		parsedDriverIDDOB, err := time.Parse("02-01-2006", driverID.BirthDate)
 		if err != nil {
@@ -739,7 +732,7 @@ func SetDriversLicenseDetails(ctx *interfaces.ApplicationContext[dto.SetDriversL
 			})
 			return
 		}
-		if driverID.FirstName == *account.FirstName.Value && driverID.LastName == *account.LastName.Value && parsedDriverIDDOB == *account.DOB.Value {
+		if driverID.FirstName == *account.FirstName.Value && driverID.LastName == *account.LastName.Value && parsedDriverIDDOB.Equal(*account.DOB.Value) {
 			success = true
 		}
 	}
@@ -881,7 +874,7 @@ func SetVoterIDDetails(ctx *interfaces.ApplicationContext[dto.SetVoterIDDetails]
 			cache.Cache.CreateEntry(string(hashedVoterID), bvnByte, time.Hour*24*365) // save fetched bvn details for a year
 		}
 	}
-	if os.Getenv("ENV") != "production" {
+	if os.Getenv("APP_ENV") != "production" {
 		voterID.Phone = "00000000000"
 	} else {
 		voterID.Phone = fmt.Sprintf("234%s", voterID.Phone)

@@ -2,6 +2,7 @@ package routev1
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 
 	apperrors "gateman.io/application/appErrors"
@@ -19,7 +20,8 @@ func WorkspaceRouter(router *gin.RouterGroup) {
 		workspaceRouter.POST("/create", func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.CreateWorkspaceDTO
-			if os.Getenv("ENV") != "dev" {
+			fmt.Println(os.Getenv("APP_ENV"))
+			if os.Getenv("APP_ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -48,7 +50,7 @@ func WorkspaceRouter(router *gin.RouterGroup) {
 		workspaceRouter.POST("/invite", middlewares.WorkspaceAuthenticationMiddleware(nil, &[]entities.MemberPermissions{entities.MEMBER_INVITE}, true), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.InviteWorspaceMembersDTO
-			if os.Getenv("ENV") != "dev" {
+			if os.Getenv("APP_ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -84,7 +86,7 @@ func WorkspaceRouter(router *gin.RouterGroup) {
 		workspaceRouter.POST("/login", func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.LoginWorkspaceMemberDTO
-			if os.Getenv("ENV") != "dev" {
+			if os.Getenv("APP_ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))

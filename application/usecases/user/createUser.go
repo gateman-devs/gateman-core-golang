@@ -218,7 +218,7 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 		return nil, url, &constants.ACCOUNT_EXISTS, nil
 	}
 
-	if os.Getenv("ENV") == "production" {
+	if os.Getenv("APP_ENV") == "production" {
 		if payload.Email != nil {
 			// found := cache.Cache.FindOne(fmt.Sprintf("%s-email-blacklist", *payload.Email))
 			// if found != nil {

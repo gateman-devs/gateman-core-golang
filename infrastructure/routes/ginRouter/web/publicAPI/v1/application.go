@@ -18,7 +18,7 @@ func AppRouter(router *gin.RouterGroup) {
 		appRouter.POST("/fetch", middlewares.AppAuthenticationMiddleware(), func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.FetchAppDTO
-			if os.Getenv("ENV") != "dev" {
+			if os.Getenv("APP_ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))

@@ -18,7 +18,7 @@ func AuthRouter(router *gin.RouterGroup) {
 		authRouter.POST("/otp/verify", func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.VerifyOTPDTO
-			if os.Getenv("ENV") != "dev" {
+			if os.Getenv("APP_ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -51,7 +51,7 @@ func AuthRouter(router *gin.RouterGroup) {
 		authRouter.POST("/verify-device", func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.VerifyDeviceDTO
-			if os.Getenv("ENV") != "dev" {
+			if os.Getenv("APP_ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -93,7 +93,7 @@ func AuthRouter(router *gin.RouterGroup) {
 		authRouter.POST("/user/authenticate", func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.CreateUserDTO
-			if os.Getenv("ENV") != "dev" {
+			if os.Getenv("APP_ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -122,7 +122,7 @@ func AuthRouter(router *gin.RouterGroup) {
 		authRouter.POST("/otp/resend", func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.ResendOTPDTO
-			if os.Getenv("ENV") != "dev" {
+			if os.Getenv("APP_ENV") != "dev" {
 				decryptedPayload, exists := ctx.Get("DecryptedBody")
 				if !exists {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))

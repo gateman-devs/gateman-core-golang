@@ -12,7 +12,7 @@ import (
 type MaxMindIPResolver struct{}
 
 func (mmResolver *MaxMindIPResolver) LookUp(ipAddress string) (*types.IPResult, error) {
-	if os.Getenv("ENV") != "production" {
+	if os.Getenv("APP_ENV") != "production" {
 		return &types.IPResult{
 			Longitude:     6.789,
 			Latitude:      6.543,

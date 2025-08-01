@@ -14,10 +14,9 @@ import (
 	"gateman.io/application/controller/dto"
 	"gateman.io/application/interfaces"
 	"gateman.io/application/subscription"
-	"gateman.io/infrastructure/facematch"
 	"gateman.io/infrastructure/logger"
 
-	// middlewares "gateman.io/infrastructure/middleware"
+	middlewares "gateman.io/infrastructure/middleware"
 	publicRouter "gateman.io/infrastructure/routes/ginRouter/web/publicAPI/v1"
 	webRoutev1 "gateman.io/infrastructure/routes/ginRouter/web/v1"
 	server_response "gateman.io/infrastructure/serverResponse"
@@ -33,17 +32,6 @@ type ginServer struct{}
 func (s *ginServer) Start() {
 	err := godotenv.Load()
 	startup.StartServices()
-
-	err = facematch.InitializeFaceMatcherService()
-	if err != nil {
-		logger.Error("Failed to initialize face matcher service", logger.LoggerOptions{
-			Key:  "error",
-			Data: err.Error(),
-		})
-		// Continue without face matcher service
-	} else {
-		logger.Info("Face matcher service initialized successfully")
-	}
 
 	if err != nil {
 		logger.Info("error loading env variables")
@@ -75,7 +63,7 @@ func (s *ginServer) Start() {
 	api := server.Group("/api")
 
 	routerV1 := api.Group("/v1")
-	// routerV1.Use(middlewares.UserAgentMiddleware())
+	routerV1.Use(middlewares.UserAgentMiddleware())
 	routerV1.POST("/key-exchange", func(ctx *gin.Context) {
 		// clientPubKeyBytes, _ := ctx.GetRawData()
 		var body map[string]any
@@ -95,12 +83,10 @@ func (s *ginServer) Start() {
 		})
 	})
 
-	// routerV1.Use(middlewares.DecryptPayloadMiddleware())
+	routerV1.Use(middlewares.DecryptPayloadMiddleware())
 	{
 		webRoutev1.AuthRouter(routerV1)
 		webRoutev1.AppRouter(routerV1)
-		// Biometric routers removed - using production liveness API only
-		webRoutev1.ProductionLivenessRouter(routerV1) // Production liveness system endpoints
 		webRoutev1.UserRouter(routerV1)
 		webRoutev1.WorkspaceRouter(routerV1)
 		webRoutev1.MiscRouter(routerV1)
