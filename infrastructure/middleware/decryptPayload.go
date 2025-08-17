@@ -2,7 +2,6 @@ package middlewares
 
 import (
 	"io"
-	"os"
 
 	"gateman.io/application/interfaces"
 	"gateman.io/application/middlewares"
@@ -12,10 +11,10 @@ import (
 
 func DecryptPayloadMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		if os.Getenv("APP_ENV") == "dev" {
-			ctx.Next()
-			return
-		}
+		// if os.Getenv("APP_ENV") == "dev" {
+		ctx.Next()
+		return
+		// }
 		body, err := io.ReadAll(ctx.Request.Body)
 		if err != nil {
 			ctx.Next()
