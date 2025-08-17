@@ -39,22 +39,22 @@ func SetAccountImage(ctx *interfaces.ApplicationContext[any]) {
 		apperrors.ClientError(ctx.Ctx, "Image has not been uploaded. Request for a new url and upload image before attempting this request again.", nil, utils.GetUIntPointer(http.StatusBadRequest), ctx.DeviceID)
 		return
 	}
-	url, _ := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), "accountimage"), types.SignedURLPermission{
-		Read: true,
-	}, time.Minute*1)
-	alive, err := biometric.BiometricService.LivenessCheck(url)
-	if err != nil {
-		logger.Error("something went wrong when verifying image", logger.LoggerOptions{
-			Key:  "error",
-			Data: err,
-		})
-		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
-		return
-	}
-	if !alive {
-		apperrors.ClientError(ctx.Ctx, "Please make sure to take a clear picture of your face", nil, nil, ctx.DeviceID)
-		return
-	}
+	// url, _ := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), "accountimage"), types.SignedURLPermission{
+	// 	Read: true,
+	// }, time.Minute*1)
+	// alive, err := biometric.BiometricService.LivenessCheck(url)
+	// if err != nil {
+	// 	logger.Error("something went wrong when verifying image", logger.LoggerOptions{
+	// 		Key:  "error",
+	// 		Data: err,
+	// 	})
+	// 	apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
+	// 	return
+	// }
+	// if !alive {
+	// 	apperrors.ClientError(ctx.Ctx, "Please make sure to take a clear picture of your face", nil, nil, ctx.DeviceID)
+	// 	return
+	// }
 	var availability_filter = map[string]any{}
 	if ctx.GetStringContextData("Email") != "" {
 		availability_filter["email"] = strings.ToLower(ctx.GetStringContextData("Email"))
