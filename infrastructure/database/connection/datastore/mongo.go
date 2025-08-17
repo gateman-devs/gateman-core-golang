@@ -56,7 +56,7 @@ type Config struct {
 func GetDefaultConfigOpts() *Config {
 	return &Config{
 		URI:                    os.Getenv("DB_URL"),
-		DatabaseName:           os.Getenv("APP_ENV"),
+		DatabaseName:           os.Getenv("DB_NAME"),
 		MaxPoolSize:            100,
 		MinPoolSize:            5,
 		MaxConnIdleTime:        30 * time.Minute,
