@@ -22,6 +22,10 @@ var (
 )
 
 type Config struct {
+	// Connection URL (takes precedence if provided)
+	URL string
+
+	// Individual connection parameters (used if URL is not provided)
 	Addr            string
 	Password        string
 	DB              int
@@ -37,8 +41,7 @@ type Config struct {
 
 func GetDefaultConfig() *Config {
 	return &Config{
-		Addr:            os.Getenv("REDIS_ADDR"),
-		Password:        os.Getenv("REDIS_PASSWORD"),
+		URL: os.Getenv("REDIS_URL"),
 		DB:              0,                // Default Redis DB
 		PoolSize:        100,              // Maximum number of socket connections
 		MinIdleConns:    10,               // Minimum number of idle connections
@@ -56,19 +59,58 @@ func Connect(config *Config) *RedisClient {
 		config = GetDefaultConfig()
 	}
 
-	rdb := redis.NewClient(&redis.Options{
-		Addr:            config.Addr,
-		Password:        config.Password,
-		DB:              config.DB,
-		PoolSize:        config.PoolSize,
-		MinIdleConns:    config.MinIdleConns,
-		MaxIdleConns:    config.MaxIdleConns,
-		ConnMaxIdleTime: config.ConnMaxIdleTime,
-		ConnMaxLifetime: config.ConnMaxLifetime,
-		DialTimeout:     config.DialTimeout,
-		ReadTimeout:     config.ReadTimeout,
-		WriteTimeout:    config.WriteTimeout,
-	})
+	var rdb *redis.Client
+
+	// If URL is provided, use it (takes precedence)
+	if config.URL != "" {
+		opt, err := redis.ParseURL(config.URL)
+		if err != nil {
+			panic(fmt.Errorf("failed to parse Redis URL: %w", err))
+		}
+
+		// Override with custom configuration if provided
+		if config.PoolSize > 0 {
+			opt.PoolSize = config.PoolSize
+		}
+		if config.MinIdleConns > 0 {
+			opt.MinIdleConns = config.MinIdleConns
+		}
+		if config.MaxIdleConns > 0 {
+			opt.MaxIdleConns = config.MaxIdleConns
+		}
+		if config.ConnMaxIdleTime > 0 {
+			opt.ConnMaxIdleTime = config.ConnMaxIdleTime
+		}
+		if config.ConnMaxLifetime > 0 {
+			opt.ConnMaxLifetime = config.ConnMaxLifetime
+		}
+		if config.DialTimeout > 0 {
+			opt.DialTimeout = config.DialTimeout
+		}
+		if config.ReadTimeout > 0 {
+			opt.ReadTimeout = config.ReadTimeout
+		}
+		if config.WriteTimeout > 0 {
+			opt.WriteTimeout = config.WriteTimeout
+		}
+
+		rdb = redis.NewClient(opt)
+	} else {
+		// Fallback to individual parameters
+		rdb = redis.NewClient(&redis.Options{
+			Addr:            config.Addr,
+			Password:        config.Password,
+			DB:              config.DB,
+			PoolSize:        config.PoolSize,
+			MinIdleConns:    config.MinIdleConns,
+			MaxIdleConns:    config.MaxIdleConns,
+			ConnMaxIdleTime: config.ConnMaxIdleTime,
+			ConnMaxLifetime: config.ConnMaxLifetime,
+			DialTimeout:     config.DialTimeout,
+			ReadTimeout:     config.ReadTimeout,
+			WriteTimeout:    config.WriteTimeout,
+		})
+	}
 
 	ctx := context.Background()
 	if err := rdb.Ping(ctx).Err(); err != nil {
