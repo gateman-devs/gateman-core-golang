@@ -2,7 +2,6 @@ package network
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -20,7 +19,6 @@ type NetworkController struct {
 
 func (network *NetworkController) InitialiseNetworkClient() {
 	network.HttpClient = &http.Client{}
-	network.HttpClient.Transport = logger.RequestMetricMonitor.GetRoundTripper(context.Background())
 }
 
 func (network *NetworkController) Get(path string, headers *map[string]string, params *map[string]string) (response *[]byte, statusCode *int, err error) {

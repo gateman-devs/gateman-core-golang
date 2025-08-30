@@ -3,19 +3,18 @@ package biometric
 import (
 	"os"
 
-	prembly_idpass "gateman.io/infrastructure/biometric/prembly"
 	"gateman.io/infrastructure/biometric/types"
+	"gateman.io/infrastructure/database/repository/cache"
 	"gateman.io/infrastructure/network"
 )
 
-var BiometricService types.BiometricServiceType
-
-func InitialiseBiometricService() {
-	BiometricService = &prembly_idpass.PremblyBiometricService{
+func init() {
+	BiometricService = &GatemanFace{
 		Network: &network.NetworkController{
-			BaseUrl: os.Getenv("PREMBLY_BASE_URL"),
+			BaseUrl: os.Getenv("GATEMAN_FACE_BASE_URL"),
 		},
-		API_KEY: os.Getenv("PREMBLY_API_KEY"),
-		APP_ID:  os.Getenv("PREMBLY_APP_ID"),
+		Cache: &cache.Cache,
 	}
 }
+
+var BiometricService types.BiometricServiceType

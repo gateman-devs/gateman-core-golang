@@ -721,8 +721,8 @@ func SetDriversLicenseDetails(ctx *interfaces.ApplicationContext[dto.SetDriversL
 	accountImgURL, _ := fileupload.FileUploader.GeneratedSignedURL(account.Image, types.SignedURLPermission{
 		Read: true,
 	}, time.Minute*1)
-	success, _ := biometric.BiometricService.FaceMatch(&driverID.Photo, accountImgURL)
-	if !success {
+	success, _ := biometric.BiometricService.CompareFaces(&driverID.Photo, accountImgURL)
+	if !success.Success {
 		parsedDriverIDDOB, err := time.Parse("02-01-2006", driverID.BirthDate)
 		if err != nil {
 			logger.Error("failed to parse Driver ID DOB", logger.LoggerOptions{
@@ -733,10 +733,10 @@ func SetDriversLicenseDetails(ctx *interfaces.ApplicationContext[dto.SetDriversL
 			return
 		}
 		if driverID.FirstName == *account.FirstName.Value && driverID.LastName == *account.LastName.Value && parsedDriverIDDOB.Equal(*account.DOB.Value) {
-			success = true
+			success.Success = true
 		}
 	}
-	if !success {
+	if !success.Success {
 		parsedDriverIDDOB, err := time.Parse("02-01-2006", driverID.BirthDate)
 		if err != nil {
 			logger.Error("failed to parse Driver ID DOB", logger.LoggerOptions{

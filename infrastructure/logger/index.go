@@ -10,8 +10,6 @@ type LoggerOptions struct {
 	Data interface{}
 }
 
-var RequestMetricMonitor = (&APIToolKitMonitor{})
-
 // This logs info level messages.
 func Info(msg string, payload ...LoggerOptions) {
 	zapFields := []zapcore.Field{}

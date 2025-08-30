@@ -406,3 +406,21 @@ func NewEnhancedComparisonMetadataDTO(similarityMethod string, thresholdUsed, qu
 		ProcessingSteps:   make([]ProcessingStepDTO, 0),
 	}
 }
+
+// New API DTOs for face comparison and liveness detection
+
+// FaceComparisonRequest represents the request for face comparison
+type FaceComparisonRequest struct {
+	Image1 string `json:"image1" validate:"required"` // Base64 encoded image or URL
+	Image2 string `json:"image2" validate:"required"` // Base64 encoded image or URL
+}
+
+// LivenessCheckRequest represents the request for image liveness check
+type LivenessCheckRequest struct {
+	Image string `json:"image" validate:"required"` // Base64 encoded image or URL
+}
+
+// VideoLivenessVerificationRequest represents the request for video liveness verification
+type VideoLivenessVerificationRequest struct {
+	ChallengeID string `json:"challenge_id" validate:"required"` // Challenge ID from generate-challenge
+}

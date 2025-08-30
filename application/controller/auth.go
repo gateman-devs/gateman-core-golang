@@ -452,7 +452,7 @@ func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) 
 	url, _ := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", ctx.GetStringContextData("UserID"), ctx.DeviceID), types.SignedURLPermission{
 		Read: true,
 	}, time.Minute*1)
-	alive, err := biometric.BiometricService.LivenessCheck(url)
+	alive, err := biometric.BiometricService.ImageLivenessCheck(url)
 	if err != nil {
 		logger.Error("something went wrong when verifying image", logger.LoggerOptions{
 			Key:  "error",
@@ -461,14 +461,14 @@ func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) 
 		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
-	if !alive {
+	if !alive.Success {
 		apperrors.ClientError(ctx.Ctx, "Please make sure to take a clear picture of your face", nil, nil, ctx.DeviceID)
 		return
 	}
 	accountImgURL, _ := fileupload.FileUploader.GeneratedSignedURL(account.Image, types.SignedURLPermission{
 		Read: true,
 	}, time.Minute*1)
-	match, err := biometric.BiometricService.FaceMatch(url, accountImgURL)
+	match, err := biometric.BiometricService.CompareFaces(url, accountImgURL)
 	if err != nil {
 		logger.Error("something went wrong when match images", logger.LoggerOptions{
 			Key:  "error",
@@ -477,7 +477,7 @@ func VeirfyDeviceImage(ctx *interfaces.ApplicationContext[dto.VerifyDeviceDTO]) 
 		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
-	if !match {
+	if !match.Success {
 		apperrors.ClientError(ctx.Ctx, "Face mismatch", nil, nil, ctx.DeviceID)
 		return
 	}

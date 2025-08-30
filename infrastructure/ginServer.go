@@ -29,13 +29,17 @@ import (
 
 type ginServer struct{}
 
-func (s *ginServer) Start() {
-	err := godotenv.Load()
-	startup.StartServices()
+func init() {
 
+	err := godotenv.Load()
 	if err != nil {
 		logger.Info("error loading env variables")
 	}
+	fmt.Println("omo")
+}
+
+func (s *ginServer) Start() {
+	startup.StartServices()
 
 	defer startup.CleanUpServices()
 
@@ -49,16 +53,13 @@ func (s *ginServer) Start() {
 	corsConfig := cors.Config{
 		AllowOrigins:     origins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "x-device-id", "User-Agent", "x-workspace-id", "x-api-key", "x-app-id"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "x-device-id", "User-Agent", "x-workspace-id", "x-api-key", "x-app-id","x-app-version"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}
 	server.Use(cors.New(corsConfig))
 	server.MaxMultipartMemory = 0 // 8 MiB
-
-	// server.Use(logger.MetricMonitor.MetricMiddleware().(gin.HandlerFunc))
-	server.Use(logger.RequestMetricMonitor.RequestMetricMiddleware().(func(*gin.Context)))
 
 	api := server.Group("/api")
 
@@ -90,6 +91,7 @@ func (s *ginServer) Start() {
 		webRoutev1.UserRouter(routerV1)
 		webRoutev1.WorkspaceRouter(routerV1)
 		webRoutev1.MiscRouter(routerV1)
+		webRoutev1.BiometricRouter(routerV1)
 	}
 
 	publicAPI := api.Group("/public")
