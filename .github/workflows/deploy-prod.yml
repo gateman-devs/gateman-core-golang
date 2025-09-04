@@ -14,7 +14,7 @@ on:
 env:
   REGISTRY: ${{ secrets.HARBOR_REGISTRY }}
   PROJECT_NAME: gateman-backend
-  IMAGE_NAME: gateman-backend/prod
+  IMAGE_NAME: prod
 
 jobs:
   build-and-push:
