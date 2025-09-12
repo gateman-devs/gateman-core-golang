@@ -91,7 +91,6 @@ func (s *ginServer) Start() {
 		webRoutev1.UserRouter(routerV1)
 		webRoutev1.WorkspaceRouter(routerV1)
 		webRoutev1.MiscRouter(routerV1)
-		webRoutev1.BiometricRouter(routerV1)
 	}
 
 	publicAPI := api.Group("/public")
@@ -99,6 +98,7 @@ func (s *ginServer) Start() {
 	{
 		publicRouter.AppRouter(publicV1)
 		publicRouter.WebhookRouter(publicV1)
+		publicRouter.BiometricRouter(publicV1)
 	}
 
 	server.GET("/ping", func(ctx *gin.Context) {
