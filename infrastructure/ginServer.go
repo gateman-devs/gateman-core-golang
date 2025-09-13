@@ -53,7 +53,7 @@ func (s *ginServer) Start() {
 	corsConfig := cors.Config{
 		AllowOrigins:     origins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "x-device-id", "User-Agent", "x-workspace-id", "x-api-key", "x-app-id","x-app-version"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "x-device-id", "User-Agent", "x-workspace-id", "x-api-key", "x-app-id", "x-app-version"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
@@ -91,6 +91,7 @@ func (s *ginServer) Start() {
 		webRoutev1.UserRouter(routerV1)
 		webRoutev1.WorkspaceRouter(routerV1)
 		webRoutev1.MiscRouter(routerV1)
+		webRoutev1.BiometricRouter(routerV1)
 	}
 
 	publicAPI := api.Group("/public")
@@ -98,6 +99,7 @@ func (s *ginServer) Start() {
 	{
 		publicRouter.AppRouter(publicV1)
 		publicRouter.WebhookRouter(publicV1)
+		publicV1.Use(middlewares.AppAuthenticationMiddleware())
 		publicRouter.BiometricRouter(publicV1)
 	}
 

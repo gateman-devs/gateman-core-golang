@@ -23,7 +23,7 @@ type BiometricLivenessResponse struct {
 	AnalysisDetails  AnalysisDetails `json:"analysis_details"`
 	Confidence       float64         `json:"confidence"`
 	Error            *string         `json:"error"`
-	FailureReason    string          `json:"failure_reason"`
+	FailureReason    *string         `json:"failure_reason"`
 	IsLive           bool            `json:"is_live"`
 	ProcessingTimeMs int             `json:"processing_time_ms"`
 	QualityScore     float64         `json:"quality_score"`

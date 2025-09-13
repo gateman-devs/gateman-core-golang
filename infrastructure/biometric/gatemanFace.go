@@ -74,7 +74,7 @@ func (g *GatemanFace) ImageLivenessCheck(image *string) (*types.BiometricLivenes
 		})
 		return &types.BiometricLivenessResponse{
 			Success:       false,
-			FailureReason: "service_error",
+			FailureReason: utils.GetStringPointer("service_error"),
 			Error:         utils.GetStringPointer("Image liveness check failed"),
 		}, nil
 	}
