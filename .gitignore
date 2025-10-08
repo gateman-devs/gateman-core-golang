@@ -1,0 +1,15 @@
+.env
+tmp
+compose.yaml
+log.json
+dump.rdb
+*.mmdb
+*.ps1
+main
+# Model files
+models/*.onnx
+data
+docs
+kiro
+.md
+/models

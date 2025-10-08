@@ -1,0 +1,92 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Go specific
+*.test
+*.out
+coverage.html
+coverage.xml
+
+# Build artifacts
+bin/
+build/
+dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+main
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+*.bak
+*.tmp
+*~
+
+# Dependencies
+vendor/
+
+# Local development
+.env
+.env.*
+*.env
+!.env.example
+*.log
+tmp/
+temp/
+
+# Docker
+.dockerignore
+docker-compose*.yml
+*.dockerfile
+# Keep Dockerfile for multi-stage builds
+
+# Testing and documentation
+README.md
+CHANGELOG.md
+docs/
+tests/
+*_test.go
+test/
+mock/
+mocks/
+
+# Deployment and CI/CD
+.github/
+.gitlab/
+.circleci/
+k8s/
+kubernetes/
+helm/
+charts/
+deploy/
+
+# Miscellaneous
+*.md
+!README.md
+LICENSE
+.DS_Store
+*.pprof
+*.cpu
+*.mem
+*.trace
+debug/
+
+# Test files
+test_*.go
+*_comparison.go
+
+# Downloaded models (will be downloaded during build)
+models/
+
+# Project specific (uncomment if needed)
+# config/local.yaml
+# assets/development/
+# scripts/local/

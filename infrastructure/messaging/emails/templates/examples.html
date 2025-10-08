@@ -1,0 +1,798 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Email Template Examples - Gateman</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: Arial, Helvetica, sans-serif;
+                background-color: #f5f5f5;
+                padding: 40px 20px;
+            }
+
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+
+            h1 {
+                color: #212830;
+                font-size: 36px;
+                margin-bottom: 10px;
+            }
+
+            .subtitle {
+                color: #21283080;
+                font-size: 18px;
+                margin-bottom: 40px;
+            }
+
+            .example-section {
+                background: white;
+                border-radius: 10px;
+                padding: 30px;
+                margin-bottom: 30px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+
+            h2 {
+                color: #212830;
+                font-size: 24px;
+                margin-bottom: 20px;
+                padding-bottom: 10px;
+                border-bottom: 2px solid #0061fe;
+            }
+
+            h3 {
+                color: #212830;
+                font-size: 18px;
+                margin-bottom: 15px;
+                margin-top: 25px;
+            }
+
+            .code-block {
+                background-color: #f8f9fa;
+                border: 1px solid #e5e5e5;
+                border-radius: 5px;
+                padding: 15px;
+                margin: 15px 0;
+                overflow-x: auto;
+            }
+
+            .code-block pre {
+                font-family: "Courier New", monospace;
+                font-size: 14px;
+                color: #212830;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+            }
+
+            .template-link {
+                display: inline-block;
+                background-color: #0061fe;
+                color: white;
+                padding: 10px 20px;
+                border-radius: 5px;
+                text-decoration: none;
+                margin-right: 10px;
+                margin-top: 10px;
+            }
+
+            .template-link:hover {
+                background-color: #0056d6;
+            }
+
+            .placeholder-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 15px 0;
+            }
+
+            .placeholder-table th,
+            .placeholder-table td {
+                padding: 10px;
+                text-align: left;
+                border: 1px solid #e5e5e5;
+            }
+
+            .placeholder-table th {
+                background-color: #f8f9fa;
+                font-weight: 600;
+                color: #212830;
+            }
+
+            .placeholder-table td:first-child {
+                font-family: "Courier New", monospace;
+                color: #0061fe;
+                font-weight: 500;
+            }
+
+            .note {
+                background-color: #e6f3ff;
+                border-left: 4px solid #0061fe;
+                padding: 15px;
+                margin: 20px 0;
+                color: #0061fe;
+            }
+
+            .warning {
+                background-color: #fff9e6;
+                border-left: 4px solid #ffb800;
+                padding: 15px;
+                margin: 20px 0;
+                color: #cc9400;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Gateman Email Template Examples</h1>
+            <p class="subtitle">
+                Complete integration examples for all email templates
+            </p>
+
+            <!-- OTP Request Example -->
+            <div class="example-section">
+                <h2>1. OTP Request Template</h2>
+                <p>Used for sending one-time passwords for authentication.</p>
+
+                <a href="otp-request.html" class="template-link"
+                    >View Template</a
+                >
+                <a href="otp-request.html" class="template-link" download
+                    >Download Template</a
+                >
+
+                <h3>Placeholders</h3>
+                <table class="placeholder-table">
+                    <thead>
+                        <tr>
+                            <th>Placeholder</th>
+                            <th>Description</th>
+                            <th>Example Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>{{RECIPIENT_NAME}}</td>
+                            <td>User's name</td>
+                            <td>John Doe</td>
+                        </tr>
+                        <tr>
+                            <td>{{OTP_CODE}}</td>
+                            <td>The OTP code</td>
+                            <td>123456</td>
+                        </tr>
+                        <tr>
+                            <td>{{REQUEST_ACTION}}</td>
+                            <td>Action description</td>
+                            <td>sign in to your account</td>
+                        </tr>
+                        <tr>
+                            <td>{{APP_NAME}}</td>
+                            <td>Application name</td>
+                            <td>Gateman</td>
+                        </tr>
+                        <tr>
+                            <td>{{EXPIRY_MINUTES}}</td>
+                            <td>Code expiry time</td>
+                            <td>10</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>JavaScript Integration Example</h3>
+                <div class="code-block">
+                    <pre>
+// Using with Node.js and Nodemailer
+const nodemailer = require('nodemailer');
+const fs = require('fs').promises;
+
+async function sendOTPEmail(userEmail, userName, otpCode) {
+    // Read template
+    const template = await fs.readFile('./otp-request.html', 'utf8');
+
+    // Replace placeholders
+    const html = template
+        .replace(/{{RECIPIENT_NAME}}/g, userName)
+        .replace(/{{OTP_CODE}}/g, otpCode)
+        .replace(/{{REQUEST_ACTION}}/g, 'sign in to your account')
+        .replace(/{{APP_NAME}}/g, 'Gateman')
+        .replace(/{{EXPIRY_MINUTES}}/g, '10');
+
+    // Send email
+    const transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 587,
+        auth: {
+            user: 'your-email@gmail.com',
+            pass: 'your-password'
+        }
+    });
+
+    await transporter.sendMail({
+        from: '"Gateman" &lt;noreply@gateman.io&gt;',
+        to: userEmail,
+        subject: 'Your OTP Code - Gateman',
+        html: html
+    });
+}</pre
+                    >
+                </div>
+            </div>
+
+            <!-- Password Changed Example -->
+            <div class="example-section">
+                <h2>2. Password Changed Template</h2>
+                <p>Notification sent when a user's password is changed.</p>
+
+                <a href="password-changed.html" class="template-link"
+                    >View Template</a
+                >
+                <a href="password-changed.html" class="template-link" download
+                    >Download Template</a
+                >
+
+                <h3>Placeholders</h3>
+                <table class="placeholder-table">
+                    <thead>
+                        <tr>
+                            <th>Placeholder</th>
+                            <th>Description</th>
+                            <th>Example Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>{{RECIPIENT_NAME}}</td>
+                            <td>User's name</td>
+                            <td>Jane Smith</td>
+                        </tr>
+                        <tr>
+                            <td>{{CHANGE_TIME}}</td>
+                            <td>Timestamp of change</td>
+                            <td>December 25, 2024, 10:30 AM</td>
+                        </tr>
+                        <tr>
+                            <td>{{IP_ADDRESS}}</td>
+                            <td>IP address</td>
+                            <td>192.168.1.1</td>
+                        </tr>
+                        <tr>
+                            <td>{{DEVICE_INFO}}</td>
+                            <td>Device/browser info</td>
+                            <td>Chrome on Windows</td>
+                        </tr>
+                        <tr>
+                            <td>{{SUPPORT_URL}}</td>
+                            <td>Support page URL</td>
+                            <td>https://support.gateman.io</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Python Integration Example</h3>
+                <div class="code-block">
+                    <pre>
+# Using with Python and SendGrid
+import sendgrid
+from sendgrid.helpers.mail import Mail
+from datetime import datetime
+
+def send_password_changed_email(user_email, user_name, ip_address, device_info):
+    # Read template
+    with open('./password-changed.html', 'r') as file:
+        template = file.read()
+
+    # Replace placeholders
+    html_content = template.replace('{{RECIPIENT_NAME}}', user_name) \
+                           .replace('{{CHANGE_TIME}}', datetime.now().strftime('%B %d, %Y, %I:%M %p')) \
+                           .replace('{{IP_ADDRESS}}', ip_address) \
+                           .replace('{{DEVICE_INFO}}', device_info) \
+                           .replace('{{SUPPORT_URL}}', 'https://support.gateman.io')
+
+    # Send email
+    sg = sendgrid.SendGridAPIClient(api_key='your-sendgrid-api-key')
+    message = Mail(
+        from_email='noreply@gateman.io',
+        to_emails=user_email,
+        subject='Password Changed - Gateman',
+        html_content=html_content
+    )
+
+    response = sg.send(message)</pre
+                    >
+                </div>
+            </div>
+
+            <!-- Workspace Created with OTP Example -->
+            <div class="example-section">
+                <h2>3. Workspace Created with OTP Template</h2>
+                <p>
+                    Welcome email sent when a workspace is created, including
+                    OTP verification.
+                </p>
+
+                <a href="workspace-created-otp.html" class="template-link"
+                    >View Template</a
+                >
+                <a
+                    href="workspace-created-otp.html"
+                    class="template-link"
+                    download
+                    >Download Template</a
+                >
+
+                <h3>Placeholders</h3>
+                <table class="placeholder-table">
+                    <thead>
+                        <tr>
+                            <th>Placeholder</th>
+                            <th>Description</th>
+                            <th>Example Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>{{RECIPIENT_NAME}}</td>
+                            <td>User's name</td>
+                            <td>John Doe</td>
+                        </tr>
+                        <tr>
+                            <td>{{WORKSPACE_NAME}}</td>
+                            <td>Workspace name</td>
+                            <td>Acme Corporation</td>
+                        </tr>
+                        <tr>
+                            <td>{{WORKSPACE_COUNTRY}}</td>
+                            <td>Country</td>
+                            <td>United States</td>
+                        </tr>
+                        <tr>
+                            <td>{{WORKSPACE_SECTOR}}</td>
+                            <td>Business sector</td>
+                            <td>Technology</td>
+                        </tr>
+                        <tr>
+                            <td>{{OTP_CODE}}</td>
+                            <td>Verification code</td>
+                            <td>123456</td>
+                        </tr>
+                        <tr>
+                            <td>{{EXPIRY_MINUTES}}</td>
+                            <td>Code expiry time</td>
+                            <td>10</td>
+                        </tr>
+                        <tr>
+                            <td>{{VERIFICATION_URL}}</td>
+                            <td>Direct verification link</td>
+                            <td>https://gateman.io/verify</td>
+                        </tr>
+                        <tr>
+                            <td>{{MANUAL_VERIFICATION_URL}}</td>
+                            <td>Manual code entry URL</td>
+                            <td>gateman.io/verify</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Node.js Integration Example</h3>
+                <div class="code-block">
+                    <pre>
+// Using with workspace creation and OTP
++const fs = require('fs').promises;
++const crypto = require('crypto');
++
++async function sendWorkspaceCreatedWithOTP(user) {
++    // Generate OTP
++    const otpCode = crypto.randomInt(100000, 999999).toString();
++
++    // Read template
++    const template = await fs.readFile('./workspace-created-otp.html', 'utf8');
++
++    // Replace placeholders
++    const html = template
++        .replace(/{{RECIPIENT_NAME}}/g, user.name)
++        .replace(/{{WORKSPACE_NAME}}/g, user.workspace.name)
++        .replace(/{{WORKSPACE_COUNTRY}}/g, user.workspace.country)
++        .replace(/{{WORKSPACE_SECTOR}}/g, user.workspace.sector)
++        .replace(/{{OTP_CODE}}/g, otpCode)
++        .replace(/{{EXPIRY_MINUTES}}/g, '10')
++        .replace(/{{VERIFICATION_URL}}/g, `https://gateman.io/verify?code=${otpCode}&workspace=${user.workspace.id}`)
++        .replace(/{{MANUAL_VERIFICATION_URL}}/g, 'gateman.io/verify')
++        .replace(/{{RESEND_CODE_URL}}/g, 'https://gateman.io/resend-code')
++        .replace(/{{SUPPORT_URL}}/g, 'https://support.gateman.io')
++        .replace(/{{DOCS_URL}}/g, 'https://docs.gateman.io')
++        .replace(/{{WEBSITE_URL}}/g, 'https://gateman.io')
++        .replace(/{{BLOG_URL}}/g, 'https://blog.gateman.io')
++        .replace(/{{STATUS_URL}}/g, 'https://status.gateman.io')
++        .replace(/{{PRIVACY_URL}}/g, 'https://gateman.io/privacy');
++
++    // Store OTP in database with expiry
++    await saveOTP(user.id, otpCode, new Date(Date.now() + 10 * 60000));
++
++    // Send email
++    await emailService.send({
++        to: user.email,
++        subject: `Welcome to ${user.workspace.name} - Verification Required`,
++        html: html
++    });
++
++    return { success: true, workspaceId: user.workspace.id };
++}</pre
+                    >
+                </div>
+            </div>
+
+            <!-- App Created Example -->
+            <div class="example-section">
+                <h2>4. App Created Template</h2>
+                <p>Welcome email sent when a new application is created.</p>
+
+                <a href="app-created.html" class="template-link"
+                    >View Template</a
+                >
+                <a href="app-created.html" class="template-link" download
+                    >Download Template</a
+                >
+
+                <h3>Placeholders</h3>
+                <table class="placeholder-table">
+                    <thead>
+                        <tr>
+                            <th>Placeholder</th>
+                            <th>Description</th>
+                            <th>Example Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>{{RECIPIENT_NAME}}</td>
+                            <td>User's name</td>
+                            <td>Developer</td>
+                        </tr>
+                        <tr>
+                            <td>{{APP_NAME}}</td>
+                            <td>Application name</td>
+                            <td>My Awesome App</td>
+                        </tr>
+                        <tr>
+                            <td>{{APP_ID}}</td>
+                            <td>Application ID</td>
+                            <td>app_1234567890</td>
+                        </tr>
+                        <tr>
+                            <td>{{API_KEY}}</td>
+                            <td>API key (sensitive)</td>
+                            <td>gm_live_abcdef123456</td>
+                        </tr>
+                        <tr>
+                            <td>{{CREATED_TIME}}</td>
+                            <td>Creation timestamp</td>
+                            <td>December 25, 2024, 10:30 AM</td>
+                        </tr>
+                        <tr>
+                            <td>{{DASHBOARD_URL}}</td>
+                            <td>Dashboard link</td>
+                            <td>https://dashboard.gateman.io</td>
+                        </tr>
+                        <tr>
+                            <td>{{DOCUMENTATION_URL}}</td>
+                            <td>Documentation link</td>
+                            <td>https://docs.gateman.io</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="warning">
+                    <strong>⚠️ Security Note:</strong> The API key should only
+                    be shown once and should be transmitted securely. Never log
+                    or store API keys in plain text.
+                </div>
+
+                <h3>PHP Integration Example</h3>
+                <div class="code-block">
+                    <pre>
+&lt;?php
+// Using with PHP and PHPMailer
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+
+function sendAppCreatedEmail($userEmail, $userName, $appName, $appId, $apiKey) {
+    // Read template
+    $template = file_get_contents('./app-created.html');
+
+    // Replace placeholders
+    $placeholders = [
+        '{{RECIPIENT_NAME}}' => $userName,
+        '{{APP_NAME}}' => $appName,
+        '{{APP_ID}}' => $appId,
+        '{{API_KEY}}' => $apiKey,
+        '{{CREATED_TIME}}' => date('F j, Y, g:i A'),
+        '{{DASHBOARD_URL}}' => 'https://dashboard.gateman.io',
+        '{{DOCUMENTATION_URL}}' => 'https://docs.gateman.io'
+    ];
+
+    $html = str_replace(
+        array_keys($placeholders),
+        array_values($placeholders),
+        $template
+    );
+
+    // Send email
+    $mail = new PHPMailer(true);
+
+    $mail->isSMTP();
+    $mail->Host = 'smtp.gmail.com';
+    $mail->SMTPAuth = true;
+    $mail->Username = 'your-email@gmail.com';
+    $mail->Password = 'your-password';
+    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+    $mail->Port = 587;
+
+    $mail->setFrom('noreply@gateman.io', 'Gateman');
+    $mail->addAddress($userEmail, $userName);
+
+    $mail->isHTML(true);
+    $mail->Subject = 'App Created Successfully - Gateman';
+    $mail->Body = $html;
+
+    $mail->send();
+}
+?&gt;</pre
+                    >
+                </div>
+            </div>
+
+            <!-- Custom Template Example -->
+            <div class="example-section">
+                <h2>5. Custom Template</h2>
+                <p>
+                    Flexible template with multiple content sections for any
+                    purpose.
+                </p>
+
+                <a href="custom-template.html" class="template-link"
+                    >View Template</a
+                >
+                <a href="custom-template.html" class="template-link" download
+                    >Download Template</a
+                >
+
+                <div class="note">
+                    <strong>💡 Tip:</strong> The custom template contains many
+                    commented sections. Uncomment only the sections you need for
+                    your specific use case.
+                </div>
+
+                <h3>Available Content Sections</h3>
+                <ul
+                    style="
+                        columns: 2;
+                        column-gap: 40px;
+                        margin: 20px 0;
+                        padding-left: 20px;
+                    "
+                >
+                    <li>Text paragraphs (aligned)</li>
+                    <li>Primary/secondary buttons</li>
+                    <li>Code/token boxes</li>
+                    <li>Highlight boxes (info/warning/success)</li>
+                    <li>Bulleted and numbered lists</li>
+                    <li>Images with captions</li>
+                    <li>Data tables</li>
+                    <li>Two-column layouts</li>
+                    <li>Card/box sections</li>
+                    <li>Social media links</li>
+                    <li>Email signatures</li>
+                    <li>Custom HTML sections</li>
+                </ul>
+
+                <h3>Complete Integration Example</h3>
+                <div class="code-block">
+                    <pre>
+// Advanced example with template caching and error handling
+class EmailService {
+    constructor() {
+        this.templates = {};
+        this.loadTemplates();
+    }
+
+    async loadTemplates() {
+        const fs = require('fs').promises;
+        const path = require('path');
+
+        const templateFiles = {
+            otp: 'otp-request.html',
+            passwordChanged: 'password-changed.html',
+            appCreated: 'app-created.html',
+            custom: 'custom-template.html'
+        };
+
+        for (const [key, filename] of Object.entries(templateFiles)) {
+            try {
+                const filePath = path.join(__dirname, 'templates', filename);
+                this.templates[key] = await fs.readFile(filePath, 'utf8');
+            } catch (error) {
+                console.error(`Failed to load template ${filename}:`, error);
+            }
+        }
+    }
+
+    replacePlaceholders(template, data) {
+        let html = template;
+        for (const [key, value] of Object.entries(data)) {
+            const placeholder = new RegExp(`{{${key}}}`, 'g');
+            html = html.replace(placeholder, value || '');
+        }
+        return html;
+    }
+
+    async sendEmail(type, to, data) {
+        const template = this.templates[type];
+        if (!template) {
+            throw new Error(`Template ${type} not found`);
+        }
+
+        const html = this.replacePlaceholders(template, data);
+
+        // Your email sending logic here
+        // This example uses AWS SES
+        const AWS = require('aws-sdk');
+        const ses = new AWS.SES({ region: 'us-east-1' });
+
+        const params = {
+            Source: 'Gateman &lt;noreply@gateman.io&gt;',
+            Destination: { ToAddresses: [to] },
+            Message: {
+                Subject: { Data: data.subject || 'Gateman Notification' },
+                Body: { Html: { Data: html } }
+            }
+        };
+
+        try {
+            const result = await ses.sendEmail(params).promise();
+            console.log('Email sent:', result.MessageId);
+            return result;
+        } catch (error) {
+            console.error('Email sending failed:', error);
+            throw error;
+        }
+    }
+}
+
+// Usage
+const emailService = new EmailService();
+
+// Send OTP email
+await emailService.sendEmail('otp', 'user@example.com', {
+    subject: 'Your OTP Code',
+    RECIPIENT_NAME: 'John Doe',
+    OTP_CODE: '123456',
+    REQUEST_ACTION: 'sign in',
+    APP_NAME: 'Gateman',
+    EXPIRY_MINUTES: '10'
+});
+
+// Send password changed email
+await emailService.sendEmail('passwordChanged', 'user@example.com', {
+    subject: 'Password Changed',
+    RECIPIENT_NAME: 'Jane Smith',
+    CHANGE_TIME: new Date().toLocaleString(),
+    IP_ADDRESS: '192.168.1.1',
+    DEVICE_INFO: 'Chrome on Windows',
+    SUPPORT_URL: 'https://support.gateman.io'
+});</pre
+                    >
+                </div>
+            </div>
+
+            <!-- Testing Section -->
+            <div class="example-section">
+                <h2>Testing Your Email Templates</h2>
+
+                <h3>1. Local Testing</h3>
+                <div class="code-block">
+                    <pre>
+// Simple HTML preview server
+const express = require('express');
+const app = express();
+
+app.get('/preview/:template', (req, res) => {
+    const fs = require('fs');
+    const path = require('path');
+
+    const templatePath = path.join(__dirname, `${req.params.template}.html`);
+    let html = fs.readFileSync(templatePath, 'utf8');
+
+    // Replace with test data
+    const testData = {
+        RECIPIENT_NAME: 'Test User',
+        OTP_CODE: '123456',
+        APP_NAME: 'Test App',
+        // Add more test values
+    };
+
+    for (const [key, value] of Object.entries(testData)) {
+        html = html.replace(new RegExp(`{{${key}}}`, 'g'), value);
+    }
+
+    res.send(html);
+});
+
+app.listen(3000, () => {
+    console.log('Preview server running at http://localhost:3000/preview/otp-request');
+});</pre
+                    >
+                </div>
+
+                <h3>2. Email Client Testing</h3>
+                <p>Test your templates across different email clients:</p>
+                <ul style="margin: 15px 0; padding-left: 20px">
+                    <li>Gmail (Web, iOS, Android)</li>
+                    <li>Outlook (2016, 2019, 365, Web)</li>
+                    <li>Apple Mail (iOS, macOS)</li>
+                    <li>Yahoo Mail</li>
+                    <li>Thunderbird</li>
+                </ul>
+
+                <h3>3. Spam Testing</h3>
+                <p>Check your email's spam score before sending:</p>
+                <div class="code-block">
+                    <pre>
+// Check spam score using mail-tester.com API
+const axios = require('axios');
+
+async function checkSpamScore(emailHtml) {
+    // Send test email to mail-tester
+    const testAddress = 'test-xyz123@mail-tester.com';
+    await sendEmail(testAddress, 'Test Subject', emailHtml);
+
+    // Wait a moment for processing
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
+    // Check score (you'll need to visit the URL)
+    console.log(`Check spam score at: https://www.mail-tester.com/test-xyz123`);
+}</pre
+                    >
+                </div>
+            </div>
+
+            <!-- Best Practices -->
+            <div class="example-section">
+                <h2>Best Practices</h2>
+
+                <h3>✅ Do's</h3>
+                <ul style="margin: 15px 0; padding-left: 20px; color: #008800">
+                    <li>Always use absolute URLs for images and links</li>
+                    <li>Include alt text for all images</li>
+                    <li>Test with real email accounts</li>
+                    <li>Keep email size under 100KB</li>
+                    <li>Use table-based layouts for consistency</li>
+                    <li>Include both HTML and plain text versions</li>
+                    <li>Add preheader text for better previews</li>
+                    <li>Use inline CSS styles</li>
+                </ul>
+
+                <h3>❌ Don'ts</h3>
+                <ul style="margin: 15px 0; padding-left: 20px; color: #dc3545">
+                    <li>Don't use JavaScript in emails</li>
+                    <li>Don't use external stylesheets</li>
+                    <li>Don't use CSS Grid or Flexbox</li>
+                    <li>Don't embed videos directly</li>
+                    <li>Don't use custom fonts (poor support)</li>
+                    <li>Don't forget mobile optimization</li>
+                    <li>Don't send without testing</li>
+                    <li>Don't use background images (inconsistent support)</li>
+                </ul>
+            </div>
+        </div>
+    </body>
+</html>

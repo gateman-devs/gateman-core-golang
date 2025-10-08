@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workspace Created - Gateman</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
+    <style type="text/css">
+        /* Reset styles */
+        body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+        table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+        img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+        body { margin: 0; padding: 0; width: 100% !important; min-width: 100%; }
+
+        /* Mobile styles */
+        @media screen and (max-width: 600px) {
+            .mobile-hide { display: none !important; }
+            .mobile-center { text-align: center !important; }
+            .container { width: 100% !important; max-width: 100% !important; }
+            .content { padding: 20px !important; }
+            .code-box { padding: 10px !important; max-width: 300px !important; }
+            .code-text { font-size: 24px !important; letter-spacing: 3px !important; }
+        }
+    </style>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f5f5f5; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+
+    <!-- Preheader Text -->
+    <div style="display: none; font-size: 1px; color: #333333; line-height: 1px; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden;">
+        Your workspace "{{.WORKSPACE_NAME}}" has been created. Your OTP code is {{.OTP_CODE}}
+    </div>
+
+    <!-- Email Container -->
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f5f5f5;">
+        <tr>
+            <td style="padding: 40px 0;">
+                <!-- Content Container -->
+                <table class="container" role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="margin: 0 auto; background-color: #ffffff; border-radius: 10px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); overflow: hidden;">
+
+                    <!-- Header -->
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 40px 40px 20px 40px; border-bottom: 1px solid #e5e5e5; text-align: center;">
+                            <img src="https://assets.gateman.io/logo.svg" alt="Gateman" style="height: 40px; display: block; margin: 0 auto;">
+                        </td>
+                    </tr>
+
+                    <!-- Main Content -->
+                    <tr>
+                        <td class="content" style="padding: 40px; background-color: #ffffff;">
+
+                            <!-- Title -->
+                            <h1 style="color: #212830; font-size: 28px; font-weight: 600; line-height: 1.2; margin: 0 0 20px 0; text-align: center;">
+                                Welcome to Your New Workspace! 🎉
+                            </h1>
+
+                            <!-- Greeting -->
+                            <p style="color: #21283080; font-size: 16px; line-height: 24px; margin: 0 0 20px 0; text-align: center;">
+                                Hi Gateman User,
+                            </p>
+
+                            <!-- Description -->
+                            <p style="color: #21283080; font-size: 16px; line-height: 24px; margin: 0 0 20px 0; text-align: center;">
+                                Great news! Your workspace has been successfully created.
+                                To complete the setup and access your workspace, please verify your identity with the OTP code below.
+                            </p>
+
+                            <!-- Success Message -->
+                            <div style="background-color: #e6f9e6; border: 1px solid #00cc00; border-radius: 8px; padding: 15px; margin: 20px 0;">
+                                <p style="color: #008800; font-size: 14px; line-height: 21px; margin: 0; text-align: center;">
+                                    ✓ Workspace created successfully - Verification required to activate
+                                </p>
+                            </div>
+
+                            <!-- OTP Code Section -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 30px 0;">
+                                <tr>
+                                    <td style="vertical-align: top;">
+                                        <div class="code-box" style="background-color: #e6f3ff; border: 2px solid #0061fe; border-radius: 8px; padding: 15px; max-width: 300px; margin: 0 auto; text-align: center; display: table;">
+                                            <div style="display: table-cell; vertical-align: middle;">
+                                                <p style="color: #0061fe; font-size: 14px; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">
+                                                    VERIFICATION CODE
+                                                </p>
+                                                <p class="code-text" style="color: #212830; font-size: 28px; font-weight: 700; letter-spacing: 4px; margin: 10px 0; font-family: 'Courier New', monospace;">
+                                                    {{.OTP_CODE}}
+                                                </p>
+                                                <p style="color: #0061fe; font-size: 12px; margin: 10px 0 0 0; font-style: italic;">
+                                                    Valid for {{.EXPIRY_MINUTES}} minutes
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Divider -->
+                            <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 30px 0;">
+
+                            <!-- What's Next Section -->
+                            <h3 style="color: #212830; font-size: 20px; font-weight: 600; margin: 30px 0 20px 0; text-align: center;">
+                                What's Next?
+                            </h3>
+
+                            <div style="background-color: #fafbfc; border-left: 4px solid #0061fe; padding: 20px; margin: 20px 0;">
+                                <h4 style="color: #212830; font-size: 16px; font-weight: 600; margin: 0 0 15px 0;">
+                                    After verification, you'll be able to:
+                                </h4>
+                                <ul style="color: #21283080; font-size: 14px; line-height: 24px; margin: 0; padding-left: 20px;">
+                                    <li style="margin-bottom: 8px;">
+                                        <strong style="color: #212830;">Create applications</strong> - Set up your first app with Gateman authentication
+                                    </li>
+                                    <li style="margin-bottom: 8px;">
+                                        <strong style="color: #212830;">Configure settings</strong> - Customize workspace preferences and security
+                                    </li>
+                                    <li style="margin-bottom: 8px;">
+                                        <strong style="color: #212830;">Access analytics</strong> - Monitor usage and performance metrics
+                                    </li>
+                                    <li style="margin-bottom: 0;">
+                                        <strong style="color: #212830;">Integrate APIs</strong> - Connect with your existing infrastructure
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <!-- Warning Message -->
+                            <div style="background-color: #fff9e6; border: 1px solid #ffb800; border-radius: 8px; padding: 15px; margin: 20px 0;">
+                                <p style="color: #cc9400; font-size: 14px; line-height: 21px; margin: 0;">
+                                    <strong>⚠️ Security Notice:</strong> This code will expire in {{.EXPIRY_MINUTES}} minutes and can only be used once.
+                                    Never share this code with anyone. Gateman staff will never ask for your verification code.
+                                </p>
+                            </div>
+
+                            <!-- Help Section -->
+                            <div style="text-align: center; margin: 30px 0;">
+                                <p style="color: #21283080; font-size: 14px; margin: 0 0 10px 0;">
+                                    Having trouble? We're here to help!
+                                </p>
+                                <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto;">
+                                    <tr>
+                                        <td style="padding: 0 10px;">
+                                            <a href="{{.SUPPORT_URL}}" style="color: #0061fe; text-decoration: underline; font-size: 14px;">
+                                                Contact Support
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- Welcome Message -->
+                            <div style="background-color: #f8f9fa; border-radius: 8px; padding: 20px; margin: 30px 0; text-align: center;">
+                                <p style="color: #212830; font-size: 16px; font-weight: 600; margin: 0 0 10px 0;">
+                                    Welcome to the Gateman Community! 🚀
+                                </p>
+                                <p style="color: #21283080; font-size: 14px; line-height: 21px; margin: 0;">
+                                    Join thousands of developers who trust Gateman for secure, scalable authentication.
+                                    We're excited to see what you'll build!
+                                </p>
+                            </div>
+
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f8f9fa; padding: 30px 40px; border-top: 1px solid #e5e5e5;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td align="center" style="color: #21283080; font-size: 14px; line-height: 21px;">
+                                        <p style="margin: 0 0 15px 0;">
+                                            <a href="{{.WEBSITE_URL}}" style="color: #0061fe; text-decoration: none;">Website</a>
+                                            <span style="margin: 0 10px;">•</span>
+                                            <a href="{{.PRIVACY_URL}}" style="color: #0061fe; text-decoration: none;">Privacy</a>
+                                            <span style="margin: 0 10px;">•</span>
+                                            <a href="{{.STATUS_URL}}" style="color: #0061fe; text-decoration: none;">Status</a>
+                                        </p>
+                                        <p style="margin: 0 0 10px 0;">
+                                            © 2024 Gateman. All rights reserved.
+                                        </p>
+                                        <p style="margin: 0 0 10px 0;">
+                                            <a href="https://gateman.io" style="color: #0061fe; text-decoration: none;">gateman.io</a>
+                                        </p>
+                                        <p style="margin: 0; font-size: 12px; color: #21283050;">
+                                            You received this email because you created a workspace with Gateman.
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>

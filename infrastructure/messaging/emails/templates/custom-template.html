@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{EMAIL_SUBJECT}} - Gateman</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
+    <style type="text/css">
+        /* Reset styles */
+        body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+        table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+        img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+        body { margin: 0; padding: 0; width: 100% !important; min-width: 100%; }
+
+        /* Mobile styles */
+        @media screen and (max-width: 600px) {
+            .mobile-hide { display: none !important; }
+            .mobile-center { text-align: center !important; }
+            .container { width: 100% !important; max-width: 100% !important; }
+            .content { padding: 20px !important; }
+            .button { width: 100% !important; max-width: 300px !important; }
+            .custom-section { padding: 15px !important; }
+            .two-column { width: 100% !important; display: block !important; }
+            .column { width: 100% !important; display: block !important; padding: 0 !important; }
+        }
+    </style>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f5f5f5; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+
+    <!-- Preheader Text -->
+    <div style="display: none; font-size: 1px; color: #333333; line-height: 1px; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden;">
+        {{PREHEADER_TEXT}}
+    </div>
+
+    <!-- Email Container -->
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f5f5f5;">
+        <tr>
+            <td style="padding: 40px 0;">
+                <!-- Content Container -->
+                <table class="container" role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="margin: 0 auto; background-color: #ffffff; border-radius: 10px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); overflow: hidden;">
+
+                    <!-- Header -->
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 40px 40px 20px 40px; border-bottom: 1px solid #e5e5e5; text-align: center;">
+                            <img src="https://assets.gateman.io/logo.svg" alt="Gateman" style="height: 40px; display: block; margin: 0 auto;">
+                        </td>
+                    </tr>
+
+                    <!-- Main Content -->
+                    <tr>
+                        <td class="content" style="padding: 40px; background-color: #ffffff;">
+
+                            <!-- Title (Optional) -->
+                            <!-- Uncomment and customize if needed
+                            <h1 style="color: #212830; font-size: 28px; font-weight: 600; line-height: 1.2; margin: 0 0 20px 0; text-align: center;">
+                                {{EMAIL_TITLE}}
+                            </h1>
+                            -->
+
+                            <!--
+                            ========================================
+                            CUSTOM CONTENT SECTIONS
+                            Copy and customize any of these sections
+                            ========================================
+                            -->
+
+                            <!-- Text Section Example -->
+                            <p style="color: #21283080; font-size: 16px; line-height: 24px; margin: 0 0 20px 0; text-align: left;">
+                                {{CUSTOM_TEXT}}
+                            </p>
+
+                            <!-- Centered Text Example -->
+                            <!--
+                            <p style="color: #21283080; font-size: 16px; line-height: 24px; margin: 0 0 20px 0; text-align: center;">
+                                {{CENTERED_TEXT}}
+                            </p>
+                            -->
+
+                            <!-- Button Example -->
+                            <!--
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 30px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{BUTTON_URL}}" class="button" style="background-color: #0061fe; border-radius: 10px; color: #ffffff; display: inline-block; font-size: 18px; font-weight: 600; padding: 15px 40px; text-decoration: none;">
+                                            {{BUTTON_TEXT}}
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            -->
+
+                            <!-- Secondary Button Example -->
+                            <!--
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{SECONDARY_BUTTON_URL}}" style="background-color: transparent; border: 2px solid #0061fe; border-radius: 10px; color: #0061fe; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;">
+                                            {{SECONDARY_BUTTON_TEXT}}
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            -->
+
+                            <!-- Divider Example -->
+                            <!--
+                            <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 30px 0;">
+                            -->
+
+                            <!-- Code/Token Box Example -->
+                            <!--
+                            <div style="background-color: #f8f9fa; border: 2px solid #e5e5e5; border-radius: 10px; padding: 20px; margin: 30px 0; text-align: center;">
+                                <p style="color: #21283080; font-size: 14px; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">
+                                    {{CODE_LABEL}}
+                                </p>
+                                <p style="color: #212830; font-size: 36px; font-weight: 600; letter-spacing: 8px; margin: 0; font-family: monospace;">
+                                    {{CODE_VALUE}}
+                                </p>
+                            </div>
+                            -->
+
+                            <!-- Info Highlight Box Example -->
+                            <!--
+                            <div style="background-color: #e6f3ff; border: 1px solid #0061fe; border-radius: 8px; padding: 15px; margin: 20px 0;">
+                                <p style="color: #0061fe; font-size: 14px; line-height: 21px; margin: 0;">
+                                    {{INFO_MESSAGE}}
+                                </p>
+                            </div>
+                            -->
+
+                            <!-- Warning Highlight Box Example -->
+                            <!--
+                            <div style="background-color: #fff9e6; border: 1px solid #ffb800; border-radius: 8px; padding: 15px; margin: 20px 0;">
+                                <p style="color: #cc9400; font-size: 14px; line-height: 21px; margin: 0;">
+                                    {{WARNING_MESSAGE}}
+                                </p>
+                            </div>
+                            -->
+
+                            <!-- Success Highlight Box Example -->
+                            <!--
+                            <div style="background-color: #e6f9e6; border: 1px solid #00cc00; border-radius: 8px; padding: 15px; margin: 20px 0;">
+                                <p style="color: #008800; font-size: 14px; line-height: 21px; margin: 0;">
+                                    {{SUCCESS_MESSAGE}}
+                                </p>
+                            </div>
+                            -->
+
+                            <!-- Bulleted List Example -->
+                            <!--
+                            <ul style="color: #21283080; font-size: 14px; line-height: 24px; margin: 0 0 20px 0; padding-left: 20px;">
+                                <li style="margin-bottom: 8px;">{{LIST_ITEM_1}}</li>
+                                <li style="margin-bottom: 8px;">{{LIST_ITEM_2}}</li>
+                                <li style="margin-bottom: 8px;">{{LIST_ITEM_3}}</li>
+                            </ul>
+                            -->
+
+                            <!-- Numbered List Example -->
+                            <!--
+                            <ol style="color: #21283080; font-size: 14px; line-height: 24px; margin: 0 0 20px 0; padding-left: 20px;">
+                                <li style="margin-bottom: 8px;">{{NUMBERED_ITEM_1}}</li>
+                                <li style="margin-bottom: 8px;">{{NUMBERED_ITEM_2}}</li>
+                                <li style="margin-bottom: 8px;">{{NUMBERED_ITEM_3}}</li>
+                            </ol>
+                            -->
+
+                            <!-- Image Example -->
+                            <!--
+                            <div style="text-align: center; margin: 20px 0;">
+                                <img src="{{IMAGE_URL}}" alt="{{IMAGE_ALT}}" style="max-width: 100%; height: auto; border-radius: 8px;">
+                            </div>
+                            -->
+
+                            <!-- Data Table Example -->
+                            <!--
+                            <div class="custom-section" style="background-color: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                                <h3 style="color: #212830; font-size: 18px; font-weight: 600; margin: 0 0 15px 0;">
+                                    {{TABLE_TITLE}}
+                                </h3>
+                                <table style="width: 100%; font-size: 14px; color: #21283080;">
+                                    <tr>
+                                        <td style="padding: 8px 0; vertical-align: top;">
+                                            <strong>{{LABEL_1}}:</strong>
+                                        </td>
+                                        <td style="padding: 8px 0 8px 20px;">
+                                            {{VALUE_1}}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px 0; vertical-align: top;">
+                                            <strong>{{LABEL_2}}:</strong>
+                                        </td>
+                                        <td style="padding: 8px 0 8px 20px;">
+                                            {{VALUE_2}}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            -->
+
+                            <!-- Two Column Layout Example -->
+                            <!--
+                            <table class="two-column" role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
+                                <tr>
+                                    <td class="column" style="width: 48%; padding-right: 2%; vertical-align: top;">
+                                        <h3 style="color: #212830; font-size: 16px; font-weight: 600; margin: 0 0 10px 0;">
+                                            {{COLUMN_1_TITLE}}
+                                        </h3>
+                                        <p style="color: #21283080; font-size: 14px; line-height: 21px; margin: 0;">
+                                            {{COLUMN_1_TEXT}}
+                                        </p>
+                                    </td>
+                                    <td class="column" style="width: 48%; padding-left: 2%; vertical-align: top;">
+                                        <h3 style="color: #212830; font-size: 16px; font-weight: 600; margin: 0 0 10px 0;">
+                                            {{COLUMN_2_TITLE}}
+                                        </h3>
+                                        <p style="color: #21283080; font-size: 14px; line-height: 21px; margin: 0;">
+                                            {{COLUMN_2_TEXT}}
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                            -->
+
+                            <!-- Card/Box Section Example -->
+                            <!--
+                            <div style="border: 1px solid #e5e5e5; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                                <h3 style="color: #212830; font-size: 18px; font-weight: 600; margin: 0 0 10px 0;">
+                                    {{CARD_TITLE}}
+                                </h3>
+                                <p style="color: #21283080; font-size: 14px; line-height: 21px; margin: 0 0 15px 0;">
+                                    {{CARD_DESCRIPTION}}
+                                </p>
+                                <a href="{{CARD_LINK_URL}}" style="color: #0061fe; text-decoration: underline; font-size: 14px;">
+                                    {{CARD_LINK_TEXT}} →
+                                </a>
+                            </div>
+                            -->
+
+                            <!-- Social Media Links Example -->
+                            <!--
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 30px auto;">
+                                <tr>
+                                    <td style="padding: 0 10px;">
+                                        <a href="{{TWITTER_URL}}" style="color: #0061fe; text-decoration: none;">Twitter</a>
+                                    </td>
+                                    <td style="color: #21283080;">•</td>
+                                    <td style="padding: 0 10px;">
+                                        <a href="{{LINKEDIN_URL}}" style="color: #0061fe; text-decoration: none;">LinkedIn</a>
+                                    </td>
+                                    <td style="color: #21283080;">•</td>
+                                    <td style="padding: 0 10px;">
+                                        <a href="{{GITHUB_URL}}" style="color: #0061fe; text-decoration: none;">GitHub</a>
+                                    </td>
+                                </tr>
+                            </table>
+                            -->
+
+                            <!-- Signature Example -->
+                            <!--
+                            <div style="margin-top: 40px;">
+                                <p style="color: #21283080; font-size: 14px; line-height: 21px; margin: 0;">
+                                    Best regards,<br>
+                                    <strong style="color: #212830;">{{SENDER_NAME}}</strong><br>
+                                    {{SENDER_TITLE}}<br>
+                                    Gateman Team
+                                </p>
+                            </div>
+                            -->
+
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f8f9fa; padding: 30px 40px; border-top: 1px solid #e5e5e5;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td align="center" style="color: #21283080; font-size: 14px; line-height: 21px;">
+                                        <!-- Custom Footer Links (Optional) -->
+                                        <!--
+                                        <p style="margin: 0 0 15px 0;">
+                                            <a href="{{FOOTER_LINK_1_URL}}" style="color: #0061fe; text-decoration: none;">{{FOOTER_LINK_1_TEXT}}</a>
+                                            <span style="margin: 0 10px;">•</span>
+                                            <a href="{{FOOTER_LINK_2_URL}}" style="color: #0061fe; text-decoration: none;">{{FOOTER_LINK_2_TEXT}}</a>
+                                            <span style="margin: 0 10px;">•</span>
+                                            <a href="{{FOOTER_LINK_3_URL}}" style="color: #0061fe; text-decoration: none;">{{FOOTER_LINK_3_TEXT}}</a>
+                                        </p>
+                                        -->
+
+                                        <p style="margin: 0 0 10px 0;">
+                                            © 2024 Gateman. All rights reserved.
+                                        </p>
+                                        <p style="margin: 0 0 10px 0;">
+                                            <a href="https://gateman.io" style="color: #0061fe; text-decoration: none;">gateman.io</a>
+                                        </p>
+                                        <p style="margin: 0; font-size: 12px; color: #21283050;">
+                                            {{FOOTER_MESSAGE}}
+                                        </p>
+
+                                        <!-- Unsubscribe Link (Optional for marketing emails) -->
+                                        <!--
+                                        <p style="margin: 10px 0 0 0; font-size: 12px;">
+                                            <a href="{{UNSUBSCRIBE_URL}}" style="color: #21283080; text-decoration: underline;">Unsubscribe</a>
+                                        </p>
+                                        -->
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>
