@@ -1,31 +1,16 @@
 # Stage 1: Builder with GoCV 0.42.0 (OpenCV 4.12.0)
-FROM ghcr.io/emekarr/gateman-face-base-image/gateman-face-base-image:sha-b38d8e3 AS builder
+FROM ghcr.io/hybridgroup/gocv:0.42.0 AS builder
 
 WORKDIR /app
 
-# Install auxiliary build tools and Go toolchain
-ARG GO_VERSION=1.22.9
+# Install auxiliary build tools
 RUN apt-get update && apt-get install -y \
     build-essential \
     pkg-config \
     curl \
     ca-certificates \
     unzip \
-    && rm -rf /var/lib/apt/lists/* \
-    && ARCH=$(dpkg --print-architecture) \
-    && case "$ARCH" in \
-        amd64) GO_ARCH=amd64 ;; \
-        arm64) GO_ARCH=arm64 ;; \
-        *) echo "unsupported architecture: $ARCH" >&2; exit 1 ;; \
-    esac \
-    && curl -fsSL https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz -o /tmp/go.tgz \
-    && tar -C /usr/local -xzf /tmp/go.tgz \
-    && rm /tmp/go.tgz \
-    && ln -s /usr/local/go/bin/go /usr/local/bin/go \
-    && ln -s /usr/local/go/bin/gofmt /usr/local/bin/gofmt
-
-ENV PATH="/usr/local/go/bin:${PATH}"
-ENV PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH}"
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy go mod files first for better layer caching
 COPY go.mod go.sum ./
