@@ -12,7 +12,9 @@ RUN apt-get update && apt-get install -y \
     unzip \
     curl \
     ca-certificates \
+    pkg-config \
     libopencv-dev \
+    libopencv-contrib-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy go mod files first for better layer caching
@@ -31,7 +33,7 @@ RUN CGO_ENABLED=1 GOOS=linux go build -o main .
 # Stage 2: Runtime with OpenCV
 FROM debian:bookworm-slim
 
-# Install runtime dependencies (OpenCV libraries)
+# Install runtime dependencies (OpenCV libraries with contrib)
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     curl \
@@ -41,6 +43,7 @@ RUN apt-get update && apt-get install -y \
     libopencv-objdetect4.6 \
     libopencv-dnn4.6 \
     libopencv-videoio4.6 \
+    libopencv-contrib4.6 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
