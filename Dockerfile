@@ -101,6 +101,9 @@ RUN apt-get update && apt-get install -y \
     libhdf5-103-1t64 \
     libglib2.0-0 \
     libwebp7 \
+    libwebpdemux2 \
+    libgl1 \
+    libtbb12 \
     && rm -rf /var/lib/apt/lists/*
 
 # Set PKG_CONFIG_PATH for OpenCV
@@ -146,6 +149,11 @@ RUN apt-get update && apt-get install -y \
     libgflags2.2 \
     libgphoto2-6 \
     libhdf5-103-1t64 \
+    libglib2.0-0 \
+    libwebp7 \
+    libwebpdemux2 \
+    libgl1 \
+    libtbb12 \
     && rm -rf /var/lib/apt/lists/*
 
 # Set library path
