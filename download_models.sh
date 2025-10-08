@@ -86,7 +86,7 @@ if [ ! -f "models/yunet/face_detection_yunet_2023mar.onnx" ]; then
         "models/yunet/face_detection_yunet_2023mar.onnx"
     
     # Verify file size (should be around 227-337KB)
-    file_size=$(stat -f%z "models/yunet/face_detection_yunet_2023mar.onnx" 2>/dev/null || stat -c%s "models/yunet/face_detection_yunet_2023mar.onnx" 2>/dev/null)
+    file_size=$(stat -c%s "models/yunet/face_detection_yunet_2023mar.onnx" 2>/dev/null || stat -f%z "models/yunet/face_detection_yunet_2023mar.onnx" 2>/dev/null)
     if [ "$file_size" -lt 200000 ] || [ "$file_size" -gt 400000 ]; then
         echo -e "${RED}✗ YuNet model file size unexpected ($file_size bytes), download may have failed${NC}"
         rm "models/yunet/face_detection_yunet_2023mar.onnx"
@@ -118,7 +118,7 @@ if [ ! -f "models/arcface/arcface_r50.onnx" ]; then
     fi
     
     # Verify file size (should be around 166MB)
-    file_size=$(stat -f%z "models/arcface/arcface_r50.onnx" 2>/dev/null || stat -c%s "models/arcface/arcface_r50.onnx" 2>/dev/null)
+    file_size=$(stat -c%s "models/arcface/arcface_r50.onnx" 2>/dev/null || stat -f%z "models/arcface/arcface_r50.onnx" 2>/dev/null)
     if [ "$file_size" -lt 160000000 ]; then
         echo -e "${RED}✗ ArcFace model file is too small ($file_size bytes), extraction may have failed${NC}"
         rm "models/arcface/arcface_r50.onnx"
