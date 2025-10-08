@@ -100,7 +100,6 @@ RUN apt-get update && apt-get install -y \
     libgphoto2-6 \
     libhdf5-103-1t64 \
     libglib2.0-0 \
-    libgl1-mesa-glx \
     libwebp7 \
     && rm -rf /var/lib/apt/lists/*
 
