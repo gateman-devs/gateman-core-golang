@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y \
     && ln -s /usr/local/go/bin/gofmt /usr/local/bin/gofmt
 
 ENV PATH="/usr/local/go/bin:${PATH}"
+ENV PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH}"
 
 # Copy go mod files first for better layer caching
 COPY go.mod go.sum ./
