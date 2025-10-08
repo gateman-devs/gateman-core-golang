@@ -1,5 +1,5 @@
-# Stage 1: Builder with GoCV 0.42.0 (OpenCV 4.12.0)
-FROM ghcr.io/hybridgroup/gocv:0.42.0 AS builder
+# Stage 1: Builder with GoCV 0.41.0 (OpenCV 4.11.0)
+FROM ghcr.io/hybridgroup/gocv:0.41.0 AS builder
 
 WORKDIR /app
 
@@ -25,8 +25,8 @@ RUN chmod +x download_models.sh && ./download_models.sh
 # Build the binary with CGO enabled (required for OpenCV)
 RUN CGO_ENABLED=1 GOOS=linux go build -o main .
 
-# Stage 2: Runtime with OpenCV 4.12.0
-FROM ghcr.io/hybridgroup/opencv:4.12.0
+# Stage 2: Runtime with OpenCV 4.11.0
+FROM ghcr.io/hybridgroup/opencv:4.11.0
 
 # Install runtime utilities
 RUN apt-get update && apt-get install -y \
