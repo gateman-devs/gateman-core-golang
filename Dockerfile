@@ -85,6 +85,23 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     unzip \
     git \
+    libjpeg8 \
+    libpng16-16 \
+    libtiff6 \
+    libavcodec60 \
+    libavformat60 \
+    libswscale7 \
+    libv4l-0 \
+    libgtk-3-0 \
+    libtbbmalloc2 \
+    libprotobuf32t64 \
+    libgoogle-glog0v6 \
+    libgflags2.2 \
+    libgphoto2-6 \
+    libhdf5-103-1t64 \
+    libglib2.0-0 \
+    libgl1-mesa-glx \
+    libwebp7 \
     && rm -rf /var/lib/apt/lists/*
 
 # Set PKG_CONFIG_PATH for OpenCV
