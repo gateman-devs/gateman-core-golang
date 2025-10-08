@@ -6,6 +6,8 @@ WORKDIR /app
 # Install auxiliary build tools and Go toolchain
 ARG GO_VERSION=1.22.9
 RUN apt-get update && apt-get install -y \
+    build-essential \
+    pkg-config \
     curl \
     ca-certificates \
     unzip \
