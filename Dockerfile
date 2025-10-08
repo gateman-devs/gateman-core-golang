@@ -118,18 +118,18 @@ RUN apt-get update && apt-get install -y \
     curl \
     libjpeg8 \
     libpng16-16 \
-    libtiff5 \
-    libavcodec58 \
-    libavformat58 \
-    libswscale5 \
+    libtiff6 \
+    libavcodec60 \
+    libavformat60 \
+    libswscale7 \
     libv4l-0 \
     libgtk-3-0 \
-    libtbb2 \
-    libprotobuf23 \
-    libgoogle-glog0v5 \
+    libtbbmalloc2 \
+    libprotobuf32t64 \
+    libgoogle-glog0v6 \
     libgflags2.2 \
     libgphoto2-6 \
-    libhdf5-103 \
+    libhdf5-103-1t64 \
     && rm -rf /var/lib/apt/lists/*
 
 # Set library path
