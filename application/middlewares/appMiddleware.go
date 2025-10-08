@@ -28,7 +28,7 @@ func AppAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], ipAddr
 	appID := *appIDPointer
 	
 	// Rate limit: 100 requests per minute per app ID
-	if !CheckRateLimit(appID, time.Minute, 10) {
+	if !CheckRateLimit(appID, time.Minute, 100) {
 		apperrors.ClientError(ctx.Ctx, "rate limit exceeded, please try again later", nil, nil, ctx.DeviceID)
 		return nil, false
 	}
