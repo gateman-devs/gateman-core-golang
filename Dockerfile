@@ -3,11 +3,26 @@ FROM ghcr.io/emekarr/gateman-face-base-image/gateman-face-base-image:sha-b38d8e3
 
 WORKDIR /app
 
-# Install auxiliary build tools
+# Install auxiliary build tools and Go toolchain
+ARG GO_VERSION=1.22.9
 RUN apt-get update && apt-get install -y \
     curl \
     ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+    unzip \
+    && rm -rf /var/lib/apt/lists/* \
+    && ARCH=$(dpkg --print-architecture) \
+    && case "$ARCH" in \
+        amd64) GO_ARCH=amd64 ;; \
+        arm64) GO_ARCH=arm64 ;; \
+        *) echo "unsupported architecture: $ARCH" >&2; exit 1 ;; \
+    esac \
+    && curl -fsSL https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz -o /tmp/go.tgz \
+    && tar -C /usr/local -xzf /tmp/go.tgz \
+    && rm /tmp/go.tgz \
+    && ln -s /usr/local/go/bin/go /usr/local/bin/go \
+    && ln -s /usr/local/go/bin/gofmt /usr/local/bin/gofmt
+
+ENV PATH="/usr/local/go/bin:${PATH}"
 
 # Copy go mod files first for better layer caching
 COPY go.mod go.sum ./
