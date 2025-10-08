@@ -1,13 +1,18 @@
-# Stage 1: Builder with OpenCV
-FROM gocv/opencv:4.10.0 AS builder
+# Stage 1: Builder with Go and OpenCV
+FROM golang:1.22-bookworm AS builder
 
 WORKDIR /app
 
-# Install build dependencies
+# Install OpenCV and build dependencies
 RUN apt-get update && apt-get install -y \
-    curl \
+    build-essential \
+    cmake \
+    git \
+    wget \
     unzip \
+    curl \
     ca-certificates \
+    libopencv-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy go mod files first for better layer caching
@@ -21,15 +26,21 @@ COPY . .
 RUN chmod +x download_models.sh && ./download_models.sh
 
 # Build the binary with CGO enabled (required for OpenCV)
-RUN CGO_ENABLED=1 GOOS=linux go build -a -ldflags '-extldflags "-static"' -o main .
+RUN CGO_ENABLED=1 GOOS=linux go build -o main .
 
 # Stage 2: Runtime with OpenCV
-FROM gocv/opencv:4.10.0-runtime
+FROM debian:bookworm-slim
 
-# Install runtime dependencies
+# Install runtime dependencies (OpenCV libraries)
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     curl \
+    libopencv-core4.6 \
+    libopencv-imgproc4.6 \
+    libopencv-imgcodecs4.6 \
+    libopencv-objdetect4.6 \
+    libopencv-dnn4.6 \
+    libopencv-videoio4.6 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
@@ -43,9 +54,6 @@ COPY --from=builder --chown=appuser:appgroup /app/main .
 
 # Copy models from builder
 COPY --from=builder --chown=appuser:appgroup /app/models ./models
-
-# Copy environment files if they exist
-COPY --chown=appuser:appgroup .env* ./
 
 # Ensure binary is executable
 RUN chmod +x main
