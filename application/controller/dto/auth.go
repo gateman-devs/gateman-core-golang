@@ -13,7 +13,7 @@ type KeyExchangeDTO struct {
 type VerifyOTPDTO struct {
 	OTP   string  `json:"otp" validate:"required,len=6"`
 	Email *string `json:"email" validate:"omitempty,email,max=100,min=6"`
-	Phone *string `json:"phone" validate:"omitempty,len=11"`
+	Phone *string `json:"phone" validate:"omitempty,len=10"`
 }
 
 type CreateUserDTO struct {

@@ -51,7 +51,7 @@ func (s *ginServer) Start() {
 	origins := strings.Split(os.Getenv("ORIGINS"), ",")
 	corsConfig := cors.Config{
 		AllowOrigins:     origins,
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "PATCH"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "x-device-id", "User-Agent", "x-workspace-id", "x-api-key", "x-app-id", "x-app-version"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,

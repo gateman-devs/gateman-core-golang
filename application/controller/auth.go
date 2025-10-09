@@ -118,7 +118,7 @@ func VerifyUserAccount(ctx *interfaces.ApplicationContext[any]) {
 		TokenType:       auth.AccessToken,
 		VerifiedAccount: true,
 		IssuedAt:        time.Now().Unix(),
-		ExpiresAt:       time.Now().Add(time.Hour * 1).Unix(), //lasts for 1 hr
+		ExpiresAt:       time.Now().Add(time.Hour * 24 * 10).Unix(), //lasts for 10 days
 	})
 	if err != nil {
 		logger.Error("an error occured while generating auth token after org verification", logger.LoggerOptions{

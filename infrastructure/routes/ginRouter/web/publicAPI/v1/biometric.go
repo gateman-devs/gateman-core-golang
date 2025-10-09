@@ -20,6 +20,7 @@ func BiometricRouter(router *gin.RouterGroup) {
 	biometricRouter.Use(middlewares.ActivityLogMiddleware())
 	{
 		biometricRouter.POST("/compare-faces", appMiddlewares.AppAuthenticationMiddleware(), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.EnhancedFaceComparisonRequest
 			var deviceID string
 
@@ -44,10 +45,15 @@ func BiometricRouter(router *gin.RouterGroup) {
 				Ctx:      ctx,
 				Body:     &body,
 				DeviceID: deviceID,
+				Keys:     appContext.Keys,
+				Query: map[string]any{
+					"fail": ctx.Query("fail"),
+				},
 			})
 		})
 
 		biometricRouter.POST("/liveness-check", appMiddlewares.AppAuthenticationMiddleware(), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.LivenessDetectionDTO
 			var deviceID string
 
@@ -72,6 +78,10 @@ func BiometricRouter(router *gin.RouterGroup) {
 				Ctx:      ctx,
 				Body:     &body,
 				DeviceID: deviceID,
+				Keys:     appContext.Keys,
+				Query: map[string]any{
+					"fail": ctx.Query("fail"),
+				},
 			})
 		})
 

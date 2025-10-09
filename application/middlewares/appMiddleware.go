@@ -3,7 +3,7 @@ package middlewares
 import (
 	"context"
 	"fmt"
-	"os"
+	"strings"
 	"time"
 
 	apperrors "gateman.io/application/appErrors"
@@ -26,7 +26,7 @@ func AppAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], ipAddr
 		return nil, false
 	}
 	appID := *appIDPointer
-	
+
 	// Rate limit: 100 requests per minute per app ID
 	if !CheckRateLimit(appID, time.Minute, 100) {
 		apperrors.ClientError(ctx.Ctx, "rate limit exceeded, please try again later", nil, nil, ctx.DeviceID)
@@ -41,8 +41,10 @@ func AppAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], ipAddr
 		return nil, false
 	}
 	var appAPIKey string
-	if os.Getenv("APP_ENV") != "production" {
+	var sanbox = strings.Contains(apiKey, "sandbox")
+	if sanbox {
 		appAPIKey = app.SandboxAPIKey
+		apiKey = strings.Split(apiKey, "-")[1]
 	} else {
 		appAPIKey = app.APIKey
 	}
@@ -51,27 +53,27 @@ func AppAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], ipAddr
 		apperrors.ClientError(ctx.Ctx, "invalid credentials", nil, nil, ctx.DeviceID)
 		return nil, false
 	}
-	if os.Getenv("APP_ENV") == "production" && app.WhiteListedIPs == nil {
-		apperrors.ClientError(ctx.Ctx, "no ip address whitelisted", nil, nil, ctx.DeviceID)
-		return nil, false
-	}
-	if os.Getenv("APP_ENV") == "production" {
-		validIP := false
-		for _, wIP := range *app.WhiteListedIPs {
-			if wIP == ipAddress {
-				validIP = true
-				break
-			}
-		}
-		if !validIP {
-			apperrors.ClientError(ctx.Ctx, "unauthorised access", nil, nil, ctx.DeviceID)
-			return nil, false
-		}
-	}
-
+	// if os.Getenv("APP_ENV") == "production" && app.WhiteListedIPs == nil {
+	// 	apperrors.ClientError(ctx.Ctx, "no ip address whitelisted", nil, nil, ctx.DeviceID)
+	// 	return nil, false
+	// }
+	// if os.Getenv("APP_ENV") == "production" {
+	// 	validIP := false
+	// 	for _, wIP := range *app.WhiteListedIPs {
+	// 		if wIP == ipAddress {
+	// 			validIP = true
+	// 			break
+	// 		}
+	// 	}
+	// 	if !validIP {
+	// 		apperrors.ClientError(ctx.Ctx, "unauthorised access", nil, nil, ctx.DeviceID)
+	// 		return nil, false
+	// 	}
+	// }
 	ctx.SetContextData("AppID", appID)
 	ctx.SetContextData("Name", app.Name)
 	ctx.SetContextData("WorkspaceID", app.WorkspaceID)
+	ctx.SetContextData("SandboxEnv", sanbox)
 	return ctx, true
 }
 
@@ -92,13 +94,13 @@ func CheckRateLimit(id string, timeWindow time.Duration, maxRequests int) bool {
 
 	// Use Redis INCR with expiry for atomic rate limiting
 	pipe := redisClient.Client.Pipeline()
-	
+
 	// Increment the counter
 	incrCmd := pipe.Incr(ctx, key)
-	
+
 	// Set expiry only if this is the first request (key didn't exist)
 	pipe.Expire(ctx, key, timeWindow)
-	
+
 	// Execute pipeline
 	_, err = pipe.Exec(ctx)
 	if err != nil {

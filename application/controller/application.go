@@ -107,7 +107,7 @@ func FetchAppDetails(ctx *interfaces.ApplicationContext[any]) {
 	var isSignedIn bool
 	isUserSignedIn := auth_usecases.IsUserSignedIn(ctx.Ctx, ctx.Keys["accessToken"], nil, ctx.DeviceID)
 	isSignedIn = isUserSignedIn.IsAuthenticated
-	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "app fetched", map[string]any{
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "app fetched", map[string]any{
 		"app":        app,
 		"isSignedIn": isSignedIn,
 	}, nil, nil, &ctx.DeviceID)

@@ -2,7 +2,6 @@ package asynq
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"time"
 
@@ -64,7 +63,6 @@ func (aq *AsynqBroker) Enqueue(task mq_types.QueueTask) {
 		task.TimeOut = 60
 	}
 	task.TimeOut = 60000000000
-	fmt.Println(task.TimeOut)
 	aq.Client.Enqueue(asynq.NewTask(string(task.Name), task.Payload),
 		asynq.ProcessIn(time.Duration(task.ProcessIn)*time.Second),
 		asynq.MaxRetry(task.MaxRetry),

@@ -161,35 +161,71 @@ func EnhancedFaceComparison(ctx *interfaces.ApplicationContext[dto.EnhancedFaceC
 		return
 	}
 
+	// Validate threshold
+	threshold := ctx.Body.Threshold
+	if threshold == 0 {
+		threshold = 0.7 // Default threshold for comparison
+	}
+	if threshold < 0.0 || threshold > 1.0 {
+		apperrors.ClientError(ctx.Ctx, "threshold must be between 0.0 and 1.0", nil, nil, ctx.DeviceID)
+		return
+	}
+
+	// Check if sandbox environment - return mock response
+	sandboxEnv, exists := ctx.GetContextData("SandboxEnv")
+	if exists && sandboxEnv.(bool) {
+		// Check query param for fail response
+		failParam, exists := ctx.Query["fail"]
+		if exists && failParam == "true" {
+			server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Enhanced face comparison failed (sandbox)", map[string]interface{}{
+				"is_match":        false,
+				"similarity":      0.2,
+				"confidence":      0.1,
+				"processing_time": 150,
+				"error":           "Mock failure response",
+			}, nil, nil, nil)
+			return
+		}
+
+		// Return success mock response
+		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Enhanced face comparison completed (sandbox)", map[string]interface{}{
+			"is_match":        true,
+			"similarity":      0.95,
+			"confidence":      0.92,
+			"processing_time": 150,
+		}, nil, nil, nil)
+		return
+	}
+
 	// Validate image inputs - check if they're URLs or base64
-	if strings.HasPrefix(ctx.Body.ReferenceImage, "http://") || strings.HasPrefix(ctx.Body.ReferenceImage, "https://") {
+	if strings.HasPrefix(ctx.Body.Image1, "http://") || strings.HasPrefix(ctx.Body.Image1, "https://") {
 		// Validate URL format
-		_, err := url.ParseRequestURI(ctx.Body.ReferenceImage)
+		_, err := url.ParseRequestURI(ctx.Body.Image1)
 		if err != nil {
-			apperrors.ClientError(ctx.Ctx, "invalid reference image URL format", nil, nil, ctx.DeviceID)
+			apperrors.ClientError(ctx.Ctx, "invalid image1 URL format", nil, nil, ctx.DeviceID)
 			return
 		}
 	} else {
 		// Validate base64 format
-		_, err := utils.DecodeBase64Image(ctx.Body.ReferenceImage)
+		_, err := utils.DecodeBase64Image(ctx.Body.Image1)
 		if err != nil {
-			apperrors.ClientError(ctx.Ctx, "invalid reference image format - must be valid URL or base64", nil, nil, ctx.DeviceID)
+			apperrors.ClientError(ctx.Ctx, "invalid image1 format - must be valid URL or base64", nil, nil, ctx.DeviceID)
 			return
 		}
 	}
 
-	if strings.HasPrefix(ctx.Body.TestImage, "http://") || strings.HasPrefix(ctx.Body.TestImage, "https://") {
+	if strings.HasPrefix(ctx.Body.Image2, "http://") || strings.HasPrefix(ctx.Body.Image2, "https://") {
 		// Validate URL format
-		_, err := url.ParseRequestURI(ctx.Body.TestImage)
+		_, err := url.ParseRequestURI(ctx.Body.Image2)
 		if err != nil {
-			apperrors.ClientError(ctx.Ctx, "invalid test image URL format", nil, nil, ctx.DeviceID)
+			apperrors.ClientError(ctx.Ctx, "invalid image2 URL format", nil, nil, ctx.DeviceID)
 			return
 		}
 	} else {
 		// Validate base64 format
-		_, err := utils.DecodeBase64Image(ctx.Body.TestImage)
+		_, err := utils.DecodeBase64Image(ctx.Body.Image2)
 		if err != nil {
-			apperrors.ClientError(ctx.Ctx, "invalid test image format - must be valid URL or base64", nil, nil, ctx.DeviceID)
+			apperrors.ClientError(ctx.Ctx, "invalid image2 format - must be valid URL or base64", nil, nil, ctx.DeviceID)
 			return
 		}
 	}
@@ -198,22 +234,36 @@ func EnhancedFaceComparison(ctx *interfaces.ApplicationContext[dto.EnhancedFaceC
 	localService := biometric.NewLocalFaceService()
 	defer localService.Close()
 
-	// Perform face comparison
-	result, err := localService.CompareFaces(&ctx.Body.ReferenceImage, &ctx.Body.TestImage)
+	// Perform face comparison using service's default thresholds first, then apply custom threshold if needed
+	result, err := localService.CompareFaces(&ctx.Body.Image1, &ctx.Body.Image2)
 	if err != nil {
 		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 
+	// Apply custom threshold to override match decision if necessary
+	customMatch := result.Match
+	if result.Confidence >= threshold {
+		customMatch = true
+	} else if result.Confidence < threshold {
+		customMatch = false
+	}
+
+	// Use custom match decision if it differs from service decision
+	finalMatch := customMatch
+
 	// Perform liveness detection if required
 	var livenessResult1, livenessResult2 *dto.LivenessResultDTO
 	var livenessProcessTime int64 = 0
 
-	if ctx.Body.RequireLiveness {
+	// Liveness detection removed from enhanced compare - only basic comparison now
+	requireLiveness := false // Set to false since user didn't specify liveness in params
+
+	if requireLiveness {
 		startTime := time.Now()
 
 		// Check liveness for reference image
-		liveness1, err := localService.ImageLivenessCheck(&ctx.Body.ReferenceImage, ctx.Body.LenientBlurry)
+		liveness1, err := localService.ImageLivenessCheck(&ctx.Body.Image1, false)
 		if err == nil && liveness1.Success {
 			// Fix NaN values for liveness result
 			spoofScore1 := liveness1.AnalysisDetails.SpoofDetectionScore
@@ -234,7 +284,7 @@ func EnhancedFaceComparison(ctx *interfaces.ApplicationContext[dto.EnhancedFaceC
 		}
 
 		// Check liveness for test image
-		liveness2, err := localService.ImageLivenessCheck(&ctx.Body.TestImage, ctx.Body.LenientBlurry)
+		liveness2, err := localService.ImageLivenessCheck(&ctx.Body.Image2, false)
 		if err == nil && liveness2.Success {
 			// Fix NaN values for liveness result
 			spoofScore2 := liveness2.AnalysisDetails.SpoofDetectionScore
@@ -260,49 +310,52 @@ func EnhancedFaceComparison(ctx *interfaces.ApplicationContext[dto.EnhancedFaceC
 	// Create enhanced response
 	response := dto.NewEnhancedFaceComparisonResponse(ctx.Body.RequestID)
 	response.SetComparisonResult(
-		result.Match,
+		finalMatch,
 		result.Confidence,
 		result.Confidence,
 		int64(result.ProcessingTimeMs),
 	)
 
-	if ctx.Body.RequireLiveness {
+	if requireLiveness {
 		response.SetLivenessResults(livenessResult1, livenessResult2, livenessProcessTime)
 	}
 
-	// Add feature quality metrics
-	if len(result.FaceQualityScores) >= 2 {
-		featureQuality := dto.NewFeatureQualityMetricsDTO(
-			result.FaceQualityScores[0]*100, // Convert to percentage
-			"center",                        // Default position
-			result.FaceQualityScores[0],
-			result.FaceQualityScores[0],
+	// Add detailed analysis if verbose mode is enabled
+	if ctx.Body.Verbose {
+		// Add feature quality metrics
+		if len(result.FaceQualityScores) >= 2 {
+			featureQuality := dto.NewFeatureQualityMetricsDTO(
+				result.FaceQualityScores[0]*100, // Convert to percentage
+				"center",                        // Default position
+				result.FaceQualityScores[0],
+				result.FaceQualityScores[0],
+				result.Confidence,
+			)
+			response.SetFeatureQuality(featureQuality)
+		}
+
+		// Add comparison metadata
+		threshold = ctx.Body.Threshold
+		if threshold == 0 {
+			threshold = 0.6 // Default threshold
+		}
+
+		metadata := dto.NewEnhancedComparisonMetadataDTO(
+			"yunet_facenet", // Updated to reflect YuNet + FaceNet
+			threshold,
+			0.0, // No quality adjustment for now
 			result.Confidence,
+			"high", // Confidence level
 		)
-		response.SetFeatureQuality(featureQuality)
-	}
+		response.SetComparisonMetadata(metadata)
 
-	// Add comparison metadata
-	threshold := ctx.Body.Threshold
-	if threshold == 0 {
-		threshold = 0.6 // Default threshold
-	}
+		// Add processing steps
+		response.AddProcessingStep("face_detection", int64(result.ProcessingTimeMs/2), true, "Faces detected successfully")
+		response.AddProcessingStep("face_comparison", int64(result.ProcessingTimeMs/2), true, fmt.Sprintf("Face comparison completed (threshold: %.2f, match: %t)", threshold, finalMatch))
 
-	metadata := dto.NewEnhancedComparisonMetadataDTO(
-		"yunet_facenet", // Updated to reflect YuNet + FaceNet
-		threshold,
-		0.0, // No quality adjustment for now
-		result.Confidence,
-		"high", // Confidence level
-	)
-	response.SetComparisonMetadata(metadata)
-
-	// Add processing steps
-	response.AddProcessingStep("face_detection", int64(result.ProcessingTimeMs/2), true, "Faces detected successfully")
-	response.AddProcessingStep("face_comparison", int64(result.ProcessingTimeMs/2), true, "Face comparison completed")
-
-	if ctx.Body.RequireLiveness {
-		response.AddProcessingStep("liveness_detection", livenessProcessTime, true, "Liveness detection completed")
+		if requireLiveness {
+			response.AddProcessingStep("liveness_detection", livenessProcessTime, true, "Liveness detection completed")
+		}
 	}
 
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Enhanced face comparison completed", response, nil, nil, nil)
@@ -313,6 +366,46 @@ func EnhancedLivenessCheck(ctx *interfaces.ApplicationContext[dto.LivenessDetect
 	validationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
 	if validationErr != nil {
 		apperrors.ValidationFailedError(ctx.Ctx, validationErr, ctx.DeviceID)
+		return
+	}
+
+	// Validate threshold
+	threshold := ctx.Body.Threshold
+	if threshold == 0 {
+		threshold = 0.6 // Default threshold
+	}
+	if threshold < 0.0 || threshold > 1.0 {
+		apperrors.ClientError(ctx.Ctx, "threshold must be between 0.0 and 1.0", nil, nil, ctx.DeviceID)
+		return
+	}
+
+	// Check if sandbox environment - return mock response
+	sandboxEnv, exists := ctx.GetContextData("SandboxEnv")
+	if exists && sandboxEnv.(bool) {
+		// Check query param for fail response
+		failParam, failExists := ctx.Query["fail"]
+		if failExists && failParam == "true" {
+			server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Enhanced liveness check failed (sandbox)", map[string]interface{}{
+				"is_live":         false,
+				"liveness_score":  0.1,
+				"threshold_used":  threshold,
+				"spoof_score":     0.9,
+				"confidence":      0.1,
+				"processing_time": 100,
+				"error":           "Mock failure response",
+			}, nil, nil, nil)
+			return
+		}
+
+		// Return success mock response
+		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Enhanced liveness check completed (sandbox)", map[string]interface{}{
+			"is_live":         true,
+			"liveness_score":  0.95,
+			"threshold_used":  threshold,
+			"spoof_score":     0.05,
+			"confidence":      0.95,
+			"processing_time": 100,
+		}, nil, nil, nil)
 		return
 	}
 
@@ -338,11 +431,22 @@ func EnhancedLivenessCheck(ctx *interfaces.ApplicationContext[dto.LivenessDetect
 	defer localService.Close()
 
 	// Perform liveness detection
-	result, err := localService.ImageLivenessCheck(&ctx.Body.Image, ctx.Body.LenientBlurry)
+	result, err := localService.ImageLivenessCheck(&ctx.Body.Image, false)
 	if err != nil {
 		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
+
+	// Apply custom threshold to override liveness decision if necessary
+	customIsLive := result.IsLive
+	if result.LivenessScore >= threshold {
+		customIsLive = true
+	} else if result.LivenessScore < threshold {
+		customIsLive = false
+	}
+
+	// Use custom liveness decision
+	finalIsLive := customIsLive
 
 	// Create enhanced response with NaN checks
 	spoofScore := result.AnalysisDetails.SpoofDetectionScore
@@ -357,9 +461,9 @@ func EnhancedLivenessCheck(ctx *interfaces.ApplicationContext[dto.LivenessDetect
 	}
 
 	response := &dto.LivenessDetectionResponse{
-		IsLive:         result.IsLive,
+		IsLive:         finalIsLive,
 		LivenessScore:  result.LivenessScore,
-		ThresholdUsed:  result.ThresholdUsed,
+		ThresholdUsed:  threshold, // Use custom threshold
 		SpoofScore:     spoofScore,
 		Confidence:     confidence,
 		ProcessingTime: int64(result.ProcessingTimeMs),
@@ -418,7 +522,7 @@ func EnhancedLivenessCheck(ctx *interfaces.ApplicationContext[dto.LivenessDetect
 		}
 
 		// Add spoof reasons if detected
-		if !result.IsLive {
+		if !finalIsLive {
 			response.SpoofReasons = []string{
 				"Low texture variance detected",
 				"Inconsistent lighting patterns",

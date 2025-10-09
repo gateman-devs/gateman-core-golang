@@ -37,14 +37,14 @@ func CreateApplicationUseCase(ctx any, payload *dto.ApplicationDTO, deviceID str
 		apperrors.ClientError(ctx, fmt.Sprintf("You have reached the maximum number of applications a workspace can have. Contact %s to assist in creating more.", constants.SUPPORT_EMAIL), nil, nil, deviceID)
 		return nil, nil, nil, nil, nil, nil
 	}
-	apiKey, _ := utils.GenerateRandomHexKey(32)
-	hashedAPIKey, _ := cryptography.CryptoHahser.HashString(apiKey, nil)
-	sandboxAPIKey, _ := utils.GenerateRandomHexKey(32)
-	hashedSandboxAPIKey, _ := cryptography.CryptoHahser.HashString(sandboxAPIKey, nil)
-	appSigningKey, _ := utils.GenerateRandomHexKey(32)
-	encryptedAppSigningKey, _ := cryptography.EncryptData([]byte(appSigningKey), nil)
-	sandboxAppSigningKey, _ := utils.GenerateRandomHexKey(32)
-	encryptedSandboxAppSigningKey, _ := cryptography.EncryptData([]byte(sandboxAppSigningKey), nil)
+	apiKey, _ := cryptography.EncryptData([]byte(utils.GenerateUULDString()), nil)
+	hashedAPIKey, _ := cryptography.CryptoHahser.HashString(*apiKey, nil)
+	sandboxAPIKey, _ := cryptography.EncryptData([]byte(utils.GenerateUULDString()), nil)
+	hashedSandboxAPIKey, _ := cryptography.CryptoHahser.HashString(*sandboxAPIKey, nil)
+	appSigningKey, _ := cryptography.EncryptData([]byte(utils.GenerateUULDString()), nil)
+	encryptedAppSigningKey, _ := cryptography.EncryptData([]byte(*appSigningKey), nil)
+	sandboxAppSigningKey, _ := cryptography.EncryptData([]byte(utils.GenerateUULDString()), nil)
+	encryptedSandboxAppSigningKey, _ := cryptography.EncryptData([]byte(*sandboxAppSigningKey), nil)
 	appPriKey := utils.GenerateUULDString()
 	appID := utils.GenerateUULDString()
 	app, err := appRepo.CreateOne(context.TODO(), entities.Application{
@@ -99,5 +99,5 @@ func CreateApplicationUseCase(ctx any, payload *dto.ApplicationDTO, deviceID str
 		Priority:  "high",
 		ProcessIn: 1,
 	})
-	return app, &apiKey, &appID, utils.GetStringPointer(string(appSigningKey)), &sandboxAPIKey, &sandboxAppSigningKey
+	return app, apiKey, &appID, utils.GetStringPointer(string(*appSigningKey)), utils.GetStringPointer("sandbox-" + *sandboxAPIKey), utils.GetStringPointer("sandbox-" + *sandboxAppSigningKey)
 }

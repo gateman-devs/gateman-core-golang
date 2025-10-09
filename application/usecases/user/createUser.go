@@ -50,7 +50,6 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 					return nil, nil, nil, nil
 				}
 
-				fmt.Println("email unverified", otp)
 				emailPayload, err := json.Marshal(queue_tasks.EmailPayload{
 					Opts: map[string]any{
 						"OTP":            otp,
@@ -124,7 +123,6 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 					return nil, nil, nil, nil
 				}
 
-				fmt.Println("again", otp)
 				payload, err := json.Marshal(queue_tasks.EmailPayload{
 					Opts: map[string]any{
 						"OTP":            otp,
@@ -274,7 +272,6 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 			apperrors.FatalServerError(ctx, err, deviceID)
 			return nil, nil, nil, nil
 		}
-		fmt.Println("new", *otp)
 		emailPayload, err := json.Marshal(queue_tasks.EmailPayload{
 			Opts: map[string]any{
 				"OTP":            otp,

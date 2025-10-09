@@ -111,8 +111,12 @@ func IsUserSignedIn(ctx any, authToken any, intent *string, deviceID string) Use
 	// Extract user information from token claims
 	result.IsAuthenticated = true
 	result.UserID = authTokenClaims["userID"].(string)
-	result.Email = authTokenClaims["email"].(string)
-	result.Phone = authTokenClaims["phone"].(string)
+	if authTokenClaims["email"] != nil {
+		result.Email = authTokenClaims["email"].(string)
+	}
+	if authTokenClaims["phone"] != nil {
+		result.Phone = authTokenClaims["phone"].(string)
+	}
 	result.UserAgent = authTokenClaims["userAgent"].(string)
 	result.DeviceID = authTokenClaims["deviceID"].(string)
 

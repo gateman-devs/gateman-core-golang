@@ -21,10 +21,12 @@ type ginResponder struct{}
 
 // Sends an encrypted payload to the client
 func (gr ginResponder) Respond(ctx interface{}, code int, message string, payload any, errs []error, responseCode *uint, deviceID *string) {
-	if os.Getenv("APP_ENV") == "dev" || deviceID == nil {
-		gr.UnEncryptedRespond(ctx, code, message, payload, errs, responseCode)
-		return
-	}
+	gr.UnEncryptedRespond(ctx, code, message, payload, errs, responseCode)
+	return
+	// if os.Getenv("APP_ENV") == "dev" || deviceID == nil {
+	// 	gr.UnEncryptedRespond(ctx, code, message, payload, errs, responseCode)
+	// 	return
+	// }
 	ginCtx, ok := (ctx).(*gin.Context)
 	if !ok {
 		logger.Error("could not transform *interface{} to gin.Context in serverResponse package", logger.LoggerOptions{
@@ -40,9 +42,9 @@ func (gr ginResponder) Respond(ctx interface{}, code int, message string, payloa
 		case map[string]any:
 			if value, ok := p["accessToken"]; ok && value.(*string) != nil {
 				http.SetCookie(ginCtx.Writer, &http.Cookie{
-					Name:     "accessToken",
-					Value:    *value.(*string),
-					Domain:   utils.ExtractDomain(utils.ExtractDomain(os.Getenv("CLIENT_URL"))),
+					Name:   "accessToken",
+					Value:  *value.(*string),
+					Domain: utils.ExtractDomain(utils.ExtractDomain(os.Getenv("CLIENT_URL"))),
 					// HttpOnly: true,
 					// Secure:   true,
 					Path:     "/",
@@ -53,9 +55,9 @@ func (gr ginResponder) Respond(ctx interface{}, code int, message string, payloa
 			}
 			if value, ok := p["refreshToken"]; ok && value.(*string) != nil {
 				http.SetCookie(ginCtx.Writer, &http.Cookie{
-					Name:     "refreshToken",
-					Value:    *value.(*string),
-					Domain:   utils.ExtractDomain(os.Getenv("CLIENT_URL")),
+					Name:   "refreshToken",
+					Value:  *value.(*string),
+					Domain: utils.ExtractDomain(os.Getenv("CLIENT_URL")),
 					// HttpOnly: true,
 					// Secure:   true,
 					Path:     "/api/v1/auth/refresh",
@@ -66,9 +68,9 @@ func (gr ginResponder) Respond(ctx interface{}, code int, message string, payloa
 			}
 			if value, ok := p["workspaceAccessToken"]; ok && value.(*string) != nil {
 				http.SetCookie(ginCtx.Writer, &http.Cookie{
-					Name:     "workspaceAccessToken",
-					Value:    *value.(*string),
-					Domain:   utils.ExtractDomain(os.Getenv("CLIENT_URL")),
+					Name:   "workspaceAccessToken",
+					Value:  *value.(*string),
+					Domain: utils.ExtractDomain(os.Getenv("CLIENT_URL")),
 					// HttpOnly: true,
 					// Secure:   true,
 					Path:     "/",
@@ -79,9 +81,9 @@ func (gr ginResponder) Respond(ctx interface{}, code int, message string, payloa
 			}
 			if value, ok := p["workspaceRefreshToken"]; ok && value.(*string) != nil {
 				http.SetCookie(ginCtx.Writer, &http.Cookie{
-					Name:     "workspaceRefreshToken",
-					Value:    *value.(*string),
-					Domain:   utils.ExtractDomain(os.Getenv("CLIENT_URL")),
+					Name:   "workspaceRefreshToken",
+					Value:  *value.(*string),
+					Domain: utils.ExtractDomain(os.Getenv("CLIENT_URL")),
 					// HttpOnly: true,
 					// Secure:   true,
 					Path:     "/api/v1/auth/workspace/refresh",
@@ -161,9 +163,9 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 		case map[string]any:
 			if value, ok := p["accessToken"]; ok && value.(*string) != nil {
 				http.SetCookie(ginCtx.Writer, &http.Cookie{
-					Name:     "accessToken",
-					Value:    *value.(*string),
-					Domain:   utils.ExtractDomain(os.Getenv("CLIENT_URL")),
+					Name:   "accessToken",
+					Value:  *value.(*string),
+					Domain: utils.ExtractDomain(os.Getenv("CLIENT_URL")),
 					// HttpOnly: true,
 					// Secure:   true,
 					Path:     "/",
@@ -174,9 +176,9 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 			}
 			if value, ok := p["refreshToken"]; ok && value.(*string) != nil {
 				http.SetCookie(ginCtx.Writer, &http.Cookie{
-					Name:     "refreshToken",
-					Value:    *value.(*string),
-					Domain:   utils.ExtractDomain(os.Getenv("CLIENT_URL")),
+					Name:   "refreshToken",
+					Value:  *value.(*string),
+					Domain: utils.ExtractDomain(os.Getenv("CLIENT_URL")),
 					// HttpOnly: true,
 					// Secure:   true,
 					Path:     "/api/v1/auth/refresh",
@@ -187,9 +189,9 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 			}
 			if value, ok := p["workspaceAccessToken"]; ok && value.(*string) != nil {
 				http.SetCookie(ginCtx.Writer, &http.Cookie{
-					Name:     "workspaceAccessToken",
-					Value:    *value.(*string),
-					Domain:   utils.ExtractDomain(os.Getenv("CLIENT_URL")),
+					Name:   "workspaceAccessToken",
+					Value:  *value.(*string),
+					Domain: utils.ExtractDomain(os.Getenv("CLIENT_URL")),
 					// HttpOnly: true,
 					// Secure:   true,
 					Path:     "/",
@@ -200,9 +202,9 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 			}
 			if value, ok := p["workspaceRefreshToken"]; ok && value.(*string) != nil {
 				http.SetCookie(ginCtx.Writer, &http.Cookie{
-					Name:     "workspaceRefreshToken",
-					Value:    *value.(*string),
-					Domain:   utils.ExtractDomain(os.Getenv("CLIENT_URL")),
+					Name:   "workspaceRefreshToken",
+					Value:  *value.(*string),
+					Domain: utils.ExtractDomain(os.Getenv("CLIENT_URL")),
 					// HttpOnly: true,
 					// Secure:   true,
 					Path:     "/api/v1/auth/workspace/refresh",

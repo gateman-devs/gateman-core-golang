@@ -8,9 +8,9 @@ import (
 
 // LivenessDetectionDTO represents the request for liveness detection
 type LivenessDetectionDTO struct {
-	Image         string `json:"image" validate:"required"` // Base64 encoded image or URL
-	Verbose       bool   `json:"verbose,omitempty"`         // Enable verbose analysis reporting
-	LenientBlurry bool   `json:"lenient_blurry,omitempty"`  // Enable lenient mode for slightly blurry images
+	Image     string  `json:"image" validate:"required"`    // Base64 encoded image or URL
+	Threshold float64 `json:"threshold,omitempty"`         // Liveness threshold (0.0-1.0, default: 0.6)
+	Verbose   bool    `json:"verbose,omitempty"`           // Enable verbose analysis reporting
 }
 
 // FaceComparisonDTO represents the request for face comparison
@@ -173,12 +173,11 @@ type ModelInfoDTO struct {
 
 // EnhancedFaceComparisonRequest represents the enhanced request for face comparison with liveness detection
 type EnhancedFaceComparisonRequest struct {
-	ReferenceImage  string  `json:"image1" validate:"required"` // Base64 encoded image or URL
-	TestImage       string  `json:"image2" validate:"required"` // Base64 encoded image or URL
-	Threshold       float64 `json:"threshold,omitempty"`        // Custom similarity threshold (0.0-1.0)
-	RequestID       string  `json:"request_id,omitempty"`       // Optional request ID for tracking
-	RequireLiveness bool    `json:"require_liveness,omitempty"` // Enable liveness detection (default: true)
-	LenientBlurry   bool    `json:"lenient_blurry,omitempty"`   // Enable lenient mode for slightly blurry images
+	Image1    string  `json:"image1" validate:"required"`   // Base64 encoded image or URL
+	Image2    string  `json:"image2" validate:"required"`   // Base64 encoded image or URL
+	Threshold float64 `json:"threshold,omitempty"`         // Custom similarity threshold (0.0-1.0)
+	Verbose   bool    `json:"verbose,omitempty"`           // Enable verbose analysis reporting
+	RequestID string  `json:"request_id,omitempty"`        // Optional request ID for tracking
 }
 
 // EnhancedFaceComparisonResponse represents the enhanced response for face comparison with liveness results
@@ -244,12 +243,12 @@ func ValidateEnhancedFaceComparisonRequest(req *EnhancedFaceComparisonRequest) e
 	}
 
 	// Validate reference image
-	if err := validateImageInput(req.ReferenceImage, "reference_image"); err != nil {
+	if err := validateImageInput(req.Image1, "image1"); err != nil {
 		return err
 	}
 
 	// Validate test image
-	if err := validateImageInput(req.TestImage, "test_image"); err != nil {
+	if err := validateImageInput(req.Image2, "image2"); err != nil {
 		return err
 	}
 

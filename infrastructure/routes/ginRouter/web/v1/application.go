@@ -146,16 +146,20 @@ func AppRouter(router *gin.RouterGroup) {
 			id, found := ctx.Params.Get("id")
 			if !found {
 				apperrors.ClientError(ctx, "missing parameter id", nil, nil, *appContext.GetHeader("X-Device-Id"))
+				return
 			}
+			accessToken, _ := ctx.Cookie("accessToken")
 			controller.FetchAppDetails(&interfaces.ApplicationContext[any]{
 				Ctx: ctx,
 				Keys: map[string]any{
-					"ip": ctx.ClientIP(),
+					"ip":          ctx.ClientIP(),
+					"accessToken": accessToken,
 				},
 				Header: appContext.Header,
 				Param: map[string]any{
 					"id": id,
 				},
+				DeviceID: appContext.DeviceID,
 			})
 		})
 
