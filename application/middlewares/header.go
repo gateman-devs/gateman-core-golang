@@ -19,7 +19,7 @@ func UserAgentMiddleware(ctx *interfaces.ApplicationContext[any], minAppVersion 
 	ctx.DeviceName = agentDetails.Name
 	deviceID := ctx.GetHeader("X-Device-Id")
 	if deviceID == nil || *deviceID == "" {
-		apperrors.MalformedHeader(ctx.Ctx, *deviceID)
+		apperrors.MalformedHeader(ctx.Ctx, nil)
 		return nil, false
 	}
 	ctx.DeviceID = *deviceID

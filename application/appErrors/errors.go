@@ -73,13 +73,13 @@ func UnsupportedUserAgent(ctx interface{}, deviceID string) {
 		"unsupported user agent 👮🏻‍♂️", nil, nil, nil, &deviceID)
 }
 
-func MalformedHeader(ctx interface{}, deviceID string) {
+func MalformedHeader(ctx interface{}, deviceID *string) {
 	// logger.MetricMonitor.ReportError(errors.New("unspported user agent"), []logger.LoggerOptions{
 	// 	{Key: "ctx",
 	// 	Data: ctx,},
 	// })
 	server_response.Responder.Respond(ctx, http.StatusBadRequest,
-		"malformed header information 👮🏻‍♂️", nil, nil, nil, &deviceID)
+		"malformed header information 👮🏻‍♂️", nil, nil, nil, deviceID)
 }
 
 func ClientError(ctx interface{}, msg string, errs []error, responseCode *uint, deviceID string) {
