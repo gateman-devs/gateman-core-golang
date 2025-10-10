@@ -1,7 +1,6 @@
 package routev1
 
 import (
-	"encoding/json"
 	"os"
 	"strconv"
 
@@ -21,12 +20,16 @@ func WorkspaceRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.CreateWorkspaceDTO
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -50,12 +53,16 @@ func WorkspaceRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.InviteWorspaceMembersDTO
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -86,12 +93,16 @@ func WorkspaceRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.LoginWorkspaceMemberDTO
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -113,12 +124,16 @@ func WorkspaceRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.CreateHelpRequestDTO
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))

@@ -1,7 +1,6 @@
 package routev1
 
 import (
-	"encoding/json"
 	"os"
 
 	apperrors "gateman.io/application/appErrors"
@@ -20,12 +19,16 @@ func MiscRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.GeneratedSignedURLDTO
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -51,12 +54,16 @@ func MiscRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.GeneratePaymentLinkDTO
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -74,12 +81,16 @@ func MiscRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.GenerateAddCardLinkDTO
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))

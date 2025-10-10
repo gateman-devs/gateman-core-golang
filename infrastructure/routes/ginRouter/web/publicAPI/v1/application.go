@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"encoding/json"
 	"os"
 
 	apperrors "gateman.io/application/appErrors"
@@ -19,12 +18,16 @@ func AppRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.FetchAppDTO
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))

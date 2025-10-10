@@ -107,9 +107,16 @@ func FetchAppDetails(ctx *interfaces.ApplicationContext[any]) {
 	var isSignedIn bool
 	isUserSignedIn := auth_usecases.IsUserSignedIn(ctx.Ctx, ctx.Keys["accessToken"], nil, ctx.DeviceID)
 	isSignedIn = isUserSignedIn.IsAuthenticated
+	var signUpStatus map[string]any
+	if isSignedIn {
+		userRepo := repository.UserRepo()
+		user, _ := userRepo.FindByID(isUserSignedIn.UserID)
+		_, _, signUpStatus, _ = services.ProcessUserSignUp(app, user, ctx.Keys["ip"].(string))
+	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "app fetched", map[string]any{
-		"app":        app,
-		"isSignedIn": isSignedIn,
+		"app":          app,
+		"isSignedIn":   isSignedIn,
+		"signUpStatus": signUpStatus,
 	}, nil, nil, &ctx.DeviceID)
 }
 

@@ -1,7 +1,6 @@
 package routev1
 
 import (
-	"encoding/json"
 	"os"
 
 	apperrors "gateman.io/application/appErrors"
@@ -20,12 +19,16 @@ func AppRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.ApplicationDTO
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -43,12 +46,16 @@ func AppRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.UpdateWhitelistIPDTO
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -66,12 +73,16 @@ func AppRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.UpdateApplications
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -189,12 +200,16 @@ func AppRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.ApplicationSignUpDTO
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -216,12 +231,16 @@ func AppRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.FetchAppUsersDTO
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -241,12 +260,16 @@ func AppRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.ToggleMFAProtectionSettingDTO
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -266,12 +289,16 @@ func AppRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.BlockAccountsDTO
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -295,12 +322,16 @@ func AppRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.BlockAccountsDTO
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -324,12 +355,16 @@ func AppRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.UpdateAccessRefreshTokenTTL
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -353,12 +388,16 @@ func AppRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.FetchAppMetrics
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -377,12 +416,16 @@ func AppRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.SubmitCustomAppFormDTO
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -403,12 +446,16 @@ func AppRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.FetchActivityLogsDTO
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))

@@ -1,7 +1,6 @@
 package routev1
 
 import (
-	"encoding/json"
 	"os"
 
 	apperrors "gateman.io/application/appErrors"
@@ -18,12 +17,16 @@ func BiometricRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.FaceComparisonRequest
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -41,12 +44,16 @@ func BiometricRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.LivenessCheckRequest
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -73,12 +80,16 @@ func BiometricRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.VideoLivenessVerificationRequest
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -97,12 +108,16 @@ func BiometricRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.EnhancedFaceComparisonRequest
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -121,12 +136,16 @@ func BiometricRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.LivenessDetectionDTO
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
@@ -145,12 +164,16 @@ func BiometricRouter(router *gin.RouterGroup) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.ImageQualityDTO
 			if os.Getenv("APP_ENV") != "dev" {
-				decryptedPayload, exists := ctx.Get("DecryptedBody")
-				if !exists {
+				// decryptedPayload, exists := ctx.Get("DecryptedBody")
+				// if !exists {
+				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
+				// 	return
+				// }
+				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
+				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
 					return
 				}
-				json.Unmarshal([]byte(decryptedPayload.(string)), &body)
 			} else {
 				if err := ctx.ShouldBindJSON(&body); err != nil {
 					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))

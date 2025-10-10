@@ -24,12 +24,12 @@ func DecryptPayloadMiddleware() gin.HandlerFunc {
 			})
 			return
 		}
-		decryptedBody := middlewares.DecryptPayloadMiddleware(&interfaces.ApplicationContext[string]{
-			Ctx:      ctx,
-			Body:     utils.GetStringPointer(string(body)),
-			DeviceID: ctx.Request.Header.Get("X-Device-Id"),
-		})
-		ctx.Set("DecryptedBody", string(decryptedBody))
+		// decryptedBody := middlewares.DecryptPayloadMiddleware(&interfaces.ApplicationContext[string]{
+		// 	Ctx:      ctx,
+		// 	Body:     utils.GetStringPointer(string(body)),
+		// 	DeviceID: ctx.Request.Header.Get("X-Device-Id"),
+		// })
+		// ctx.Set("DecryptedBody", string(decryptedBody))
 		ctx.Next()
 	}
 }
