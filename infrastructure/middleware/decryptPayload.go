@@ -1,12 +1,8 @@
 package middlewares
 
 import (
-	"io"
 	"os"
 
-	"gateman.io/application/interfaces"
-	"gateman.io/application/middlewares"
-	"gateman.io/application/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,14 +12,14 @@ func DecryptPayloadMiddleware() gin.HandlerFunc {
 			ctx.Next()
 			return
 		}
-		body, err := io.ReadAll(ctx.Request.Body)
-		if err != nil {
-			ctx.Next()
-			ctx.Set("AppContext", &interfaces.ApplicationContext[any]{
-				Ctx: ctx,
-			})
-			return
-		}
+		// body, err := io.ReadAll(ctx.Request.Body)
+		// if err != nil {
+		// 	ctx.Next()
+		// 	ctx.Set("AppContext", &interfaces.ApplicationContext[any]{
+		// 		Ctx: ctx,
+		// 	})
+		// 	return
+		// }
 		// decryptedBody := middlewares.DecryptPayloadMiddleware(&interfaces.ApplicationContext[string]{
 		// 	Ctx:      ctx,
 		// 	Body:     utils.GetStringPointer(string(body)),
