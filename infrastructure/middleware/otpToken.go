@@ -9,7 +9,7 @@ import (
 func OTPTokenMiddleware(intent string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		savedCtx := (ctx.MustGet("AppContext")).(*interfaces.ApplicationContext[any])
-		accessToken, _ := ctx.Cookie("accessToken")
+		accessToken, _ := ctx.Cookie("otpAccessToken")
 		appContext, next := middlewares.OTPTokenMiddleware(&interfaces.ApplicationContext[any]{
 			Ctx:      ctx,
 			Keys:     savedCtx.Keys,
