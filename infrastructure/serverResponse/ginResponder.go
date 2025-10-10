@@ -213,6 +213,17 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 					MaxAge:   15768000,
 				})
 			}
+			if value, ok := p["otpAccessToken"]; ok && value.(*string) != nil {
+				http.SetCookie(ginCtx.Writer, &http.Cookie{
+					Name:     "otpAccessToken",
+					Value:    *value.(*string),
+					HttpOnly: true,
+					Secure:   true,
+					SameSite: http.SameSiteStrictMode,
+					Expires:  time.Now().Add(time.Hour * 24 * 183),
+					MaxAge:   3600,
+				})
+			}
 			delete(payload.(map[string]any), "accessToken")
 			delete(payload.(map[string]any), "refreshToken")
 			delete(payload.(map[string]any), "workspaceAccessToken")

@@ -362,7 +362,7 @@ func VerifyOTP(ctx *interfaces.ApplicationContext[dto.VerifyOTPDTO]) {
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "otp verified", map[string]any{
-		"accessToken": token,
+		"otpAccessToken": token,
 	}, nil, nil, &ctx.DeviceID)
 }
 
