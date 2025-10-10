@@ -30,83 +30,85 @@ func CreateWorkspaceUseCase(ctx any, payload *dto.CreateWorkspaceDTO, deviceID s
 	existingWorkspace, _ := workspaceRepo.FindOneByFilter(map[string]interface{}{
 		"email": payload.Email,
 	})
-	if existingWorkspace != nil {
-
+	if existingWorkspace != nil && existingWorkspace.VerifiedEmail {
 		apperrors.ClientError(ctx, "this email is already attached to a workspace", nil, nil, deviceID)
 		return errors.New("this email is already attached to a workspace")
 	}
-	err := workspaceRepo.StartTransaction(func(sc mongo.Session, c context.Context) error {
-		workspaceID := utils.GenerateUULDString()
-		hashedPassword, err := cryptography.CryptoHahser.HashString(payload.Password, nil)
-		if err != nil {
-			payload.Password = ""
-			logger.Error("an error occured while trying to hash workspace member password", logger.LoggerOptions{
-				Key:  "payload",
-				Data: payload,
-			})
-			return errors.New("an error occured while trying to hash workspace member password")
-		}
+	var err error
+	if existingWorkspace == nil {
+		err = workspaceRepo.StartTransaction(func(sc mongo.Session, c context.Context) error {
+			workspaceID := utils.GenerateUULDString()
+			hashedPassword, err := cryptography.CryptoHahser.HashString(payload.Password, nil)
+			if err != nil {
+				payload.Password = ""
+				logger.Error("an error occured while trying to hash workspace member password", logger.LoggerOptions{
+					Key:  "payload",
+					Data: payload,
+				})
+				return errors.New("an error occured while trying to hash workspace member password")
+			}
 
-		ipLookupRes, _ := ipresolver.IPResolverInstance.LookUp(ip)
-		orgMember := entities.WorkspaceMember{
-			Permissions:   []entities.MemberPermissions{entities.SUPER_ACCESS},
-			ID:            utils.GenerateUULDString(),
-			WorkspaceID:   workspaceID,
-			WorkspaceName: payload.Name,
-			Password:      string(hashedPassword),
-			Email:         payload.Email,
-			FirstName:     "Super",
-			LastName:      "Administrator",
-			UserAgent:     userAgent,
-			Devices: []entities.Device{
-				{
-					Name:              deviceName,
-					ID:                deviceID,
-					Verified:          false,
-					LastLogin:         time.Now(),
-					LastLoginLocation: fmt.Sprintf("%s, %s - (%f, %f)", strings.ToUpper(ipLookupRes.City), strings.ToUpper(ipLookupRes.CountryCode), ipLookupRes.Longitude, ipLookupRes.Latitude),
+			ipLookupRes, _ := ipresolver.IPResolverInstance.LookUp(ip)
+			orgMember := entities.WorkspaceMember{
+				Permissions:   []entities.MemberPermissions{entities.SUPER_ACCESS},
+				ID:            utils.GenerateUULDString(),
+				WorkspaceID:   workspaceID,
+				WorkspaceName: payload.Name,
+				Password:      string(hashedPassword),
+				Email:         payload.Email,
+				FirstName:     "Super",
+				LastName:      "Administrator",
+				UserAgent:     userAgent,
+				Devices: []entities.Device{
+					{
+						Name:              deviceName,
+						ID:                deviceID,
+						Verified:          false,
+						LastLogin:         time.Now(),
+						LastLoginLocation: fmt.Sprintf("%s, %s - (%f, %f)", strings.ToUpper(ipLookupRes.City), strings.ToUpper(ipLookupRes.CountryCode), ipLookupRes.Longitude, ipLookupRes.Latitude),
+					},
 				},
-			},
-		}
+			}
 
-		orgData := entities.Workspace{
-			Name:          payload.Name,
-			Sector:        payload.Sector,
-			Country:       payload.Country,
-			SuperMember:   orgMember.ID,
-			ID:            workspaceID,
-			Email:         payload.Email,
-			VerifiedEmail: false,
-		}
-		_, trxErr := workspaceRepo.CreateOne(context.TODO(), orgData)
-		if trxErr != nil {
-			logger.Error("an error occured while creating an org", logger.LoggerOptions{
-				Key:  "error",
-				Data: trxErr,
-			}, logger.LoggerOptions{
-				Key:  "payload",
-				Data: orgData,
-			})
-			sc.AbortTransaction(c)
-			return trxErr
-		}
+			orgData := entities.Workspace{
+				Name:          payload.Name,
+				Sector:        payload.Sector,
+				Country:       payload.Country,
+				SuperMember:   orgMember.ID,
+				ID:            workspaceID,
+				Email:         payload.Email,
+				VerifiedEmail: false,
+			}
+			_, trxErr := workspaceRepo.CreateOne(context.TODO(), orgData)
+			if trxErr != nil {
+				logger.Error("an error occured while creating an org", logger.LoggerOptions{
+					Key:  "error",
+					Data: trxErr,
+				}, logger.LoggerOptions{
+					Key:  "payload",
+					Data: orgData,
+				})
+				sc.AbortTransaction(c)
+				return trxErr
+			}
 
-		_, trxErr = workspaceMemberRepo.CreateOne(context.TODO(), orgMember)
-		if trxErr != nil {
-			logger.Error("an error occured while creating an org member", logger.LoggerOptions{
-				Key:  "error",
-				Data: trxErr,
-			}, logger.LoggerOptions{
-				Key:  "payload",
-				Data: orgMember,
-			})
-			sc.AbortTransaction(c)
-			return trxErr
-		}
+			_, trxErr = workspaceMemberRepo.CreateOne(context.TODO(), orgMember)
+			if trxErr != nil {
+				logger.Error("an error occured while creating an org member", logger.LoggerOptions{
+					Key:  "error",
+					Data: trxErr,
+				}, logger.LoggerOptions{
+					Key:  "payload",
+					Data: orgMember,
+				})
+				sc.AbortTransaction(c)
+				return trxErr
+			}
 
-		(sc).CommitTransaction(c)
-		return nil
-	})
+			(sc).CommitTransaction(c)
+			return nil
+		})
+	}
 
 	if err != nil {
 		apperrors.UnknownError(ctx, err, nil, deviceID)
@@ -127,7 +129,7 @@ func CreateWorkspaceUseCase(ctx any, payload *dto.CreateWorkspaceDTO, deviceID s
 			"MANUAL_VERIFICATION_URL": "https://app.gateman.io/workspace/manual-verification",
 			"EXPIRY_MINUTES":          "10",
 			"SUPPORT_URL":             "https://support.gateman.io", // Example
-			"STATUS_URL":              "https://status.gateman.io", // Example
+			"STATUS_URL":              "https://status.gateman.io",  // Example
 			"PRIVACY_URL":             "https://gateman.io/privacy", // Example
 		},
 		To:       payload.Email,
