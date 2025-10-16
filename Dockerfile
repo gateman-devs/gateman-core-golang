@@ -169,6 +169,7 @@ WORKDIR /app
 COPY --from=builder --chown=appuser:appgroup /app/main .
 COPY --from=builder --chown=appuser:appgroup /app/models ./models
 COPY --from=builder --chown=appuser:appgroup /app/infrastructure/messaging/emails/templates ./infrastructure/messaging/emails/templates
+COPY --from=builder --chown=appuser:appgroup /app/api-doc ./api-doc
 
 RUN chmod +x main
 

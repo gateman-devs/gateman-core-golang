@@ -1,471 +1,280 @@
 {
   "title": "Gateman API Documentation",
-  "description": "Complete API documentation for Gateman's user verification and biometric authentication services",
+  "description": "Complete API reference for Gateman biometric verification services",
   "version": "1.0.0",
   "baseUrl": "https://api.gateman.io",
   "sections": [
     {
-      "id": "introduction",
-      "title": "Introduction",
-      "description": "Welcome to Gateman API documentation",
-      "type": "content"
-    },
-    {
       "id": "getting-started",
       "title": "Getting Started",
-      "description": "Learn how to integrate Gateman into your application",
-      "type": "content"
+      "description": "Learn how to get started with Gateman API",
+      "pages": [
+        {
+          "id": "introduction",
+          "title": "Introduction",
+          "type": "page",
+          "description": "Overview of the Gateman API"
+        },
+        {
+          "id": "authentication",
+          "title": "Authentication",
+          "type": "page",
+          "description": "How to authenticate with the API"
+        }
+      ]
     },
     {
-      "id": "authentication",
-      "title": "Authentication",
-      "description": "Learn how to authenticate with the Gateman API",
-      "type": "content"
+      "id": "biometric-verification",
+      "title": "Biometric Verification",
+      "description": "Face recognition and biometric verification endpoints",
+      "pages": [
+        {
+          "id": "face-comparison-endpoint",
+          "title": "Face Comparison",
+          "type": "endpoint",
+          "description": "Compare two face images and return similarity score"
+        },
+        {
+          "id": "liveness-check-endpoint",
+          "title": "Liveness Check",
+          "type": "endpoint",
+          "description": "Analyze facial movements to detect liveness"
+        }
+      ]
     },
     {
-      "id": "quick-start",
-      "title": "Quick Start",
-      "description": "Get up and running with Gateman in minutes",
-      "type": "content"
+      "id": "identity-verification",
+      "title": "Identity Verification",
+      "description": "Document verification and identity services",
+      "pages": [
+        {
+          "id": "document-scan-endpoint",
+          "title": "Document Scan",
+          "type": "endpoint",
+          "description": "Extract data from government-issued documents"
+        },
+        {
+          "id": "face-document-match-endpoint",
+          "title": "Face-Document Match",
+          "type": "endpoint",
+          "description": "Verify if face matches document photo"
+        }
+      ]
     },
     {
-      "id": "api-reference",
-      "title": "API Reference",
-      "description": "Complete reference for all Gateman API endpoints",
-      "type": "endpoints"
-    },
-    {
-      "id": "javascript-sdk",
-      "title": "JavaScript SDK",
-      "description": "Official JavaScript/Node.js SDK for Gateman API",
-      "type": "content"
-    },
-    {
-      "id": "python-sdk",
-      "title": "Python SDK",
-      "description": "Official Python SDK for Gateman API",
-      "type": "content"
-    },
-    {
-      "id": "php-sdk",
-      "title": "PHP SDK",
-      "description": "Official PHP SDK for Gateman API",
-      "type": "content"
-    },
-    {
-      "id": "integration-guide",
-      "title": "Integration Guide",
-      "description": "Complete guide to integrating Gateman into your application",
-      "type": "content"
-    },
-    {
-      "id": "best-practices",
-      "title": "Best Practices",
-      "description": "Security and performance best practices for using Gateman API",
-      "type": "content"
-    },
-    {
-      "id": "error-handling",
-      "title": "Error Handling",
-      "description": "How to handle API errors gracefully",
-      "type": "content"
+      "id": "webhooks",
+      "title": "Webhooks",
+      "description": "Real-time event notifications",
+      "pages": [
+        {
+          "id": "webhook-setup",
+          "title": "Webhook Configuration",
+          "type": "page",
+          "description": "Set up webhooks for event notifications"
+        }
+      ]
     }
   ],
   "apiKey": {
     "description": "Your API key for authentication",
-    "placeholder": "Enter your API key",
+    "placeholder": "your_api_key_here",
     "required": true
   },
   "appId": {
-    "description": "Your application ID",
-    "placeholder": "Enter your app ID",
+    "description": "Your application identifier",
+    "placeholder": "your_app_id_here",
     "required": true
   },
   "defaultHeaders": {
     "Content-Type": "application/json",
-    "Accept": "application/json"
+    "X-API-Key": "{api_key}",
+    "X-App-ID": "{app_id}"
   },
   "endpoints": [
     {
-      "id": "verify-user",
-      "title": "Verify User",
+      "id": "face-comparison-endpoint",
+      "title": "Face Comparison",
       "method": "POST",
-      "path": "/v1/verify",
-      "description": "Verify a user's identity using biometric data",
-      "category": "Authentication",
+      "path": "/biometric/face/compare",
+      "description": "Compare two face images and return similarity score",
+      "category": "Biometric Verification",
       "headers": {
-        "Authorization": "Bearer {api_key}",
-        "Content-Type": "application/json",
-        "X-App-ID": "{app_id}"
+        "X-API-Key": "{api_key}",
+        "X-App-ID": "{app_id}",
+        "Content-Type": "multipart/form-data"
       },
       "requestBody": {
         "type": "object",
         "properties": {
-          "user_id": {
+          "face1": {
             "type": "string",
-            "description": "Unique identifier for the user",
-            "required": true,
-            "example": "user_123456"
+            "format": "binary",
+            "description": "First face image file"
           },
-          "verification_type": {
+          "face2": {
             "type": "string",
-            "enum": ["biometric", "document", "phone", "email"],
-            "description": "Type of verification to perform",
-            "required": true,
-            "example": "biometric"
+            "format": "binary",
+            "description": "Second face image file"
           },
-          "biometric_data": {
-            "type": "object",
-            "description": "Biometric data for verification",
-            "properties": {
-              "fingerprint": {
-                "type": "string",
-                "description": "Base64 encoded fingerprint data"
-              },
-              "face_image": {
-                "type": "string",
-                "description": "Base64 encoded face image"
-              }
-            }
-          },
-          "metadata": {
-            "type": "object",
-            "description": "Additional metadata for the verification request",
-            "properties": {
-              "device_id": {
-                "type": "string",
-                "description": "Device identifier"
-              },
-              "ip_address": {
-                "type": "string",
-                "description": "User's IP address"
-              }
-            }
+          "threshold": {
+            "type": "number",
+            "description": "Similarity threshold (0-1)",
+            "default": 0.8
           }
-        }
+        },
+        "required": ["face1", "face2"]
       },
       "responses": {
         "200": {
-          "description": "Verification successful",
+          "description": "Success",
           "schema": {
-            "verified": {
-              "type": "boolean",
-              "description": "Whether the user was successfully verified"
-            },
-            "user_data": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "description": "User ID"
-                },
-                "verified_at": {
-                  "type": "string",
-                  "format": "date-time",
-                  "description": "Timestamp of verification"
-                },
-                "confidence_score": {
-                  "type": "number",
-                  "description": "Confidence score (0-100)"
-                }
+            "type": "object",
+            "properties": {
+              "similarity": {
+                "type": "number",
+                "description": "Similarity score between 0 and 1"
+              },
+              "match": {
+                "type": "boolean",
+                "description": "Whether faces match above threshold"
+              },
+              "confidence": {
+                "type": "number",
+                "description": "Confidence level of the match"
               }
-            },
-            "verification_id": {
-              "type": "string",
-              "description": "Unique verification ID"
             }
           }
         },
         "400": {
-          "description": "Bad request - invalid parameters",
-          "schema": {
-            "error": {
-              "type": "string",
-              "description": "Error message"
-            },
-            "code": {
-              "type": "string",
-              "description": "Error code"
-            }
-          }
+          "description": "Bad Request - Invalid input"
         },
         "401": {
-          "description": "Unauthorized - invalid API key",
-          "schema": {
-            "error": {
-              "type": "string",
-              "description": "Error message"
-            }
-          }
-        },
-        "429": {
-          "description": "Rate limit exceeded",
-          "schema": {
-            "error": {
-              "type": "string",
-              "description": "Rate limit error message"
-            },
-            "retry_after": {
-              "type": "number",
-              "description": "Seconds to wait before retrying"
-            }
-          }
+          "description": "Unauthorized"
         }
       },
       "example": {
         "request": {
-          "user_id": "user_123456",
-          "verification_type": "biometric",
-          "biometric_data": {
-            "fingerprint": "base64_encoded_fingerprint_data",
-            "face_image": "base64_encoded_face_image"
-          },
-          "metadata": {
-            "device_id": "device_789",
-            "ip_address": "192.168.1.1"
-          }
+          "face1": "image1.jpg",
+          "face2": "image2.jpg",
+          "threshold": 0.8
         },
         "response": {
-          "verified": true,
-          "user_data": {
-            "id": "user_123456",
-            "verified_at": "2025-01-10T12:00:00Z",
-            "confidence_score": 95.5
-          },
-          "verification_id": "verification_abc123"
+          "similarity": 0.92,
+          "match": true,
+          "confidence": 0.95
         }
       }
     },
     {
-      "id": "get-user-status",
-      "title": "Get User Status",
-      "method": "GET",
-      "path": "/v1/users/{user_id}/status",
-      "description": "Get the verification status of a specific user",
-      "category": "User Management",
-      "headers": {
-        "Authorization": "Bearer {api_key}",
-        "X-App-ID": "{app_id}"
-      },
-      "pathParameters": {
-        "user_id": {
-          "type": "string",
-          "description": "The user ID to check status for",
-          "required": true
-        }
-      },
-      "responses": {
-        "200": {
-          "description": "User status retrieved successfully",
-          "schema": {
-            "user_id": {
-              "type": "string",
-              "description": "User ID"
-            },
-            "status": {
-              "type": "string",
-              "enum": ["verified", "pending", "failed", "expired"],
-              "description": "Current verification status"
-            },
-            "last_verified": {
-              "type": "string",
-              "format": "date-time",
-              "description": "Last verification timestamp"
-            },
-            "verification_count": {
-              "type": "integer",
-              "description": "Number of successful verifications"
-            }
-          }
-        },
-        "404": {
-          "description": "User not found",
-          "schema": {
-            "error": {
-              "type": "string",
-              "description": "User not found error message"
-            }
-          }
-        }
-      },
-      "example": {
-        "request": {
-          "user_id": "user_123456"
-        },
-        "response": {
-          "user_id": "user_123456",
-          "status": "verified",
-          "last_verified": "2025-01-10T12:00:00Z",
-          "verification_count": 5
-        }
-      }
-    },
-    {
-      "id": "create-webhook",
-      "title": "Create Webhook",
+      "id": "liveness-check-endpoint",
+      "title": "Liveness Check",
       "method": "POST",
-      "path": "/v1/webhooks",
-      "description": "Create a new webhook endpoint for receiving notifications",
-      "category": "Webhooks",
+      "path": "/biometric/liveness/check",
+      "description": "Analyze facial movements to detect if the person is live",
+      "category": "Biometric Verification",
       "headers": {
-        "Authorization": "Bearer {api_key}",
-        "Content-Type": "application/json",
-        "X-App-ID": "{app_id}"
+        "X-API-Key": "{api_key}",
+        "X-App-ID": "{app_id}",
+        "Content-Type": "multipart/form-data"
       },
       "requestBody": {
         "type": "object",
         "properties": {
-          "url": {
+          "video": {
             "type": "string",
-            "format": "uri",
-            "description": "Webhook endpoint URL",
-            "required": true,
-            "example": "https://your-app.com/webhooks/gateman"
+            "format": "binary",
+            "description": "Video file for liveness analysis"
           },
-          "events": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": ["user.verified", "user.failed", "verification.completed"]
-            },
-            "description": "Events to subscribe to",
-            "required": true,
-            "example": ["user.verified", "user.failed"]
-          },
-          "secret": {
+          "challenge_type": {
             "type": "string",
-            "description": "Webhook secret for signature verification",
-            "required": true,
-            "example": "your_webhook_secret"
+            "enum": ["blink", "smile", "turn_head"],
+            "description": "Type of liveness challenge"
           }
-        }
+        },
+        "required": ["video"]
       },
       "responses": {
-        "201": {
-          "description": "Webhook created successfully",
+        "200": {
+          "description": "Success",
           "schema": {
-            "webhook_id": {
-              "type": "string",
-              "description": "Unique webhook identifier"
-            },
-            "url": {
-              "type": "string",
-              "description": "Webhook endpoint URL"
-            },
-            "events": {
-              "type": "array",
-              "description": "Subscribed events"
-            },
-            "created_at": {
-              "type": "string",
-              "format": "date-time",
-              "description": "Creation timestamp"
+            "type": "object",
+            "properties": {
+              "is_live": {
+                "type": "boolean",
+                "description": "Whether the person appears to be live"
+              },
+              "confidence": {
+                "type": "number",
+                "description": "Confidence score of liveness detection"
+              },
+              "challenge_completed": {
+                "type": "boolean",
+                "description": "Whether the challenge was successfully completed"
+              }
             }
           }
         }
       },
       "example": {
         "request": {
-          "url": "https://your-app.com/webhooks/gateman",
-          "events": ["user.verified", "user.failed"],
-          "secret": "your_webhook_secret"
+          "video": "liveness_video.mp4",
+          "challenge_type": "blink"
         },
         "response": {
-          "webhook_id": "webhook_xyz789",
-          "url": "https://your-app.com/webhooks/gateman",
-          "events": ["user.verified", "user.failed"],
-          "created_at": "2025-01-10T12:00:00Z"
+          "is_live": true,
+          "confidence": 0.98,
+          "challenge_completed": true
         }
       }
     },
     {
-      "id": "get-analytics",
-      "title": "Get Analytics",
-      "method": "GET",
-      "path": "/v1/analytics",
-      "description": "Retrieve usage analytics and insights",
-      "category": "Analytics",
+      "id": "document-scan-endpoint",
+      "title": "Document Scan",
+      "method": "POST",
+      "path": "/identity/document/scan",
+      "description": "Extract data from government-issued documents",
+      "category": "Identity Verification",
       "headers": {
-        "Authorization": "Bearer {api_key}",
-        "X-App-ID": "{app_id}"
+        "X-API-Key": "{api_key}",
+        "X-App-ID": "{app_id}",
+        "Content-Type": "multipart/form-data"
       },
-      "queryParameters": {
-        "start_date": {
-          "type": "string",
-          "format": "date",
-          "description": "Start date for analytics (YYYY-MM-DD)",
-          "required": false,
-          "example": "2025-01-01"
+      "requestBody": {
+        "type": "object",
+        "properties": {
+          "document_image": {
+            "type": "string",
+            "format": "binary",
+            "description": "Image of the document to scan"
+          },
+          "document_type": {
+            "type": "string",
+            "enum": ["passport", "drivers_license", "id_card"],
+            "description": "Type of document being scanned"
+          }
         },
-        "end_date": {
-          "type": "string",
-          "format": "date",
-          "description": "End date for analytics (YYYY-MM-DD)",
-          "required": false,
-          "example": "2025-01-31"
-        },
-        "granularity": {
-          "type": "string",
-          "enum": ["hour", "day", "week", "month"],
-          "description": "Data granularity",
-          "required": false,
-          "default": "day"
-        }
+        "required": ["document_image", "document_type"]
       },
       "responses": {
         "200": {
-          "description": "Analytics data retrieved successfully",
+          "description": "Document scanned successfully",
           "schema": {
-            "period": {
-              "type": "object",
-              "properties": {
-                "start_date": {
-                  "type": "string",
-                  "format": "date"
-                },
-                "end_date": {
-                  "type": "string",
-                  "format": "date"
-                }
-              }
-            },
-            "metrics": {
-              "type": "object",
-              "properties": {
-                "total_verifications": {
-                  "type": "integer",
-                  "description": "Total number of verifications"
-                },
-                "successful_verifications": {
-                  "type": "integer",
-                  "description": "Number of successful verifications"
-                },
-                "failed_verifications": {
-                  "type": "integer",
-                  "description": "Number of failed verifications"
-                },
-                "success_rate": {
-                  "type": "number",
-                  "description": "Success rate percentage"
-                }
-              }
-            },
-            "data_points": {
-              "type": "array",
-              "items": {
+            "type": "object",
+            "properties": {
+              "document_type": {"type": "string"},
+              "extracted_data": {
                 "type": "object",
                 "properties": {
-                  "timestamp": {
-                    "type": "string",
-                    "format": "date-time"
-                  },
-                  "verifications": {
-                    "type": "integer"
-                  },
-                  "success_rate": {
-                    "type": "number"
-                  }
+                  "full_name": {"type": "string"},
+                  "document_number": {"type": "string"},
+                  "date_of_birth": {"type": "string"},
+                  "date_of_expiry": {"type": "string"},
+                  "issuing_country": {"type": "string"}
                 }
+              },
+              "confidence_scores": {
+                "type": "object",
+                "description": "Confidence scores for each extracted field"
               }
             }
           }
@@ -473,445 +282,148 @@
       },
       "example": {
         "request": {
-          "start_date": "2025-01-01",
-          "end_date": "2025-01-31",
-          "granularity": "day"
+          "document_image": "passport.jpg",
+          "document_type": "passport"
         },
         "response": {
-          "period": {
-            "start_date": "2025-01-01",
-            "end_date": "2025-01-31"
+          "document_type": "passport",
+          "extracted_data": {
+            "full_name": "JOHN DOE",
+            "document_number": "P123456789",
+            "date_of_birth": "1990-01-15",
+            "date_of_expiry": "2030-01-15",
+            "issuing_country": "US"
           },
-          "metrics": {
-            "total_verifications": 1500,
-            "successful_verifications": 1425,
-            "failed_verifications": 75,
-            "success_rate": 95.0
+          "confidence_scores": {
+            "full_name": 0.98,
+            "document_number": 0.95,
+            "date_of_birth": 0.92
+          }
+        }
+      }
+    },
+    {
+      "id": "face-document-match-endpoint",
+      "title": "Face-Document Match",
+      "method": "POST",
+      "path": "/identity/face-document/match",
+      "description": "Verify if a face matches the photo on a document",
+      "category": "Identity Verification",
+      "headers": {
+        "X-API-Key": "{api_key}",
+        "X-App-ID": "{app_id}",
+        "Content-Type": "multipart/form-data"
+      },
+      "requestBody": {
+        "type": "object",
+        "properties": {
+          "face_image": {
+            "type": "string",
+            "format": "binary",
+            "description": "Face image to compare"
           },
-          "data_points": [
-            {
-              "timestamp": "2025-01-01T00:00:00Z",
-              "verifications": 50,
-              "success_rate": 96.0
+          "document_image": {
+            "type": "string",
+            "format": "binary",
+            "description": "Document image containing photo"
+          },
+          "threshold": {
+            "type": "number",
+            "description": "Similarity threshold (0-1)",
+            "default": 0.7
+          }
+        },
+        "required": ["face_image", "document_image"]
+      },
+      "responses": {
+        "200": {
+          "description": "Match analysis completed",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "match": {
+                "type": "boolean",
+                "description": "Whether face matches document photo"
+              },
+              "similarity": {
+                "type": "number",
+                "description": "Similarity score between face and document photo"
+              },
+              "confidence": {
+                "type": "number",
+                "description": "Confidence level of the analysis"
+              }
             }
-          ]
+          }
+        }
+      },
+      "example": {
+        "request": {
+          "face_image": "selfie.jpg",
+          "document_image": "passport.jpg",
+          "threshold": 0.7
+        },
+        "response": {
+          "match": true,
+          "similarity": 0.85,
+          "confidence": 0.91
         }
       }
     }
   ],
   "pages": {
     "introduction": {
-      "title": "Introduction to Gateman",
-      "description": "Welcome to Gateman API documentation",
-      "content": [
-        {
-          "type": "intro",
-          "title": "What is Gateman?",
-          "text": "Gateman is a powerful API platform that provides seamless user onboarding with verified data through biometric authentication. Our API allows you to verify user identities quickly, securely, and at scale."
-        },
-        {
-          "type": "section",
-          "title": "Key Features",
-          "items": [
-            "Biometric verification (fingerprint, face recognition)",
-            "Document verification",
-            "Real-time webhooks for instant notifications",
-            "Comprehensive SDKs for popular languages",
-            "99.9% uptime SLA",
-            "Enterprise-grade security"
-          ]
-        },
-        {
-          "type": "section",
-          "title": "How It Works",
-          "steps": [
-            {
-              "title": "Sign up and get API credentials",
-              "description": "Create an account and obtain your API key and App ID from the dashboard."
-            },
-            {
-              "title": "Integrate the API",
-              "description": "Use our RESTful API or SDKs to integrate verification into your application."
-            },
-            {
-              "title": "Verify users",
-              "description": "Send verification requests and receive instant results with confidence scores."
-            },
-            {
-              "title": "Handle responses",
-              "description": "Process verification results and update your application accordingly."
-            }
-          ]
-        },
-        {
-          "type": "callout",
-          "variant": "info",
-          "title": "Ready to get started?",
-          "text": "Check out our Quick Start guide to make your first API call in under 5 minutes."
-        }
-      ]
-    },
-    "getting-started": {
-      "title": "Getting Started",
-      "description": "Learn how to integrate Gateman into your application",
+      "title": "Introduction",
+      "description": "Welcome to Gateman API",
       "content": [
         {
           "type": "intro",
           "title": "Welcome to Gateman",
-          "text": "Gateman provides seamless user onboarding with verified data through biometric authentication. Our API allows you to verify user identities quickly and securely."
+          "text": "Gateman provides advanced biometric verification and identity verification services through our comprehensive API."
         },
         {
           "type": "section",
-          "title": "Prerequisites",
+          "title": "Key Features",
+          "text": "Our API offers:",
           "items": [
-            "An active Gateman account",
-            "API credentials (API Key and App ID)",
-            "Basic understanding of REST APIs",
-            "A development environment"
+            "Face comparison and recognition",
+            "Liveness detection",
+            "Document verification",
+            "Biometric matching",
+            "Real-time webhook notifications"
           ]
-        },
-        {
-          "type": "section",
-          "title": "Quick Start Steps",
-          "steps": [
-            {
-              "title": "Get your API credentials",
-              "description": "Log in to your Gateman dashboard and navigate to Settings > API Keys to get your credentials."
-            },
-            {
-              "title": "Make your first API call",
-              "description": "Use your API key to make a test verification request."
-            },
-            {
-              "title": "Handle the response",
-              "description": "Process the verification results in your application."
-            }
-          ]
-        },
-        {
-          "type": "callout",
-          "variant": "info",
-          "title": "Need help?",
-          "text": "Check out our comprehensive API reference or reach out to our support team at devs@gateman.io"
         }
       ]
     },
     "authentication": {
       "title": "Authentication",
-      "description": "Learn how to authenticate with the Gateman API",
+      "description": "How to authenticate with the Gateman API",
       "content": [
         {
           "type": "intro",
           "title": "API Authentication",
-          "text": "Gateman uses API keys to authenticate requests. Your API keys carry many privileges, so be sure to keep them secure. Do not share your secret API keys in publicly accessible areas such as GitHub, client-side code, and so forth."
-        },
-        {
-          "type": "section",
-          "title": "Authentication Methods",
-          "text": "All API requests must be authenticated using your API key in the Authorization header:"
-        },
-        {
-          "type": "code",
-          "language": "bash",
-          "code": "Authorization: Bearer YOUR_API_KEY"
+          "text": "All API requests require authentication using your API key and App ID."
         },
         {
           "type": "section",
           "title": "Required Headers",
+          "text": "Include these headers in all API requests:",
           "items": [
-            "Authorization: Bearer {your_api_key}",
-            "X-App-ID: {your_app_id}",
-            "Content-Type: application/json"
+            "X-API-Key: Your API key",
+            "X-App-ID: Your application identifier",
+            "Content-Type: application/json (or multipart/form-data for file uploads)"
           ]
-        },
-        {
-          "type": "callout",
-          "variant": "warning",
-          "title": "Keep your API keys secure",
-          "text": "Never expose your API keys in client-side code or public repositories. Always store them securely in environment variables."
         }
       ]
     },
-    "quick-start": {
-      "title": "Quick Start",
-      "description": "Get up and running with Gateman in minutes",
+    "webhook-setup": {
+      "title": "Webhook Configuration",
+      "description": "Set up webhooks for real-time event notifications",
       "content": [
         {
           "type": "intro",
-          "title": "Quick Start Guide",
-          "text": "This guide will walk you through making your first API request to Gateman."
-        },
-        {
-          "type": "section",
-          "title": "Step 1: Install a client library (Optional)",
-          "text": "While you can use any HTTP client, we recommend using our official SDKs:"
-        },
-        {
-          "type": "code",
-          "language": "bash",
-          "code": "npm install @gateman/node\n# or\npip install gateman-python"
-        },
-        {
-          "type": "section",
-          "title": "Step 2: Make your first request",
-          "text": "Here's an example of verifying a user:"
-        },
-        {
-          "type": "code",
-          "language": "javascript",
-          "code": "const response = await fetch('https://api.gateman.io/v1/verify', {\n  method: 'POST',\n  headers: {\n    'Authorization': 'Bearer YOUR_API_KEY',\n    'X-App-ID': 'YOUR_APP_ID',\n    'Content-Type': 'application/json'\n  },\n  body: JSON.stringify({\n    user_id: 'user_123',\n    verification_type: 'biometric'\n  })\n});\n\nconst data = await response.json();\nconsole.log(data);"
-        },
-        {
-          "type": "section",
-          "title": "Step 3: Handle the response",
-          "text": "The API will return a JSON response with the verification results. Check the 'verified' field to determine if verification was successful."
-        }
-      ]
-    },
-    "api-reference": {
-      "title": "API Reference",
-      "description": "Complete reference for all Gateman API endpoints",
-      "content": [
-        {
-          "type": "intro",
-          "title": "API Reference",
-          "text": "The Gateman API is organized around REST. Our API has predictable resource-oriented URLs, accepts form-encoded request bodies, returns JSON-encoded responses, and uses standard HTTP response codes, authentication, and verbs."
-        },
-        {
-          "type": "section",
-          "title": "Base URL",
-          "text": "All API requests should be made to:"
-        },
-        {
-          "type": "code",
-          "language": "text",
-          "code": "https://api.gateman.io"
-        },
-        {
-          "type": "section",
-          "title": "API Endpoints",
-          "text": "Browse our API endpoints below. Click on any endpoint to view detailed documentation, request/response examples, and test it directly in your browser."
-        }
-      ]
-    },
-    "javascript-sdk": {
-      "title": "JavaScript SDK",
-      "description": "Official JavaScript/Node.js SDK for Gateman API",
-      "content": [
-        {
-          "type": "intro",
-          "title": "JavaScript SDK",
-          "text": "The Gateman JavaScript SDK provides a simple way to integrate with the Gateman API in Node.js and browser environments."
-        },
-        {
-          "type": "section",
-          "title": "Installation",
-          "text": "Install the SDK using npm or yarn:"
-        },
-        {
-          "type": "code",
-          "language": "bash",
-          "code": "npm install @gateman/sdk\n# or\nyarn add @gateman/sdk"
-        },
-        {
-          "type": "section",
-          "title": "Basic Usage",
-          "text": "Initialize the SDK with your API credentials:"
-        },
-        {
-          "type": "code",
-          "language": "javascript",
-          "code": "const Gateman = require('@gateman/sdk');\n\nconst client = new Gateman({\n  apiKey: 'your_api_key',\n  appId: 'your_app_id'\n});\n\n// Verify a user\nconst result = await client.verify({\n  userId: 'user_123',\n  verificationType: 'biometric',\n  biometricData: {\n    fingerprint: 'base64_data'\n  }\n});\n\nconsole.log(result);"
-        }
-      ]
-    },
-    "python-sdk": {
-      "title": "Python SDK",
-      "description": "Official Python SDK for Gateman API",
-      "content": [
-        {
-          "type": "intro",
-          "title": "Python SDK",
-          "text": "The Gateman Python SDK provides a Pythonic way to interact with the Gateman API."
-        },
-        {
-          "type": "section",
-          "title": "Installation",
-          "text": "Install the SDK using pip:"
-        },
-        {
-          "type": "code",
-          "language": "bash",
-          "code": "pip install gateman-python"
-        },
-        {
-          "type": "section",
-          "title": "Basic Usage",
-          "text": "Initialize the SDK with your API credentials:"
-        },
-        {
-          "type": "code",
-          "language": "python",
-          "code": "from gateman import Gateman\n\nclient = Gateman(\n    api_key='your_api_key',\n    app_id='your_app_id'\n)\n\n# Verify a user\nresult = client.verify(\n    user_id='user_123',\n    verification_type='biometric',\n    biometric_data={\n        'fingerprint': 'base64_data'\n    }\n)\n\nprint(result)"
-        }
-      ]
-    },
-    "php-sdk": {
-      "title": "PHP SDK",
-      "description": "Official PHP SDK for Gateman API",
-      "content": [
-        {
-          "type": "intro",
-          "title": "PHP SDK",
-          "text": "The Gateman PHP SDK makes it easy to integrate Gateman into your PHP applications."
-        },
-        {
-          "type": "section",
-          "title": "Installation",
-          "text": "Install the SDK using Composer:"
-        },
-        {
-          "type": "code",
-          "language": "bash",
-          "code": "composer require gateman/sdk"
-        },
-        {
-          "type": "section",
-          "title": "Basic Usage",
-          "text": "Initialize the SDK with your API credentials:"
-        },
-        {
-          "type": "code",
-          "language": "php",
-          "code": "<?php\nrequire 'vendor/autoload.php';\n\nuse Gateman\\SDK\\Client;\n\n$client = new Client([\n    'api_key' => 'your_api_key',\n    'app_id' => 'your_app_id'\n]);\n\n// Verify a user\n$result = $client->verify([\n    'user_id' => 'user_123',\n    'verification_type' => 'biometric',\n    'biometric_data' => [\n        'fingerprint' => 'base64_data'\n    ]\n]);\n\nprint_r($result);"
-        }
-      ]
-    },
-    "integration-guide": {
-      "title": "Integration Guide",
-      "description": "Complete guide to integrating Gateman into your application",
-      "content": [
-        {
-          "type": "intro",
-          "title": "Integration Guide",
-          "text": "This comprehensive guide will walk you through integrating Gateman's verification services into your application."
-        },
-        {
-          "type": "section",
-          "title": "Integration Steps",
-          "steps": [
-            {
-              "title": "Set up your account",
-              "description": "Create a Gateman account and obtain your API credentials from the dashboard."
-            },
-            {
-              "title": "Choose your integration method",
-              "description": "Decide whether to use our REST API directly or one of our official SDKs."
-            },
-            {
-              "title": "Implement verification flow",
-              "description": "Add verification calls to your user onboarding or authentication flow."
-            },
-            {
-              "title": "Handle responses",
-              "description": "Process verification results and update your user records accordingly."
-            },
-            {
-              "title": "Set up webhooks",
-              "description": "Configure webhooks to receive real-time notifications about verification events."
-            },
-            {
-              "title": "Test in sandbox",
-              "description": "Use our sandbox environment to test your integration thoroughly before going live."
-            }
-          ]
-        },
-        {
-          "type": "callout",
-          "variant": "success",
-          "title": "Integration complete!",
-          "text": "Once you've completed these steps, you're ready to start verifying users in production."
-        }
-      ]
-    },
-    "best-practices": {
-      "title": "Best Practices",
-      "description": "Security and performance best practices for using Gateman API",
-      "content": [
-        {
-          "type": "intro",
-          "title": "Best Practices",
-          "text": "Follow these best practices to ensure secure and efficient use of the Gateman API."
-        },
-        {
-          "type": "section",
-          "title": "Security Best Practices",
-          "items": [
-            "Never expose API keys in client-side code or public repositories",
-            "Store API keys securely using environment variables or secret management services",
-            "Rotate API keys regularly",
-            "Use HTTPS for all API requests",
-            "Implement proper error handling to avoid leaking sensitive information",
-            "Validate webhook signatures to ensure authenticity"
-          ]
-        },
-        {
-          "type": "section",
-          "title": "Performance Best Practices",
-          "items": [
-            "Implement caching for frequently accessed data",
-            "Use webhooks instead of polling for real-time updates",
-            "Batch requests when possible to reduce API calls",
-            "Handle rate limits gracefully with exponential backoff",
-            "Monitor API usage and set up alerts for unusual patterns",
-            "Use compression for large payloads"
-          ]
-        },
-        {
-          "type": "callout",
-          "variant": "warning",
-          "title": "Rate Limits",
-          "text": "Be aware of rate limits on your account tier. Contact support if you need higher limits."
-        }
-      ]
-    },
-    "error-handling": {
-      "title": "Error Handling",
-      "description": "How to handle API errors gracefully",
-      "content": [
-        {
-          "type": "intro",
-          "title": "Error Handling",
-          "text": "The Gateman API uses standard HTTP response codes to indicate the success or failure of requests. Learn how to handle errors properly in your application."
-        },
-        {
-          "type": "section",
-          "title": "HTTP Status Codes",
-          "items": [
-            "200 OK - Request succeeded",
-            "400 Bad Request - Invalid request parameters",
-            "401 Unauthorized - Invalid or missing API key",
-            "403 Forbidden - API key doesn't have required permissions",
-            "404 Not Found - Resource doesn't exist",
-            "429 Too Many Requests - Rate limit exceeded",
-            "500 Internal Server Error - Server error occurred"
-          ]
-        },
-        {
-          "type": "section",
-          "title": "Error Response Format",
-          "text": "All errors return a JSON response with the following structure:"
-        },
-        {
-          "type": "code",
-          "language": "json",
-          "code": "{\n  \"error\": \"Error message description\",\n  \"code\": \"ERROR_CODE\",\n  \"details\": {\n    \"field\": \"Additional error context\"\n  }\n}"
-        },
-        {
-          "type": "callout",
-          "variant": "info",
-          "title": "Retry Logic",
-          "text": "Implement exponential backoff for retrying failed requests, especially for 429 and 5xx errors."
+          "title": "Webhook Integration",
+          "text": "Webhooks allow you to receive real-time notifications when verification events occur."
         }
       ]
     }
