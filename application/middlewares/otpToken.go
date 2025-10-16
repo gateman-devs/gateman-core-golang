@@ -43,6 +43,7 @@ func OTPTokenMiddleware(ctx *interfaces.ApplicationContext[any], ipAddress strin
 		channel = authTokenClaims["phone"].(string)
 	}
 	otpIntent := cache.Cache.FindOne(fmt.Sprintf("%s-otp-intent", channel))
+	fmt.Println(otpIntent, "found")
 	if otpIntent == nil {
 		logger.Error("otp intent missing")
 		apperrors.ClientError(ctx.Ctx, "otp expired", nil, nil, ctx.DeviceID)

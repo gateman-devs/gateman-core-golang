@@ -18,6 +18,8 @@ import (
 
 func WorkspaceAuthenticationMiddleware(ctx *interfaces.ApplicationContext[any], intent *string, requiredPermissions *[]entities.MemberPermissions, authToken string) (*interfaces.ApplicationContext[any], bool) {
 	validAccessToken, err := auth.DecodeAuthToken(authToken)
+	fmt.Println("the token")
+	fmt.Println(authToken)
 	if err != nil {
 		apperrors.AuthenticationError(ctx.Ctx, "this session has expired", ctx.DeviceID)
 		return nil, false

@@ -40,10 +40,6 @@ func CreateApplication(ctx *interfaces.ApplicationContext[dto.ApplicationDTO]) {
 		apperrors.ValidationFailedError(ctx.Ctx, valiedationErr, ctx.DeviceID)
 		return
 	}
-	if len(ctx.Body.RequestedFields) == 0 {
-		apperrors.ValidationFailedError(ctx.Ctx, &[]error{errors.New("requestedFields cannot be empty")}, ctx.DeviceID)
-		return
-	}
 	if ctx.Body.Verifications != nil {
 		for _, field := range *ctx.Body.Verifications {
 			if !utils.HasItemString(&constants.AVAILABLE_REQUIRED_DATA_POINTS, field.Name) {
@@ -65,7 +61,7 @@ func CreateApplication(ctx *interfaces.ApplicationContext[dto.ApplicationDTO]) {
 		apperrors.ValidationFailedError(ctx.Ctx, &[]error{errors.New("duplicate validation options detected on custom form fields")}, ctx.DeviceID)
 		return
 	}
-	if len(ctx.Body.RequestedFields) > 11 {
+	if ctx.Body.RequestedFields != nil && len(*ctx.Body.RequestedFields) > 11 {
 		apperrors.ValidationFailedError(ctx.Ctx, &[]error{errors.New("requested fields cannot contain more than 11 items")}, ctx.DeviceID)
 		return
 	}

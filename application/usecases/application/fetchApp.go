@@ -21,15 +21,14 @@ func FetchAppUseCase(ctx any, appID string, deviceID string, ip string) (*entiti
 	app, err := appRepo.FindOneByFilter(map[string]interface{}{
 		"appID": appID,
 	}, options.FindOne().SetProjection(map[string]any{
-		"name":                  1,
-		"requiredVerifications": 1,
-		"requestedFields":       1,
-		"localeRestriction":     1,
-		"description":           1,
-		"appImg":                1,
-		"appIssuer":             1,
-		"appSigningKey":         1,
-		"workspaceID":           1,
+		"name":             1,
+		"verifications":    1,
+		"requestedFields":  1,
+		"localeRestriction": 1,
+		"description":      1,
+		"appImg":           1,
+		"appSigningKey":    1,
+		"workspaceID":      1,
 	}))
 	if err != nil {
 		logger.Error("an error occured while fethcing app details", logger.LoggerOptions{

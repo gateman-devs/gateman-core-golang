@@ -58,7 +58,7 @@ func CreateApplicationUseCase(ctx any, payload *dto.ApplicationDTO, deviceID str
 		Description:            payload.Description,
 		LocaleRestriction:      payload.LocaleRestriction,
 		Verifications:          payload.Verifications,
-		RequestedFields:        payload.RequestedFields,
+		RequestedFields:        *payload.RequestedFields,
 		AppSigningKey:          *encryptedAppSigningKey,
 		SandboxAppSigningKey:   *encryptedSandboxAppSigningKey,
 		RefreshTokenTTL:        60 * 60 * 24 * 7, // 7 days

@@ -4,10 +4,10 @@ import "gateman.io/entities"
 
 type ApplicationDTO struct {
 	Name              string                        `json:"name" validate:"required,max=100,min=2"`
-	Description       string                        `json:"description" validate:"required,max=200,min=10"`
+	Description       string                        `json:"description" validate:"required,max=200"`
 	Verifications     *[]entities.VerificationType  `json:"verifications" validate:"omitempty,dive"`
 	LocaleRestriction *[]entities.LocaleRestriction `json:"localeRestriction" validate:"omitempty,dive"`
-	RequestedFields   []entities.RequestedField     `json:"requestedFields" validate:"required,dive"`
+	RequestedFields   *[]entities.RequestedField     `json:"requestedFields" validate:"omitempty,dive"`
 	CustomFormFields  *[]entities.CustomFormField   `json:"customFormFields" validate:"omitempty,dive"`
 }
 

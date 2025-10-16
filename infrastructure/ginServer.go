@@ -3,6 +3,7 @@ package infrastructure
 import (
 	"crypto/ecdh"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -113,6 +114,20 @@ func (s *ginServer) Start() {
 
 	server.GET("/ping", func(ctx *gin.Context) {
 		server_response.Responder.Respond(ctx, http.StatusOK, "pong!", nil, nil, nil, nil)
+	})
+
+	server.GET("/docs", func(ctx *gin.Context) {
+		fileData, err := os.ReadFile("./api-doc/index.json")
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read API documentation"})
+			return
+		}
+		var jsonData interface{}
+		if err := json.Unmarshal(fileData, &jsonData); err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse API documentation"})
+			return
+		}
+		ctx.JSON(http.StatusOK, jsonData)
 	})
 
 	server.NoRoute(func(ctx *gin.Context) {

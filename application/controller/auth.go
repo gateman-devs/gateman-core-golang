@@ -150,6 +150,7 @@ func VerifyUserAccount(ctx *interfaces.ApplicationContext[any]) {
 }
 
 func VerifyWorkspaceAccount(ctx *interfaces.ApplicationContext[any]) {
+	fmt.Println("it hot")
 	workspaceRepo := repository.WorkspaceRepository()
 	workspace, err := workspaceRepo.FindOneByFilter(map[string]interface{}{
 		"email": ctx.GetStringContextData("OTPEmail"),

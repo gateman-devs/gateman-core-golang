@@ -159,6 +159,7 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 	ginCtx.Abort()
 
 	if payload != nil {
+		secureAccess := os.Getenv("APP_ENV") == "prod"
 		switch p := payload.(type) {
 		case map[string]any:
 			if value, ok := p["accessToken"]; ok && value.(*string) != nil {
@@ -167,7 +168,7 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 					Value:    *value.(*string),
 					Domain:   utils.ExtractDomain(os.Getenv("AUTH_CLIENT_URL")),
 					HttpOnly: true,
-					Secure:   true,
+					Secure:   secureAccess,
 					Path:     "/",
 					SameSite: http.SameSiteStrictMode,
 					Expires:  time.Now().Add(time.Hour * 1),
@@ -180,7 +181,7 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 					Value:    *value.(*string),
 					Domain:   utils.ExtractDomain(os.Getenv("AUTH_CLIENT_URL")),
 					HttpOnly: true,
-					Secure:   true,
+					Secure:   secureAccess,
 					Path:     "/api/v1/auth/refresh",
 					SameSite: http.SameSiteStrictMode,
 					Expires:  time.Now().Add(time.Hour * 24 * 183),
@@ -193,7 +194,7 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 					Value:    *value.(*string),
 					Domain:   utils.ExtractDomain(os.Getenv("WORKSPACE_CLIENT_URL")),
 					HttpOnly: true,
-					Secure:   true,
+					Secure:   secureAccess,
 					Path:     "/",
 					SameSite: http.SameSiteStrictMode,
 					Expires:  time.Now().Add(time.Hour * 1),
@@ -206,7 +207,7 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 					Value:    *value.(*string),
 					Domain:   utils.ExtractDomain(os.Getenv("WORKSPACE_CLIENT_URL")),
 					HttpOnly: true,
-					Secure:   true,
+					Secure:   secureAccess,
 					Path:     "/api/v1/auth/workspace/refresh",
 					SameSite: http.SameSiteStrictMode,
 					Expires:  time.Now().Add(time.Hour * 24 * 183),
@@ -218,16 +219,18 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 					Name:     "otpAccessToken",
 					Value:    *value.(*string),
 					HttpOnly: true,
-					Secure:   true,
+					Secure:   secureAccess,
+					Path:     "/",
 					SameSite: http.SameSiteStrictMode,
-					Expires:  time.Now().Add(time.Hour * 24 * 183),
-					MaxAge:   3600,
+					Expires:  time.Now().Add(time.Hour * 24 * 1800),
+					MaxAge:   360000,
 				})
 			}
 			delete(payload.(map[string]any), "accessToken")
 			delete(payload.(map[string]any), "refreshToken")
 			delete(payload.(map[string]any), "workspaceAccessToken")
 			delete(payload.(map[string]any), "workspaceRefreshToken")
+			delete(payload.(map[string]any), "otpAccessToken")
 		}
 	}
 
