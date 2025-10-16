@@ -7,7 +7,7 @@
     {
       "id": "getting-started",
       "title": "Getting Started",
-      "description": "Learn how to get started with Gateman API",
+      "description": "Quick guide to start using Gateman API",
       "pages": [
         {
           "id": "introduction",
@@ -26,95 +26,63 @@
     {
       "id": "biometric-verification",
       "title": "Biometric Verification",
-      "description": "Face recognition and biometric verification endpoints",
+      "description": "Check if two faces match or if a person is real (not a photo/video)",
       "pages": [
         {
           "id": "face-comparison-endpoint",
           "title": "Face Comparison",
           "type": "endpoint",
-          "description": "Compare two face images and return similarity score"
+          "description": "Compare two faces to see if they are the same person"
         },
         {
           "id": "liveness-check-endpoint",
           "title": "Liveness Check",
           "type": "endpoint",
-          "description": "Analyze facial movements to detect liveness"
-        }
-      ]
-    },
-    {
-      "id": "identity-verification",
-      "title": "Identity Verification",
-      "description": "Document verification and identity services",
-      "pages": [
-        {
-          "id": "document-scan-endpoint",
-          "title": "Document Scan",
-          "type": "endpoint",
-          "description": "Extract data from government-issued documents"
-        },
-        {
-          "id": "face-document-match-endpoint",
-          "title": "Face-Document Match",
-          "type": "endpoint",
-          "description": "Verify if face matches document photo"
-        }
-      ]
-    },
-    {
-      "id": "webhooks",
-      "title": "Webhooks",
-      "description": "Real-time event notifications",
-      "pages": [
-        {
-          "id": "webhook-setup",
-          "title": "Webhook Configuration",
-          "type": "page",
-          "description": "Set up webhooks for event notifications"
+          "description": "Check if the person in the photo is real (not a fake image or video)"
         }
       ]
     }
   ],
   "apiKey": {
-    "description": "Your API key for authentication",
+    "description": "Your secret key to access the API",
     "placeholder": "your_api_key_here",
     "required": true
   },
   "appId": {
-    "description": "Your application identifier",
+    "description": "Your app's unique ID",
     "placeholder": "your_app_id_here",
     "required": true
   },
   "defaultHeaders": {
     "Content-Type": "application/json",
-    "X-API-Key": "{api_key}",
-    "X-App-ID": "{app_id}"
+    "x-api-key": "{api_key}",
+    "x-app-id": "{app_id}"
   },
   "endpoints": [
     {
       "id": "face-comparison-endpoint",
       "title": "Face Comparison",
       "method": "POST",
-      "path": "/biometric/face/compare",
-      "description": "Compare two face images and return similarity score",
+      "path": "/api/public/v1/biometric/liveness-check",
+      "description": "Compare two faces and see if they match (use URLs or base64 images)",
       "category": "Biometric Verification",
       "headers": {
-        "X-API-Key": "{api_key}",
-        "X-App-ID": "{app_id}",
-        "Content-Type": "multipart/form-data"
+        "x-api-key": "{api_key}",
+        "x-app-id": "{app_id}",
+        "Content-Type": "application/json"
       },
       "requestBody": {
         "type": "object",
         "properties": {
-          "face1": {
+          "image1": {
             "type": "string",
-            "format": "binary",
-            "description": "First face image file"
+            "format": "string",
+            "description": "Image URL or base64 string"
           },
-          "face2": {
+          "image2": {
             "type": "string",
-            "format": "binary",
-            "description": "Second face image file"
+            "format": "string",
+            "description": "Image URL or base64 string"
           },
           "threshold": {
             "type": "number",
@@ -122,46 +90,97 @@
             "default": 0.8
           }
         },
-        "required": ["face1", "face2"]
+        "required": ["image1", "image2"]
       },
       "responses": {
-        "200": {
+        "200 - Match Success": {
           "description": "Success",
           "schema": {
             "type": "object",
             "properties": {
-              "similarity": {
-                "type": "number",
-                "description": "Similarity score between 0 and 1"
+              "body": {
+                "is_match": true,
+                "similarity": 0.5738323359758971,
+                "confidence": 0.5738323359758971,
+                "processing_time_ms": 3748,
+                "reference_liveness": null,
+                "test_liveness": null,
+                "liveness_process_time_ms": 0,
+                "request_id": "",
+                "timestamp": "2025-10-08T23:13:59.802387+01:00"
               },
-              "match": {
-                "type": "boolean",
-                "description": "Whether faces match above threshold"
-              },
-              "confidence": {
-                "type": "number",
-                "description": "Confidence level of the match"
-              }
+              "message": "Enhanced face comparison completed"
             }
           }
         },
-        "400": {
-          "description": "Bad Request - Invalid input"
-        },
-        "401": {
-          "description": "Unauthorized"
+        "200 - Match Failed": {
+          "description": "Bad Request - Invalid input",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "is_match": false,
+                "similarity": 0.5738323359758971,
+                "confidence": 0.5738323359758971,
+                "processing_time_ms": 2625,
+                "reference_liveness": null,
+                "test_liveness": null,
+                "liveness_process_time_ms": 0,
+                "request_id": "",
+                "timestamp": "2025-10-08T23:13:33.394071+01:00"
+              },
+              "message": "Enhanced face comparison completed"
+            }
+          }
         }
       },
       "example": {
         "request": {
-          "face1": "image1.jpg",
-          "face2": "image2.jpg",
+          "face1": "https://res.cloudinary.com/themizehq/image/upload/v1705754919/b3660e9e-4bed-4063-8400-88f5e109aacb.jpg",
+          "face2": "https://res.cloudinary.com/themizehq/image/upload/v1705754919/b3660e9e-4bed-4063-8400-88f5e109aacb.jpg",
           "threshold": 0.8
         },
         "response": {
-          "similarity": 0.92,
-          "match": true,
-          "confidence": 0.95
+          "body": {
+            "is_match": true,
+            "similarity": 0.5738323359758971,
+            "confidence": 0.5738323359758971,
+            "processing_time_ms": 3218,
+            "reference_liveness": null,
+            "test_liveness": null,
+            "liveness_process_time_ms": 0,
+            "feature_quality": {
+              "face_size_percent": 97.262930338731,
+              "face_position": "center",
+              "image_sharpness": 0.9726293033873099,
+              "lighting_quality": 0.9726293033873099,
+              "feature_strength": 0.5738323359758971
+            },
+            "comparison_metadata": {
+              "similarity_method": "yunet_facenet",
+              "threshold_used": 0.1,
+              "quality_adjustment": 0,
+              "confidence_level": "high",
+              "feature_strength": 0.5738323359758971,
+              "processing_steps": [
+                {
+                  "step": "face_detection",
+                  "duration_ms": 1609,
+                  "success": true,
+                  "details": "Faces detected successfully"
+                },
+                {
+                  "step": "face_comparison",
+                  "duration_ms": 1609,
+                  "success": true,
+                  "details": "Face comparison completed (threshold: 0.10, match: true)"
+                }
+              ]
+            },
+            "request_id": "",
+            "timestamp": "2025-10-08T23:02:50.031014+01:00"
+          },
+          "message": "Enhanced face comparison completed"
         }
       }
     },
@@ -169,263 +188,143 @@
       "id": "liveness-check-endpoint",
       "title": "Liveness Check",
       "method": "POST",
-      "path": "/biometric/liveness/check",
-      "description": "Analyze facial movements to detect if the person is live",
+      "path": "/api/public/v1/biometric/liveness-check",
+      "description": "Detect if a face photo is from a real person or a fake/spoofed image",
       "category": "Biometric Verification",
       "headers": {
         "X-API-Key": "{api_key}",
         "X-App-ID": "{app_id}",
-        "Content-Type": "multipart/form-data"
+        "Content-Type": "application/json"
       },
       "requestBody": {
         "type": "object",
         "properties": {
-          "video": {
+          "image": {
             "type": "string",
-            "format": "binary",
-            "description": "Video file for liveness analysis"
+            "format": "string",
+            "description": "Image url for liveness analysis"
           },
-          "challenge_type": {
-            "type": "string",
-            "enum": ["blink", "smile", "turn_head"],
-            "description": "Type of liveness challenge"
-          }
-        },
-        "required": ["video"]
-      },
-      "responses": {
-        "200": {
-          "description": "Success",
-          "schema": {
-            "type": "object",
-            "properties": {
-              "is_live": {
-                "type": "boolean",
-                "description": "Whether the person appears to be live"
-              },
-              "confidence": {
-                "type": "number",
-                "description": "Confidence score of liveness detection"
-              },
-              "challenge_completed": {
-                "type": "boolean",
-                "description": "Whether the challenge was successfully completed"
-              }
-            }
-          }
-        }
-      },
-      "example": {
-        "request": {
-          "video": "liveness_video.mp4",
-          "challenge_type": "blink"
-        },
-        "response": {
-          "is_live": true,
-          "confidence": 0.98,
-          "challenge_completed": true
-        }
-      }
-    },
-    {
-      "id": "document-scan-endpoint",
-      "title": "Document Scan",
-      "method": "POST",
-      "path": "/identity/document/scan",
-      "description": "Extract data from government-issued documents",
-      "category": "Identity Verification",
-      "headers": {
-        "X-API-Key": "{api_key}",
-        "X-App-ID": "{app_id}",
-        "Content-Type": "multipart/form-data"
-      },
-      "requestBody": {
-        "type": "object",
-        "properties": {
-          "document_image": {
-            "type": "string",
-            "format": "binary",
-            "description": "Image of the document to scan"
-          },
-          "document_type": {
-            "type": "string",
-            "enum": ["passport", "drivers_license", "id_card"],
-            "description": "Type of document being scanned"
-          }
-        },
-        "required": ["document_image", "document_type"]
-      },
-      "responses": {
-        "200": {
-          "description": "Document scanned successfully",
-          "schema": {
-            "type": "object",
-            "properties": {
-              "document_type": {"type": "string"},
-              "extracted_data": {
-                "type": "object",
-                "properties": {
-                  "full_name": {"type": "string"},
-                  "document_number": {"type": "string"},
-                  "date_of_birth": {"type": "string"},
-                  "date_of_expiry": {"type": "string"},
-                  "issuing_country": {"type": "string"}
-                }
-              },
-              "confidence_scores": {
-                "type": "object",
-                "description": "Confidence scores for each extracted field"
-              }
-            }
-          }
-        }
-      },
-      "example": {
-        "request": {
-          "document_image": "passport.jpg",
-          "document_type": "passport"
-        },
-        "response": {
-          "document_type": "passport",
-          "extracted_data": {
-            "full_name": "JOHN DOE",
-            "document_number": "P123456789",
-            "date_of_birth": "1990-01-15",
-            "date_of_expiry": "2030-01-15",
-            "issuing_country": "US"
-          },
-          "confidence_scores": {
-            "full_name": 0.98,
-            "document_number": 0.95,
-            "date_of_birth": 0.92
-          }
-        }
-      }
-    },
-    {
-      "id": "face-document-match-endpoint",
-      "title": "Face-Document Match",
-      "method": "POST",
-      "path": "/identity/face-document/match",
-      "description": "Verify if a face matches the photo on a document",
-      "category": "Identity Verification",
-      "headers": {
-        "X-API-Key": "{api_key}",
-        "X-App-ID": "{app_id}",
-        "Content-Type": "multipart/form-data"
-      },
-      "requestBody": {
-        "type": "object",
-        "properties": {
-          "face_image": {
-            "type": "string",
-            "format": "binary",
-            "description": "Face image to compare"
-          },
-          "document_image": {
-            "type": "string",
-            "format": "binary",
-            "description": "Document image containing photo"
+          "verbose": {
+            "type": "boolean",
+            "description": "Enable verbose analysis reporting"
           },
           "threshold": {
             "type": "number",
             "description": "Similarity threshold (0-1)",
-            "default": 0.7
+            "default": 0.8
           }
         },
-        "required": ["face_image", "document_image"]
+        "required": ["image"]
       },
       "responses": {
-        "200": {
-          "description": "Match analysis completed",
+        "200 - Liveness Check Success": {
+          "description": "Success",
           "schema": {
-            "type": "object",
-            "properties": {
-              "match": {
-                "type": "boolean",
-                "description": "Whether face matches document photo"
-              },
-              "similarity": {
-                "type": "number",
-                "description": "Similarity score between face and document photo"
-              },
-              "confidence": {
-                "type": "number",
-                "description": "Confidence level of the analysis"
-              }
-            }
+            "body": {
+              "is_live": true,
+              "liveness_score": 0.630642772668024,
+              "threshold_used": 0.6,
+              "spoof_score": 0,
+              "confidence": 0.7059458932353999,
+              "processing_time_ms": 2960,
+              "request_id": "",
+              "timestamp": "2025-10-08T22:45:23.428105+01:00"
+            },
+            "message": "Enhanced liveness check completed"
+          }
+        },
+        "200 - Liveness Check Failed": {
+          "description": "Success",
+          "schema": {
+            "body": {
+              "is_live": false,
+              "liveness_score": 0.630642772668024,
+              "threshold_used": 0.7,
+              "spoof_score": 0,
+              "confidence": 0.7059458932353999,
+              "processing_time_ms": 4032,
+              "request_id": "",
+              "timestamp": "2025-10-08T22:42:10.54574+01:00"
+            },
+            "message": "Enhanced liveness check completed"
           }
         }
       },
       "example": {
         "request": {
-          "face_image": "selfie.jpg",
-          "document_image": "passport.jpg",
+          "image": "https://res.cloudinary.com/themizehq/image/upload/v1705754919/b3660e9e-4bed-4063-8400-88f5e109aacb.jpg",
+          "verbose": true,
           "threshold": 0.7
         },
         "response": {
-          "match": true,
-          "similarity": 0.85,
-          "confidence": 0.91
+          "body": {
+            "is_live": true,
+            "liveness_score": 0.630642772668024,
+            "threshold_used": 0.6,
+            "spoof_score": 0,
+            "confidence": 0.7059458932353999,
+            "processing_time_ms": 2732,
+            "analysis_breakdown": {
+              "lbp_score": 0.876964,
+              "lpq_score": 0.559192,
+              "reflection_consistency": 0.72831547208,
+              "color_space_analysis": {
+                "rgb_variance": 0.53252,
+                "hsv_variance": 0.718417,
+                "lab_variance": 0.256634
+              },
+              "edge_analysis": {
+                "edge_density": 0.4940092989985694,
+                "edge_sharpness": 1,
+                "edge_consistency": 1
+              },
+              "frequency_analysis": {
+                "high_frequency": 1,
+                "mid_frequency": 0.7,
+                "low_frequency": 0.3,
+                "compression_artifacts": 0
+              },
+              "texture_analysis": {
+                "texture_variance": 0.32093790278986795,
+                "texture_uniformity": 0.564579414839498,
+                "texture_entropy": 0.9116036888648632
+              }
+            },
+            "quality_metrics": {
+              "resolution": "unknown",
+              "sharpness": 1,
+              "brightness": 0.66415773604,
+              "contrast": 0.66415773604,
+              "face_size_percent": 75.10104018912529,
+              "face_position": {
+                "x": 0.5,
+                "y": 0.5
+              },
+              "compression_level": 0,
+              "quality_score": 0.7510104018912529
+            },
+            "recommendations": [
+              "Ensure good lighting conditions",
+              "Keep face centered in frame",
+              "Avoid reflections and shadows"
+            ],
+            "request_id": "",
+            "timestamp": "2025-10-08T22:44:51.27309+01:00"
+          },
+          "message": "Enhanced liveness check completed"
         }
       }
     }
   ],
   "pages": {
     "introduction": {
-      "title": "Introduction",
-      "description": "Welcome to Gateman API",
-      "content": [
-        {
-          "type": "intro",
-          "title": "Welcome to Gateman",
-          "text": "Gateman provides advanced biometric verification and identity verification services through our comprehensive API."
-        },
-        {
-          "type": "section",
-          "title": "Key Features",
-          "text": "Our API offers:",
-          "items": [
-            "Face comparison and recognition",
-            "Liveness detection",
-            "Document verification",
-            "Biometric matching",
-            "Real-time webhook notifications"
-          ]
-        }
-      ]
+      "content": "---\ntitle: 'Introduction'\ndescription: 'Welcome to the Gateman API Documentation where you'll learn how to build secure and reliable applications with the Gateman API.'\n---\n\n## Getting Started\n\nTo use the Gateman API, you'll need a Gateman account. If you don't have one yet, you can create an account [here](https://gateman.io).\n\nOnce your account is set up, you can access the API using the following base URLs:\n\n- **Production Environment**: `https://api.gateman.io`  \n- **Sandbox Environment**: `https://sandbox.gateman.io`  \n\nThe Sandbox environment is recommended for testing and development, while the Production environment is for live applications.\n\n## Authentication\n\nAll Gateman API endpoints require authentication using an **API Key** and **API ID**. These credentials must be included in the headers of every request.\n\nYou can retrieve your API Key and API ID from the **Settings** page on your [Gateman Dashboard](https://gateman.io).\n\n### Example Request Headers\n\n```json\n{\n  \"x-api-key\": \"your-sandbox-api-key\",\n  \"x-app-id\": \"your-sandbox-app-id\"\n}\n```"
     },
     "authentication": {
-      "title": "Authentication",
-      "description": "How to authenticate with the Gateman API",
-      "content": [
-        {
-          "type": "intro",
-          "title": "API Authentication",
-          "text": "All API requests require authentication using your API key and App ID."
-        },
-        {
-          "type": "section",
-          "title": "Required Headers",
-          "text": "Include these headers in all API requests:",
-          "items": [
-            "X-API-Key: Your API key",
-            "X-App-ID: Your application identifier",
-            "Content-Type: application/json (or multipart/form-data for file uploads)"
-          ]
-        }
-      ]
+      "content": "---\ntitle: 'Authentication'\ndescription: 'How to authenticate with the API'\n---\n\n# API Authentication\n\nAll API requests require authentication using your API key and App ID.\n\n## Required Headers\n\nInclude these headers in all API requests:\n\n- X-API-Key: Your API key\n- X-App-ID: Your application identifier\n- Content-Type: application/json (or multipart/form-data for file uploads)"
     },
     "webhook-setup": {
-      "title": "Webhook Configuration",
-      "description": "Set up webhooks for real-time event notifications",
-      "content": [
-        {
-          "type": "intro",
-          "title": "Webhook Integration",
-          "text": "Webhooks allow you to receive real-time notifications when verification events occur."
-        }
-      ]
+      "content": "---\ntitle: 'Webhook Configuration'\ndescription: 'Get notified instantly when things happen'\n---\n\n# Webhook Integration\n\nWebhooks allow you to receive real-time notifications when verification events occur."
     }
   }
 }
