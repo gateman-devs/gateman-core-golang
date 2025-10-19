@@ -159,7 +159,7 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 	ginCtx.Abort()
 
 	if payload != nil {
-		secureAccess := os.Getenv("APP_ENV") == "prod"
+		secureAccess := os.Getenv("APP_ENV") == "production"
 		switch p := payload.(type) {
 		case map[string]any:
 			if value, ok := p["accessToken"]; ok && value.(*string) != nil {
