@@ -199,11 +199,11 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 					Data: value.(*string),
 				})
 				http.SetCookie(ginCtx.Writer, &http.Cookie{
-					Name:     "workspaceAccessToken",
-					Value:    *value.(*string),
-					Domain:   utils.ExtractDomain(os.Getenv("WORKSPACE_CLIENT_URL")),
-					HttpOnly: true,
-					Secure:   secureAccess,
+					Name:   "workspaceAccessToken",
+					Value:  *value.(*string),
+					Domain: utils.ExtractDomain(os.Getenv("WORKSPACE_CLIENT_URL")),
+					// HttpOnly: true,
+					// Secure:   secureAccess,
 					Path:     "/",
 					SameSite: http.SameSiteStrictMode,
 					Expires:  time.Now().Add(time.Hour * 1),
@@ -216,11 +216,11 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 					Data: value.(*string),
 				})
 				http.SetCookie(ginCtx.Writer, &http.Cookie{
-					Name:     "workspaceRefreshToken",
-					Value:    *value.(*string),
-					Domain:   utils.ExtractDomain(os.Getenv("WORKSPACE_CLIENT_URL")),
-					HttpOnly: true,
-					Secure:   secureAccess,
+					Name:   "workspaceRefreshToken",
+					Value:  *value.(*string),
+					Domain: utils.ExtractDomain(os.Getenv("WORKSPACE_CLIENT_URL")),
+					// HttpOnly: true,
+					// Secure:   secureAccess,
 					Path:     "/api/v1/auth/workspace/refresh",
 					SameSite: http.SameSiteStrictMode,
 					Expires:  time.Now().Add(time.Hour * 24 * 183),
@@ -229,10 +229,10 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 			}
 			if value, ok := p["otpAccessToken"]; ok && value.(*string) != nil {
 				http.SetCookie(ginCtx.Writer, &http.Cookie{
-					Name:     "otpAccessToken",
-					Value:    *value.(*string),
-					HttpOnly: true,
-					Secure:   secureAccess,
+					Name:  "otpAccessToken",
+					Value: *value.(*string),
+					// HttpOnly: true,
+					// Secure:   secureAccess,
 					Path:     "/",
 					SameSite: http.SameSiteStrictMode,
 					Expires:  time.Now().Add(time.Hour * 24 * 1800),
