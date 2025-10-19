@@ -158,6 +158,11 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 	}
 	ginCtx.Abort()
 
+	logger.Info("payload", logger.LoggerOptions{
+		Key:  "payload",
+		Data: payload,
+	})
+
 	if payload != nil {
 		secureAccess := os.Getenv("APP_ENV") == "production"
 		switch p := payload.(type) {
@@ -189,6 +194,10 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 				})
 			}
 			if value, ok := p["workspaceAccessToken"]; ok && value.(*string) != nil {
+				logger.Info("workspace access token", logger.LoggerOptions{
+					Key:  "workspaceAccessToken",
+					Data: value.(*string),
+				})
 				http.SetCookie(ginCtx.Writer, &http.Cookie{
 					Name:     "workspaceAccessToken",
 					Value:    *value.(*string),
@@ -202,6 +211,10 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 				})
 			}
 			if value, ok := p["workspaceRefreshToken"]; ok && value.(*string) != nil {
+				logger.Info("workspace refresh token", logger.LoggerOptions{
+					Key:  "workspaceRefreshToken",
+					Data: value.(*string),
+				})
 				http.SetCookie(ginCtx.Writer, &http.Cookie{
 					Name:     "workspaceRefreshToken",
 					Value:    *value.(*string),
