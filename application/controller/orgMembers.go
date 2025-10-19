@@ -149,14 +149,13 @@ func AcknowledgeWorkspaceInvite(ctx *interfaces.ApplicationContext[dto.Acknowled
 		"accepted": ctx.Body.Accepted,
 	})
 	if ctx.Body.Accepted {
-		token, url, code, err := user_usecases.CreateUserUseCase(ctx.Ctx, &dto.CreateUserDTO{}, ctx.DeviceID, ctx.UserAgent, ctx.DeviceName)
+		url, code, err := user_usecases.CreateUserUseCase(ctx.Ctx, &dto.CreateUserDTO{}, ctx.DeviceID, ctx.UserAgent, ctx.DeviceName)
 		if err != nil {
 			return
 		}
 		server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "authentication complete", map[string]any{
-			"url":         url,
-			"code":        code,
-			"accessToken": token,
+			"url":  url,
+			"code": code,
 		}, nil, nil, &ctx.DeviceID)
 
 		workspaceMemberRepo.CreateOne(context.TODO(), entities.WorkspaceMember{

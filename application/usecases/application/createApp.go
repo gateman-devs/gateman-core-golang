@@ -18,7 +18,7 @@ import (
 	mq_types "gateman.io/infrastructure/message_queue/types"
 )
 
-func CreateApplicationUseCase(ctx any, payload *dto.ApplicationDTO, deviceID string, userID string, workspaceID string, email string) (*entities.Application, *string, *string, *string, *string, *string) {
+func CreateApplicationUseCase(ctx any, payload *dto.ApplicationDTO, deviceID string, userID string, workspaceID string, email string) (*entities.Application, *string, *string, *string, *string) {
 	appRepo := repository.ApplicationRepo()
 	currentApps, err := appRepo.CountDocs(map[string]interface{}{
 		"workspaceID": workspaceID,
@@ -31,11 +31,11 @@ func CreateApplicationUseCase(ctx any, payload *dto.ApplicationDTO, deviceID str
 			Key:  "payload",
 			Data: *payload,
 		})
-		return nil, nil, nil, nil, nil, nil
+		return nil, nil, nil, nil, nil
 	}
 	if currentApps >= 30 {
 		apperrors.ClientError(ctx, fmt.Sprintf("You have reached the maximum number of applications a workspace can have. Contact %s to assist in creating more.", constants.SUPPORT_EMAIL), nil, nil, deviceID)
-		return nil, nil, nil, nil, nil, nil
+		return nil, nil, nil, nil, nil
 	}
 	apiKey, _ := cryptography.EncryptData([]byte(utils.GenerateUULDString()), nil)
 	hashedAPIKey, _ := cryptography.CryptoHahser.HashString(*apiKey, nil)
@@ -43,24 +43,24 @@ func CreateApplicationUseCase(ctx any, payload *dto.ApplicationDTO, deviceID str
 	hashedSandboxAPIKey, _ := cryptography.CryptoHahser.HashString(*sandboxAPIKey, nil)
 	appSigningKey, _ := cryptography.EncryptData([]byte(utils.GenerateUULDString()), nil)
 	encryptedAppSigningKey, _ := cryptography.EncryptData([]byte(*appSigningKey), nil)
-	sandboxAppSigningKey, _ := cryptography.EncryptData([]byte(utils.GenerateUULDString()), nil)
-	encryptedSandboxAppSigningKey, _ := cryptography.EncryptData([]byte(*sandboxAppSigningKey), nil)
+	// sandboxAppSigningKey, _ := cryptography.EncryptData([]byte(utils.GenerateUULDString()), nil)
+	// encryptedSandboxAppSigningKey, _ := cryptography.EncryptData([]byte(*sandboxAppSigningKey), nil)
 	appPriKey := utils.GenerateUULDString()
 	appID := utils.GenerateUULDString()
 	app, err := appRepo.CreateOne(context.TODO(), entities.Application{
-		ID:                     appPriKey,
-		Name:                   payload.Name,
-		Email:                  email,
-		CreatorID:              userID,
-		AppID:                  appID,
-		WorkspaceID:            workspaceID,
-		AppImg:                 fmt.Sprintf("%s/%s", workspaceID, appPriKey),
-		Description:            payload.Description,
-		LocaleRestriction:      payload.LocaleRestriction,
-		Verifications:          payload.Verifications,
-		RequestedFields:        *payload.RequestedFields,
-		AppSigningKey:          *encryptedAppSigningKey,
-		SandboxAppSigningKey:   *encryptedSandboxAppSigningKey,
+		ID:                appPriKey,
+		Name:              payload.Name,
+		Email:             email,
+		CreatorID:         userID,
+		AppID:             appID,
+		WorkspaceID:       workspaceID,
+		AppImg:            fmt.Sprintf("%s/%s", workspaceID, appPriKey),
+		Description:       payload.Description,
+		LocaleRestriction: payload.LocaleRestriction,
+		Verifications:     payload.Verifications,
+		RequestedFields:   *payload.RequestedFields,
+		AppSigningKey:     *encryptedAppSigningKey,
+		// SandboxAppSigningKey:   *encryptedSandboxAppSigningKey,
 		RefreshTokenTTL:        60 * 60 * 24 * 7, // 7 days
 		AccessTokenTTL:         60 * 60 * 2,      // 2 hours
 		SandboxRefreshTokenTTL: 60 * 60 * 24 * 7, // 7 days
@@ -77,7 +77,7 @@ func CreateApplicationUseCase(ctx any, payload *dto.ApplicationDTO, deviceID str
 			Key:  "payload",
 			Data: *payload,
 		})
-		return nil, nil, nil, nil, nil, nil
+		return nil, nil, nil, nil, nil
 	}
 
 	emailPayload, err := json.Marshal(queue_tasks.EmailPayload{
@@ -91,7 +91,7 @@ func CreateApplicationUseCase(ctx any, payload *dto.ApplicationDTO, deviceID str
 	if err != nil {
 		logger.Error("error marshalling payload for email queue")
 		apperrors.FatalServerError(ctx, err, deviceID)
-		return nil, nil, nil, nil, nil, nil
+		return nil, nil, nil, nil, nil
 	}
 	messagequeue.TaskQueue.Enqueue(mq_types.QueueTask{
 		Payload:   emailPayload,
@@ -99,5 +99,5 @@ func CreateApplicationUseCase(ctx any, payload *dto.ApplicationDTO, deviceID str
 		Priority:  "high",
 		ProcessIn: 1,
 	})
-	return app, apiKey, &appID, utils.GetStringPointer(string(*appSigningKey)), utils.GetStringPointer("sandbox-" + *sandboxAPIKey), utils.GetStringPointer("sandbox-" + *sandboxAppSigningKey)
+	return app, apiKey, &appID, utils.GetStringPointer(string(*appSigningKey)), utils.GetStringPointer("sandbox-" + *sandboxAPIKey)
 }

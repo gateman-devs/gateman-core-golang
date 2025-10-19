@@ -254,7 +254,7 @@ type Application struct {
 	RequireAppMFA          bool                 `bson:"requireAppMFA" json:"requireAppMFA"`
 	CreatorID              string               `bson:"creatorID" json:"-"`
 	AppSigningKey          string               `bson:"appSigningKey" json:"-"`
-	SandboxAppSigningKey   string               `bson:"sandBoxAppSigningKey" json:"-"`
+	// SandboxAppSigningKey   string               `bson:"sandBoxAppSigningKey" json:"-"`
 	SandboxAPIKey          string               `bson:"sandBoxAPIKey" json:"-"`
 	APIKey                 string               `bson:"apiKey" json:"-"`
 	VPN                    bool                 `bson:"vpn" json:"vpn"`

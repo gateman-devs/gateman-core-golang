@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -13,29 +15,89 @@ import (
 	"gateman.io/application/controller/dto"
 	"gateman.io/application/interfaces"
 	"gateman.io/application/repository"
-	auth_usecases "gateman.io/application/usecases/auth"
-	user_usecases "gateman.io/application/usecases/user"
+	"gateman.io/application/usecases/auth"
+	"gateman.io/application/usecases/user"
 	"gateman.io/application/utils"
 	"gateman.io/entities"
 	"gateman.io/infrastructure/auth"
 	"gateman.io/infrastructure/biometric"
 	"gateman.io/infrastructure/cryptography"
 	"gateman.io/infrastructure/database/repository/cache"
-	fileupload "gateman.io/infrastructure/file_upload"
+	"gateman.io/infrastructure/file_upload"
 	"gateman.io/infrastructure/file_upload/types"
 	"gateman.io/infrastructure/ipresolver"
 	"gateman.io/infrastructure/logger"
-	messagequeue "gateman.io/infrastructure/message_queue"
-	queue_tasks "gateman.io/infrastructure/message_queue/tasks"
-	mq_types "gateman.io/infrastructure/message_queue/types"
-	sms "gateman.io/infrastructure/messaging/sms"
-	server_response "gateman.io/infrastructure/serverResponse"
+	"gateman.io/infrastructure/message_queue"
+	"gateman.io/infrastructure/message_queue/tasks"
+	"gateman.io/infrastructure/message_queue/types"
+	"gateman.io/infrastructure/messaging/sms"
+	"gateman.io/infrastructure/serverResponse"
 	"gateman.io/infrastructure/validator"
+	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+func getQueryParam(ctx *interfaces.ApplicationContext[any], key string) string {
+	if ctx.Query != nil {
+		if val, ok := ctx.Query[key]; ok {
+			if str, ok := val.(string); ok {
+				return str
+			}
+		}
+	}
+	if ctx.Ctx != nil {
+		if ginCtx, ok := ctx.Ctx.(*gin.Context); ok {
+			return ginCtx.Query(key)
+		}
+	}
+	return ""
+}
+
+func getHeaderValue(ctx *interfaces.ApplicationContext[any], header string) *string {
+	if ctx.Header != nil {
+		if values, ok := ctx.Header[header]; ok && len(values) > 0 {
+			return utils.GetStringPointer(values[0])
+		}
+	}
+	return ctx.GetHeader(header)
+}
+
+func getCookieValue(ctx *interfaces.ApplicationContext[any], name string) *string {
+	if ctx.Cookies != nil {
+		for _, cookie := range ctx.Cookies {
+			if cookieName, ok := cookie["name"].(string); ok && cookieName == name {
+				if value, ok := cookie["value"].(string); ok {
+					return utils.GetStringPointer(value)
+				}
+			}
+		}
+	}
+	if ctx.Ctx != nil {
+		if ginCtx, ok := ctx.Ctx.(*gin.Context); ok {
+			if value, err := ginCtx.Cookie(name); err == nil {
+				return utils.GetStringPointer(value)
+			}
+		}
+	}
+	return nil
+}
+
+func computePKCECodeChallenge(codeVerifier string) string {
+	hash := sha256.Sum256([]byte(codeVerifier))
+	encoded := base64.StdEncoding.EncodeToString(hash[:])
+	encoded = strings.TrimRight(encoded, "=")
+	encoded = strings.ReplaceAll(encoded, "+", "-")
+	encoded = strings.ReplaceAll(encoded, "/", "_")
+	return encoded
+}
+
 func KeyExchange(ctx *interfaces.ApplicationContext[dto.KeyExchangeDTO]) {
 	serverPublicKey, _, _ := auth_usecases.InitiateKeyExchange(ctx.Ctx, ctx.DeviceID, ctx.Body.ClientPublicKey)
+	if serverPublicKey == nil {
+		return
+	}
+	server_response.Responder.UnEncryptedRespond(ctx.Ctx, http.StatusCreated, "key exchanged", hex.EncodeToString(serverPublicKey), nil, nil)
+    server_response.Responder.UnEncryptedRespond(ctx.Ctx, http.StatusCreated, "key exchanged", hex.EncodeToString(serverPublicKey), nil, nil)
 	if serverPublicKey == nil {
 		return
 	}
@@ -52,14 +114,13 @@ func AuthenticateUser(ctx *interfaces.ApplicationContext[dto.CreateUserDTO]) {
 		apperrors.ClientError(ctx.Ctx, "One of email or phone is required", nil, nil, ctx.DeviceID)
 		return
 	}
-	token, url, code, err := user_usecases.CreateUserUseCase(ctx.Ctx, ctx.Body, ctx.DeviceID, ctx.UserAgent, ctx.DeviceName)
+	url, code, err := user_usecases.CreateUserUseCase(ctx.Ctx, ctx.Body, ctx.DeviceID, ctx.UserAgent, ctx.DeviceName)
 	if err != nil {
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "authentication complete", map[string]any{
-		"url":         url,
-		"code":        code,
-		"accessToken": token,
+		"url":  url,
+		"code": code,
 	}, nil, nil, &ctx.DeviceID)
 }
 
@@ -150,7 +211,6 @@ func VerifyUserAccount(ctx *interfaces.ApplicationContext[any]) {
 }
 
 func VerifyWorkspaceAccount(ctx *interfaces.ApplicationContext[any]) {
-	fmt.Println("it hot")
 	workspaceRepo := repository.WorkspaceRepository()
 	workspace, err := workspaceRepo.FindOneByFilter(map[string]interface{}{
 		"email": ctx.GetStringContextData("OTPEmail"),

@@ -26,7 +26,7 @@ import (
 	"gateman.io/infrastructure/messaging/sms"
 )
 
-func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, userAgent string, deviceName string) (*string, *string, *uint, error) {
+func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, userAgent string, deviceName string) (*string, *uint, error) {
 	var availabilityFilter = map[string]any{}
 	if payload.Email != nil {
 		availabilityFilter["email"] = strings.ToLower(*payload.Email)
@@ -39,7 +39,7 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 	account, err := userRepo.FindOneByFilter(availabilityFilter)
 	if err != nil {
 		apperrors.UnknownError(ctx, err, nil, deviceID)
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	if account != nil {
 		if !account.VerifiedAccount {
@@ -47,7 +47,7 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 				otp, err := auth.GenerateOTP(6, *account.Email)
 				if err != nil {
 					apperrors.FatalServerError(ctx, err, deviceID)
-					return nil, nil, nil, nil
+					return nil, nil, nil
 				}
 
 				emailPayload, err := json.Marshal(queue_tasks.EmailPayload{
@@ -65,7 +65,7 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 				if err != nil {
 					logger.Error("error marshalling payload for email queue")
 					apperrors.FatalServerError(ctx, err, deviceID)
-					return nil, nil, nil, err
+					return nil, nil, err
 				}
 				messagequeue.TaskQueue.Enqueue(mq_types.QueueTask{
 					Payload:   emailPayload,
@@ -78,13 +78,13 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 				otp, err := auth.GenerateOTP(6, account.Phone.LocalNumber)
 				if err != nil {
 					apperrors.FatalServerError(ctx, err, deviceID)
-					return nil, nil, nil, nil
+					return nil, nil, nil
 				}
 				ref := sms.SMSService.SendOTP(fmt.Sprintf("%s%s", account.Phone.Prefix, account.Phone.LocalNumber), false, otp)
 				encryptedRef, err := cryptography.EncryptData([]byte(*ref), nil)
 				if err != nil {
 					apperrors.UnknownError(ctx, err, nil, deviceID)
-					return nil, nil, nil, nil
+					return nil, nil, nil
 				}
 				cache.Cache.CreateEntry(fmt.Sprintf("%s-sms-otp-ref", account.Phone.LocalNumber), *encryptedRef, time.Minute*10)
 				cache.Cache.CreateEntry(fmt.Sprintf("%s-otp-intent", account.Phone.LocalNumber), "verify_account", time.Minute*10)
@@ -111,16 +111,16 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 					Data: account.Devices,
 				})
 				apperrors.UnknownError(ctx, err, nil, deviceID)
-				return nil, nil, nil, err
+				return nil, nil, err
 			}
-			return nil, nil, &constants.ACCOUNT_EXISTS_EMAIL_OR_PHONE_UNVERIFIED, nil
+			return nil, &constants.ACCOUNT_EXISTS_EMAIL_OR_PHONE_UNVERIFIED, nil
 		}
 		if account.Image == "" {
 			if account.Email != nil {
 				otp, err := auth.GenerateOTP(6, *account.Email)
 				if err != nil {
 					apperrors.FatalServerError(ctx, err, deviceID)
-					return nil, nil, nil, nil
+					return nil, nil, nil
 				}
 
 				payload, err := json.Marshal(queue_tasks.EmailPayload{
@@ -138,7 +138,7 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 				if err != nil {
 					logger.Error("error marshalling payload for email queue")
 					apperrors.FatalServerError(ctx, err, deviceID)
-					return nil, nil, nil, err
+					return nil, nil, err
 				}
 				messagequeue.TaskQueue.Enqueue(mq_types.QueueTask{
 					Payload:   payload,
@@ -150,13 +150,13 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 				otp, err := auth.GenerateOTP(6, account.Phone.LocalNumber)
 				if err != nil {
 					apperrors.FatalServerError(ctx, err, deviceID)
-					return nil, nil, nil, nil
+					return nil, nil, nil
 				}
 				ref := sms.SMSService.SendOTP(fmt.Sprintf("%s%s", account.Phone.Prefix, account.Phone.LocalNumber), false, otp)
 				encryptedRef, err := cryptography.EncryptData([]byte(*ref), nil)
 				if err != nil {
 					apperrors.UnknownError(ctx, err, nil, deviceID)
-					return nil, nil, nil, nil
+					return nil, nil, nil
 				}
 				cache.Cache.CreateEntry(fmt.Sprintf("%s-sms-otp-ref", account.Phone.LocalNumber), *encryptedRef, time.Minute*10)
 				cache.Cache.CreateEntry(fmt.Sprintf("%s-otp-intent", account.Phone.LocalNumber), "verify_account", time.Minute*10)
@@ -183,9 +183,9 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 					Data: account.Devices,
 				})
 				apperrors.UnknownError(ctx, err, nil, deviceID)
-				return nil, nil, nil, err
+				return nil, nil, err
 			}
-			return nil, nil, &constants.ACCOUNT_EXISTS_UNVERIFIED, nil
+			return nil, &constants.ACCOUNT_EXISTS_UNVERIFIED, nil
 		}
 		for i, device := range account.Devices {
 			if device.ID == deviceID {
@@ -208,7 +208,7 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 				Data: account.Devices,
 			})
 			apperrors.UnknownError(ctx, err, nil, deviceID)
-			return nil, nil, nil, err
+			return nil, nil, err
 		}
 		url, err := fileupload.FileUploader.GeneratedSignedURL(fmt.Sprintf("%s/%s", account.ID, deviceID), types.SignedURLPermission{
 			Write: true,
@@ -219,9 +219,9 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 				Data: err,
 			})
 			apperrors.UnknownError(ctx, err, nil, deviceID)
-			return nil, nil, nil, err
+			return nil, nil, err
 		}
-		return nil, url, &constants.ACCOUNT_EXISTS, nil
+		return url, &constants.ACCOUNT_EXISTS, nil
 	}
 
 	if os.Getenv("APP_ENV") == "production" {
@@ -230,16 +230,16 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 			// if found != nil {
 			// 	err = fmt.Errorf(`email address "%s" has been flagged as unacceptable on our system`, *payload.Email)
 			// 	apperrors.ClientError(ctx, err.Error(), nil, nil)
-			// 	return nil, nil, nil, err
+			// 	return  nil, nil, err
 			// }
 			// if err != nil {
 			// 	apperrors.ExternalDependencyError(ctx, "polymer-core", "500", err)
-			// 	return nil, nil, nil, err
+			// 	return  nil, nil, err
 			// }
 			// if !result {
 			// 	apperrors.ClientError(ctx, fmt.Sprintf(`email address "%s" has been flagged as unacceptable on our system`, *payload.Email), nil, nil)
 			// 	cache.Cache.CreateEntry(fmt.Sprintf("%s-email-blacklist", *payload.Email), payload.Email, time.Minute*0)
-			// 	return nil, nil, nil, err
+			// 	return  nil, nil, err
 			// }
 		}
 	}
@@ -263,14 +263,14 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 			Data: err,
 		})
 		apperrors.UnknownError(ctx, err, nil, deviceID)
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	if payload.Email != nil {
 		otp, err := auth.GenerateOTP(6, *payload.Email)
 		if err != nil {
 			apperrors.FatalServerError(ctx, err, deviceID)
-			return nil, nil, nil, nil
+			return nil, nil, nil
 		}
 		emailPayload, err := json.Marshal(queue_tasks.EmailPayload{
 			Opts: map[string]any{
@@ -287,7 +287,7 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 		if err != nil {
 			logger.Error("error marshalling payload for email queue")
 			apperrors.FatalServerError(ctx, err, deviceID)
-			return nil, nil, nil, err
+			return nil, nil, err
 		}
 		messagequeue.TaskQueue.Enqueue(mq_types.QueueTask{
 			Payload:   emailPayload,
@@ -299,16 +299,16 @@ func CreateUserUseCase(ctx any, payload *dto.CreateUserDTO, deviceID string, use
 		otp, err := auth.GenerateOTP(6, payload.Phone.LocalNumber)
 		if err != nil {
 			apperrors.FatalServerError(ctx, err, deviceID)
-			return nil, nil, nil, nil
+			return nil, nil, nil
 		}
 		ref := sms.SMSService.SendOTP(fmt.Sprintf("%s%s", payload.Phone.Prefix, payload.Phone.LocalNumber), false, otp)
 		encryptedRef, err := cryptography.EncryptData([]byte(*ref), nil)
 		if err != nil {
 			apperrors.UnknownError(ctx, err, nil, deviceID)
-			return nil, nil, nil, nil
+			return nil, nil, nil
 		}
 		cache.Cache.CreateEntry(fmt.Sprintf("%s-sms-otp-ref", payload.Phone.LocalNumber), *encryptedRef, time.Minute*10)
 		cache.Cache.CreateEntry(fmt.Sprintf("%s-otp-intent", payload.Phone.LocalNumber), "verify_account", time.Minute*10)
 	}
-	return nil, nil, &constants.ACCOUNT_CREATED, nil
+	return nil, &constants.ACCOUNT_CREATED, nil
 }

@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -23,7 +24,7 @@ func FetchActivityLogs(ctx *interfaces.ApplicationContext[dto.FetchActivityLogsD
 	}
 	appRepo := repository.ApplicationRepo()
 	app, _ := appRepo.FindOneByFilter(map[string]interface{}{
-		"_id":         ctx.Body.AppID,
+		"appID":         ctx.Body.AppID,
 		"workspaceID": ctx.Keys["WorkspaceID"],
 	})
 	if app == nil {
@@ -124,6 +125,7 @@ func FetchActivityLogs(ctx *interfaces.ApplicationContext[dto.FetchActivityLogsD
 		totalCount = 0
 	}
 
+	fmt.Println(logs)
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "activity logs fetched successfully", map[string]any{
 		"logs":       logs,
 		"totalCount": totalCount,

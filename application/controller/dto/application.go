@@ -3,24 +3,24 @@ package dto
 import "gateman.io/entities"
 
 type ApplicationDTO struct {
-	Name              string                        `json:"name" validate:"required,max=100,min=2"`
-	Description       string                        `json:"description" validate:"required,max=200"`
+	Name              string                        `json:"name" validate:"required,max=50,min=2"`
+	Description       string                        `json:"description" validate:"required,max=500,min=2"`
 	Verifications     *[]entities.VerificationType  `json:"verifications" validate:"omitempty,dive"`
 	LocaleRestriction *[]entities.LocaleRestriction `json:"localeRestriction" validate:"omitempty,dive"`
-	RequestedFields   *[]entities.RequestedField     `json:"requestedFields" validate:"omitempty,dive"`
+	RequestedFields   *[]entities.RequestedField    `json:"requestedFields" validate:"omitempty,dive"`
 	CustomFormFields  *[]entities.CustomFormField   `json:"customFormFields" validate:"omitempty,dive"`
 }
 
 type UpdateApplications struct {
-	Name                *string                           `json:"name" validate:"omitempty,max=100,min=2"`
-	Description         *string                           `json:"description" validate:"omitempty,max=200,min=10"`
-	PaymentCard         *string                           `json:"paymentCard" validate:"omitempty,ulid"`
-	SubscriptionID      *string                           `json:"subscriptionID" validate:"omitempty,ulid"`
-	Interval            *entities.SubscriptionFrequency   `json:"interval" validate:"omitempty,oneof=monthly annually"`
-	Verifications       *[]entities.VerificationType      `json:"verifications" validate:"omitempty,dive"`
-	LocaleRestriction   *[]entities.LocaleRestriction     `json:"localeRestriction" validate:"omitempty,dive"`
-	RequestedFields     []entities.RequestedField         `json:"requestedFields" validate:"omitempty,dive"`
-	CustomFormFields    *[]entities.CustomFormField       `json:"customFormFields" validate:"omitempty,dive"`
+	Name              *string                         `json:"name" validate:"omitempty,max=100,min=2"`
+	Description       *string                         `json:"description" validate:"omitempty,max=200,min=10"`
+	PaymentCard       *string                         `json:"paymentCard" validate:"omitempty,ulid"`
+	SubscriptionID    *string                         `json:"subscriptionID" validate:"omitempty,ulid"`
+	Interval          *entities.SubscriptionFrequency `json:"interval" validate:"omitempty,oneof=monthly annually"`
+	Verifications     *[]entities.VerificationType    `json:"verifications" validate:"omitempty,dive"`
+	LocaleRestriction *[]entities.LocaleRestriction   `json:"localeRestriction" validate:"omitempty,dive"`
+	RequestedFields   []entities.RequestedField       `json:"requestedFields" validate:"omitempty,dive"`
+	CustomFormFields  *[]entities.CustomFormField     `json:"customFormFields" validate:"omitempty,dive"`
 }
 
 type ApplicationSignUpDTO struct {
@@ -44,8 +44,8 @@ type FetchAppUsersDTO struct {
 }
 
 type BlockAccountsDTO struct {
-	IDs []string `json:"ids" validate:"dive,ulid"`
-	Reason string `json:"reason" validate:"omitempty,max=200"`
+	IDs    []string `json:"ids" validate:"dive,ulid"`
+	Reason string   `json:"reason" validate:"omitempty,max=200"`
 }
 
 type FetchAppMetrics struct {

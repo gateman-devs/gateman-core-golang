@@ -73,7 +73,7 @@ func CreateApplication(ctx *interfaces.ApplicationContext[dto.ApplicationDTO]) {
 		apperrors.ValidationFailedError(ctx.Ctx, &[]error{errors.New("locale restrictions cannot contain more than 300 items")}, ctx.DeviceID)
 		return
 	}
-	app, apiKey, appID, appSigningKey, sandboxAPIKey, sandboxAppSigningKey := application_usecase.CreateApplicationUseCase(ctx.Ctx, ctx.Body, ctx.DeviceID, ctx.GetStringContextData("UserID"), ctx.GetStringContextData("WorkspaceID"), ctx.GetStringContextData("Email"))
+	app, apiKey, appID, appSigningKey, sandboxAPIKey := application_usecase.CreateApplicationUseCase(ctx.Ctx, ctx.Body, ctx.DeviceID, ctx.GetStringContextData("UserID"), ctx.GetStringContextData("WorkspaceID"), ctx.GetStringContextData("Email"))
 	if app == nil {
 		return
 	}
@@ -83,7 +83,6 @@ func CreateApplication(ctx *interfaces.ApplicationContext[dto.ApplicationDTO]) {
 		"appID":                appID,
 		"appSigningKey":        appSigningKey,
 		"sandboxAPIKey":        sandboxAPIKey,
-		"sandboxAppSigningKey": sandboxAppSigningKey,
 	}, nil, nil, &ctx.DeviceID)
 }
 
