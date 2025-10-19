@@ -201,7 +201,7 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 				http.SetCookie(ginCtx.Writer, &http.Cookie{
 					Name:   "workspaceAccessToken",
 					Value:  *value.(*string),
-					Domain: utils.ExtractDomain(os.Getenv("WORKSPACE_CLIENT_URL")),
+					// Domain: utils.ExtractDomain(os.Getenv("WORKSPACE_CLIENT_URL")),
 					// HttpOnly: true,
 					// Secure:   secureAccess,
 					Path:     "/",
@@ -218,7 +218,7 @@ func (gr ginResponder) UnEncryptedRespond(ctx interface{}, code int, message str
 				http.SetCookie(ginCtx.Writer, &http.Cookie{
 					Name:   "workspaceRefreshToken",
 					Value:  *value.(*string),
-					Domain: utils.ExtractDomain(os.Getenv("WORKSPACE_CLIENT_URL")),
+					// Domain: utils.ExtractDomain(os.Getenv("WORKSPACE_CLIENT_URL")),
 					// HttpOnly: true,
 					// Secure:   secureAccess,
 					Path:     "/api/v1/auth/workspace/refresh",
