@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gateman Email</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
+    <style type="text/css">
+        /* Reset styles */
+        body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+        table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+        img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+
+        /* Remove default styling */
+        body { margin: 0; padding: 0; width: 100% !important; min-width: 100%; }
+
+        /* Mobile styles */
+        @media screen and (max-width: 600px) {
+            .mobile-hide { display: none !important; }
+            .mobile-center { text-align: center !important; }
+            .container { width: 100% !important; max-width: 100% !important; }
+            .content { padding: 20px !important; }
+            .button { width: 100% !important; max-width: 300px !important; }
+        }
+    </style>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f5f5f5; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+
+    <!-- Preheader Text (Hidden) -->
+    <div style="display: none; font-size: 1px; color: #333333; line-height: 1px; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden;">
+        {{.PreheaderText}}
+    </div>
+
+    <!-- Email Container -->
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f5f5f5;">
+        <tr>
+            <td style="padding: 40px 0;">
+                <!-- Content Container -->
+                <table class="container" role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="margin: 0 auto; background-color: #ffffff; border-radius: 10px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); overflow: hidden;">
+
+                    <!-- Header -->
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 40px 40px 20px 40px; border-bottom: 1px solid #e5e5e5; text-align: center;">
+                            <img src="https://assets.gateman.io/logo.svg" alt="Gateman" style="height: 40px; display: block; margin: 0 auto;">
+                        </td>
+                    </tr>
+
+                    <!-- Main Content -->
+                    <tr>
+                        <td class="content" style="padding: 40px; background-color: #ffffff;">
+
+                            <!-- Title -->
+                            <h1 style="color: #212830; font-size: 28px; font-weight: 600; line-height: 1.2; margin: 0 0 20px 0; text-align: center;">
+                                {{.EmailTitle}}
+                            </h1>
+
+                            <!-- Content -->
+                            <p class="email-text" style="color: #21283080; font-size: 16px; line-height: 24px; margin: 0 0 20px 0; text-align: left;">
+                                Thank you for reaching out to us. We have received your help request and our support team will get back to you as soon as possible.
+                            </p>
+                            <p class="email-text" style="color: #21283080; font-size: 16px; line-height: 24px; margin: 0 0 20px 0; text-align: left;">
+                                <strong>Summary:</strong> {{.Summary}}
+                            </p>
+                            <p class="email-text" style="color: #21283080; font-size: 16px; line-height: 24px; margin: 0 0 20px 0; text-align: left;">
+                                <strong>Details:</strong> {{.Details}}
+                            </p>
+                            <p class="email-text" style="color: #21283080; font-size: 16px; line-height: 24px; margin: 0; text-align: left;">
+                                If you have any additional information or need immediate assistance, please don't hesitate to reply to this email.
+                            </p>
+
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f8f9fa; padding: 30px 40px; border-top: 1px solid #e5e5e5;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td align="center" style="color: #21283080; font-size: 14px; line-height: 21px;">
+                                        <p style="margin: 0 0 10px 0;">
+                                            © <script>document.write(new Date().getFullYear())</script>2024 Gateman. All rights reserved.
+                                        </p>
+                                        <p style="margin: 0 0 10px 0;">
+                                            <a href="https://gateman.io" style="color: #0061fe; text-decoration: none;">gateman.io</a>
+                                        </p>
+                                        <p style="margin: 0; font-size: 12px; color: #21283050;">
+                                            You received this email because you have an account with Gateman.
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>

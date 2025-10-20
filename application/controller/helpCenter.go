@@ -10,6 +10,7 @@ import (
 	"gateman.io/application/repository"
 	"gateman.io/entities"
 	server_response "gateman.io/infrastructure/serverResponse"
+	"gateman.io/infrastructure/messaging/emails"
 	"gateman.io/infrastructure/validator"
 )
 
@@ -44,6 +45,18 @@ func CreateHelpRequest(ctx *interfaces.ApplicationContext[dto.CreateHelpRequestD
 	if err != nil {
 		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
+	}
+
+	// Send confirmation email
+	userRepo := repository.UserRepo()
+	user, err := userRepo.FindByID(memberID)
+	if err == nil && user != nil && user.Email != nil {
+		emails.EmailService.SendEmail(*user.Email, "Help Request Received", "help-request-confirmation", map[string]interface{}{
+			"EmailTitle":    "Help Request Received",
+			"PreheaderText": "Your help request has been received",
+			"Summary":       result.Summary,
+			"Details":       result.Details,
+		})
 	}
 
 	// Return success response

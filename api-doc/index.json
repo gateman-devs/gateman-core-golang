@@ -9,12 +9,6 @@
       "title": "Getting Started",
       "description": "Quick guide to start using Gateman API",
       "pages": [
-        {
-          "id": "getting-started",
-          "title": "Getting Started",
-          "type": "page",
-          "description": "Quick guide to start using Gateman API"
-        }
       ]
     },
     {
