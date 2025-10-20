@@ -124,8 +124,8 @@
       },
       "example": {
         "request": {
-          "face1": "https://res.cloudinary.com/themizehq/image/upload/v1705754919/b3660e9e-4bed-4063-8400-88f5e109aacb.jpg",
-          "face2": "https://res.cloudinary.com/themizehq/image/upload/v1705754919/b3660e9e-4bed-4063-8400-88f5e109aacb.jpg",
+          "image1": "https://res.cloudinary.com/themizehq/image/upload/v1705754919/b3660e9e-4bed-4063-8400-88f5e109aacb.jpg",
+          "image2": "https://res.cloudinary.com/themizehq/image/upload/v1705754919/b3660e9e-4bed-4063-8400-88f5e109aacb.jpg",
           "threshold": 0.8
         },
         "response": {
