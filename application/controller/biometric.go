@@ -164,7 +164,7 @@ func EnhancedFaceComparison(ctx *interfaces.ApplicationContext[dto.EnhancedFaceC
 	// Validate threshold
 	threshold := ctx.Body.Threshold
 	if threshold == 0 {
-		threshold = 0.7 // Default threshold for comparison
+		threshold = 0.5 // Default threshold for comparison
 	}
 	if threshold < 0.0 || threshold > 1.0 {
 		apperrors.ClientError(ctx.Ctx, "threshold must be between 0.0 and 1.0", nil, nil, ctx.DeviceID)
@@ -252,60 +252,7 @@ func EnhancedFaceComparison(ctx *interfaces.ApplicationContext[dto.EnhancedFaceC
 	// Use custom match decision if it differs from service decision
 	finalMatch := customMatch
 
-	// Perform liveness detection if required
-	var livenessResult1, livenessResult2 *dto.LivenessResultDTO
-	var livenessProcessTime int64 = 0
-
 	// Liveness detection removed from enhanced compare - only basic comparison now
-	requireLiveness := false // Set to false since user didn't specify liveness in params
-
-	if requireLiveness {
-		startTime := time.Now()
-
-		// Check liveness for reference image
-		liveness1, err := localService.ImageLivenessCheck(&ctx.Body.Image1, false)
-		if err == nil && liveness1.Success {
-			// Fix NaN values for liveness result
-			spoofScore1 := liveness1.AnalysisDetails.SpoofDetectionScore
-			confidence1 := liveness1.Confidence
-			if math.IsNaN(spoofScore1) || math.IsInf(spoofScore1, 0) {
-				spoofScore1 = 0.0
-			}
-			if math.IsNaN(confidence1) || math.IsInf(confidence1, 0) {
-				confidence1 = 0.5
-			}
-
-			livenessResult1 = dto.NewLivenessResultDTO(
-				liveness1.IsLive,
-				spoofScore1,
-				confidence1,
-				[]string{},
-			)
-		}
-
-		// Check liveness for test image
-		liveness2, err := localService.ImageLivenessCheck(&ctx.Body.Image2, false)
-		if err == nil && liveness2.Success {
-			// Fix NaN values for liveness result
-			spoofScore2 := liveness2.AnalysisDetails.SpoofDetectionScore
-			confidence2 := liveness2.Confidence
-			if math.IsNaN(spoofScore2) || math.IsInf(spoofScore2, 0) {
-				spoofScore2 = 0.0
-			}
-			if math.IsNaN(confidence2) || math.IsInf(confidence2, 0) {
-				confidence2 = 0.5
-			}
-
-			livenessResult2 = dto.NewLivenessResultDTO(
-				liveness2.IsLive,
-				spoofScore2,
-				confidence2,
-				[]string{},
-			)
-		}
-
-		livenessProcessTime = time.Since(startTime).Milliseconds()
-	}
 
 	// Create enhanced response
 	response := dto.NewEnhancedFaceComparisonResponse(ctx.Body.RequestID)
@@ -316,9 +263,7 @@ func EnhancedFaceComparison(ctx *interfaces.ApplicationContext[dto.EnhancedFaceC
 		int64(result.ProcessingTimeMs),
 	)
 
-	if requireLiveness {
-		response.SetLivenessResults(livenessResult1, livenessResult2, livenessProcessTime)
-	}
+	// Liveness results removed from payload as requested
 
 	// Add detailed analysis if verbose mode is enabled
 	if ctx.Body.Verbose {
@@ -349,13 +294,7 @@ func EnhancedFaceComparison(ctx *interfaces.ApplicationContext[dto.EnhancedFaceC
 		)
 		response.SetComparisonMetadata(metadata)
 
-		// Add processing steps
-		response.AddProcessingStep("face_detection", int64(result.ProcessingTimeMs/2), true, "Faces detected successfully")
-		response.AddProcessingStep("face_comparison", int64(result.ProcessingTimeMs/2), true, fmt.Sprintf("Face comparison completed (threshold: %.2f, match: %t)", threshold, finalMatch))
-
-		if requireLiveness {
-			response.AddProcessingStep("liveness_detection", livenessProcessTime, true, "Liveness detection completed")
-		}
+		// Processing steps removed from payload as requested
 	}
 
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Enhanced face comparison completed", response, nil, nil, nil)
@@ -467,7 +406,6 @@ func EnhancedLivenessCheck(ctx *interfaces.ApplicationContext[dto.LivenessDetect
 		SpoofScore:     spoofScore,
 		Confidence:     confidence,
 		ProcessingTime: int64(result.ProcessingTimeMs),
-		Timestamp:      time.Now(),
 	}
 
 	// Add detailed analysis if verbose mode is enabled
@@ -518,7 +456,6 @@ func EnhancedLivenessCheck(ctx *interfaces.ApplicationContext[dto.LivenessDetect
 			CompressionLevel: 0.0,                         // Would need to analyze
 			QualityScore:     qualityScore,
 			Issues:           []string{},
-			Recommendations:  []string{},
 		}
 
 		// Add spoof reasons if detected
@@ -530,12 +467,7 @@ func EnhancedLivenessCheck(ctx *interfaces.ApplicationContext[dto.LivenessDetect
 			}
 		}
 
-		// Add recommendations
-		response.Recommendations = []string{
-			"Ensure good lighting conditions",
-			"Keep face centered in frame",
-			"Avoid reflections and shadows",
-		}
+		// Remove recommendations from verbose payload as requested
 	}
 
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Enhanced liveness check completed", response, nil, nil, nil)

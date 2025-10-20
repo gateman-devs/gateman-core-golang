@@ -726,6 +726,21 @@ func (lfs *LocalFaceService) CompareFacesWithArcFace(image1 *string, image2 *str
 	// Calculate confidence based on similarity and quality
 	confidence := lfs.calculateConfidence(normalizedSimilarity, quality1, quality2)
 
+	// RUN LIVENESS CHECKS CONCURRENTLY USING GOROUTINES ALWAYS BEFORE FACE COMPARISON
+	livenessChan := make(chan struct {
+		image1Live bool
+		image2Live bool
+	}, 1)
+
+	go func() {
+		image1Live := lfs.performQuickLivenessCheck(faceRegion1)
+		image2Live := lfs.performQuickLivenessCheck(faceRegion2)
+		livenessChan <- struct {
+			image1Live bool
+			image2Live bool
+		}{image1Live, image2Live}
+	}()
+
 	// ArcFace threshold - typically 0.4 cosine similarity (0.7 normalized)
 	// Adjust based on image quality
 	baseThreshold := 0.4 // Cosine similarity threshold
@@ -756,6 +771,9 @@ func (lfs *LocalFaceService) CompareFacesWithArcFace(image1 *string, image2 *str
 
 	processingTime := time.Since(startTime)
 
+	// Wait for liveness results
+	livenessResult := <-livenessChan
+
 	// Update statistics
 	lfs.updateStats(processingTime.Milliseconds(), true)
 
@@ -782,8 +800,8 @@ func (lfs *LocalFaceService) CompareFacesWithArcFace(image1 *string, image2 *str
 		ProcessingTimeMs:  int(processingTime.Milliseconds()),
 		FaceQualityScores: []float64{quality1, quality2},
 		Liveness: types.Liveness{
-			Image1: lfs.performQuickLivenessCheck(faceRegion1),
-			Image2: lfs.performQuickLivenessCheck(faceRegion2),
+			Image1: livenessResult.image1Live,
+			Image2: livenessResult.image2Live,
 		},
 	}, nil
 }

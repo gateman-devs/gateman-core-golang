@@ -187,18 +187,11 @@ type EnhancedFaceComparisonResponse struct {
 	Confidence     float64 `json:"confidence"`
 	ProcessingTime int64   `json:"processing_time_ms"`
 
-	// Liveness Detection Results
-	ReferenceLiveness   *LivenessResultDTO `json:"reference_liveness"`
-	TestLiveness        *LivenessResultDTO `json:"test_liveness"`
-	LivenessProcessTime int64              `json:"liveness_process_time_ms"`
-
 	// Enhanced Comparison Metadata
 	FeatureQuality     *FeatureQualityMetricsDTO      `json:"feature_quality,omitempty"`
 	ComparisonMetadata *EnhancedComparisonMetadataDTO `json:"comparison_metadata,omitempty"`
 
-	RequestID string    `json:"request_id"`
-	Timestamp time.Time `json:"timestamp"`
-	Error     string    `json:"error,omitempty"`
+	Error string `json:"error,omitempty"`
 }
 
 // LivenessResultDTO represents liveness detection result for a single image
@@ -312,10 +305,7 @@ func validateImageInput(image, fieldName string) error {
 
 // NewEnhancedFaceComparisonResponse creates a new enhanced face comparison response
 func NewEnhancedFaceComparisonResponse(requestID string) *EnhancedFaceComparisonResponse {
-	return &EnhancedFaceComparisonResponse{
-		RequestID: requestID,
-		Timestamp: time.Now(),
-	}
+	return &EnhancedFaceComparisonResponse{}
 }
 
 // SetError sets an error on the response
@@ -331,13 +321,6 @@ func (r *EnhancedFaceComparisonResponse) SetComparisonResult(isMatch bool, simil
 	r.Similarity = similarity
 	r.Confidence = confidence
 	r.ProcessingTime = processingTime
-}
-
-// SetLivenessResults sets the liveness detection results for both images
-func (r *EnhancedFaceComparisonResponse) SetLivenessResults(refLiveness, testLiveness *LivenessResultDTO, livenessProcessTime int64) {
-	r.ReferenceLiveness = refLiveness
-	r.TestLiveness = testLiveness
-	r.LivenessProcessTime = livenessProcessTime
 }
 
 // SetFeatureQuality sets the feature quality metrics
@@ -371,9 +354,9 @@ func (r *EnhancedFaceComparisonResponse) IsSuccessful() bool {
 	return r.Error == ""
 }
 
-// GetTotalProcessingTime returns the total processing time including liveness detection
+// GetTotalProcessingTime returns the total processing time (simplified since liveness time removed)
 func (r *EnhancedFaceComparisonResponse) GetTotalProcessingTime() int64 {
-	return r.ProcessingTime + r.LivenessProcessTime
+	return r.ProcessingTime
 }
 
 // NewLivenessResultDTO creates a new liveness result DTO
