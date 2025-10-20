@@ -86,7 +86,7 @@
           },
           "threshold": {
             "type": "number",
-            "description": "Similarity threshold (0-1)",
+            "description": "Similarity threshold (0-1) Default is 0.5.",
             "default": 0.8
           }
         },
@@ -210,7 +210,7 @@
           },
           "threshold": {
             "type": "number",
-            "description": "Similarity threshold (0-1)",
+            "description": "Similarity threshold (0-1). Default is 0.5.",
             "default": 0.8
           }
         },
@@ -245,6 +245,66 @@
               "processing_time_ms": 4032,
               "request_id": "",
               "timestamp": "2025-10-08T22:42:10.54574+01:00"
+            },
+            "message": "Enhanced liveness check completed"
+          }
+        },
+        "200 - Verbose Liveness Check Success": {
+          "description": "Success",
+          "schema": {
+            "body": {
+              "is_live": true,
+              "liveness_score": 0.7256766640792977,
+              "threshold_used": 0.6,
+              "spoof_score": 0,
+              "confidence": 0.8458570445140902,
+              "processing_time_ms": 1795,
+              "analysis_breakdown": {
+                "lbp_score": 0.856172,
+                "lpq_score": 0.574933,
+                "reflection_consistency": 0.6619380095799859,
+                "color_space_analysis": {
+                  "rgb_variance": 1,
+                  "hsv_variance": 1,
+                  "lab_variance": 0.505686
+                },
+                "edge_analysis": {
+                  "edge_density": 0.5522543494241607,
+                  "edge_sharpness": 1,
+                  "edge_consistency": 1
+                },
+                "frequency_analysis": {
+                  "high_frequency": 1,
+                  "mid_frequency": 0.7,
+                  "low_frequency": 0.3,
+                  "compression_artifacts": 0
+                },
+                "texture_analysis": {
+                  "texture_variance": 0.6626913464076413,
+                  "texture_uniformity": 0.5662501811840158,
+                  "texture_entropy": 0.9448179141535159
+                }
+              },
+              "quality_metrics": {
+                "resolution": "unknown",
+                "sharpness": 0.499149049,
+                "brightness": 0.7400932876399999,
+                "contrast": 0.7400932876399999,
+                "face_size_percent": 90.0601268115975,
+                "face_position": {
+                  "x": 0.5,
+                  "y": 0.5
+                },
+                "compression_level": 0,
+                "quality_score": 0.900601268115975
+              },
+              "recommendations": [
+                "Ensure good lighting conditions",
+                "Keep face centered in frame",
+                "Avoid reflections and shadows"
+              ],
+              "request_id": "",
+              "timestamp": "2025-10-20T12:17:34.438178547Z"
             },
             "message": "Enhanced liveness check completed"
           }

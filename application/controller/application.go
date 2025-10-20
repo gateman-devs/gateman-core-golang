@@ -22,6 +22,7 @@ import (
 	"gateman.io/application/utils"
 	"gateman.io/entities"
 	"gateman.io/infrastructure/cryptography"
+	"gateman.io/infrastructure/database/repository/cache"
 	fileupload "gateman.io/infrastructure/file_upload"
 	"gateman.io/infrastructure/file_upload/types"
 	"gateman.io/infrastructure/logger"
@@ -78,11 +79,11 @@ func CreateApplication(ctx *interfaces.ApplicationContext[dto.ApplicationDTO]) {
 		return
 	}
 	server_response.Responder.Respond(ctx.Ctx, http.StatusCreated, "app created", map[string]any{
-		"url":                  fmt.Sprintf("%s/app/authenticate/%s", os.Getenv("CLIENT_URL"), app.ID),
-		"apiKey":               apiKey,
-		"appID":                appID,
-		"appSigningKey":        appSigningKey,
-		"sandboxAPIKey":        sandboxAPIKey,
+		"url":           fmt.Sprintf("%s/app/authenticate/%s", os.Getenv("CLIENT_URL"), app.ID),
+		"apiKey":        apiKey,
+		"appID":         appID,
+		"appSigningKey": appSigningKey,
+		"sandboxAPIKey": sandboxAPIKey,
 	}, nil, nil, &ctx.DeviceID)
 }
 
@@ -95,6 +96,8 @@ func FetchAppCreationConfigInfo(ctx *interfaces.ApplicationContext[any]) {
 }
 
 func FetchAppDetails(ctx *interfaces.ApplicationContext[any]) {
+	fmt.Println("processing begin")
+	fmt.Println(ctx.Param)
 	app, err := application_usecase.FetchAppUseCase(ctx.Ctx, ctx.Param["id"].(string), ctx.DeviceID, ctx.Keys["ip"].(string))
 	if err != nil {
 		return
@@ -108,6 +111,9 @@ func FetchAppDetails(ctx *interfaces.ApplicationContext[any]) {
 		user, _ := userRepo.FindByID(isUserSignedIn.UserID)
 		_, _, signUpStatus, _ = services.ProcessUserSignUp(app, user, ctx.Keys["ip"].(string))
 	}
+	SSOCode := utils.GenerateUULDString()
+	cache.Cache.CreateEntry(SSOCode, ctx.Param["codeChallenge"], time.Minute*10)
+	cache.Cache.CreateEntry(fmt.Sprintf("%s:app-signing-key", SSOCode), app.AppSigningKey, time.Minute*10)
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "app fetched", map[string]any{
 		"app":          app,
 		"isSignedIn":   isSignedIn,

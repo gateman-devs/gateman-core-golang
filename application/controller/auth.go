@@ -1,8 +1,6 @@
 package controller
 
 import (
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -15,81 +13,26 @@ import (
 	"gateman.io/application/controller/dto"
 	"gateman.io/application/interfaces"
 	"gateman.io/application/repository"
-	"gateman.io/application/usecases/auth"
-	"gateman.io/application/usecases/user"
+	auth_usecases "gateman.io/application/usecases/auth"
+	user_usecases "gateman.io/application/usecases/user"
 	"gateman.io/application/utils"
 	"gateman.io/entities"
 	"gateman.io/infrastructure/auth"
 	"gateman.io/infrastructure/biometric"
 	"gateman.io/infrastructure/cryptography"
 	"gateman.io/infrastructure/database/repository/cache"
-	"gateman.io/infrastructure/file_upload"
+	fileupload "gateman.io/infrastructure/file_upload"
 	"gateman.io/infrastructure/file_upload/types"
 	"gateman.io/infrastructure/ipresolver"
 	"gateman.io/infrastructure/logger"
-	"gateman.io/infrastructure/message_queue"
-	"gateman.io/infrastructure/message_queue/tasks"
-	"gateman.io/infrastructure/message_queue/types"
+	messagequeue "gateman.io/infrastructure/message_queue"
+	queue_tasks "gateman.io/infrastructure/message_queue/tasks"
+	mq_types "gateman.io/infrastructure/message_queue/types"
 	"gateman.io/infrastructure/messaging/sms"
-	"gateman.io/infrastructure/serverResponse"
+	server_response "gateman.io/infrastructure/serverResponse"
 	"gateman.io/infrastructure/validator"
-	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
-
-func getQueryParam(ctx *interfaces.ApplicationContext[any], key string) string {
-	if ctx.Query != nil {
-		if val, ok := ctx.Query[key]; ok {
-			if str, ok := val.(string); ok {
-				return str
-			}
-		}
-	}
-	if ctx.Ctx != nil {
-		if ginCtx, ok := ctx.Ctx.(*gin.Context); ok {
-			return ginCtx.Query(key)
-		}
-	}
-	return ""
-}
-
-func getHeaderValue(ctx *interfaces.ApplicationContext[any], header string) *string {
-	if ctx.Header != nil {
-		if values, ok := ctx.Header[header]; ok && len(values) > 0 {
-			return utils.GetStringPointer(values[0])
-		}
-	}
-	return ctx.GetHeader(header)
-}
-
-func getCookieValue(ctx *interfaces.ApplicationContext[any], name string) *string {
-	if ctx.Cookies != nil {
-		for _, cookie := range ctx.Cookies {
-			if cookieName, ok := cookie["name"].(string); ok && cookieName == name {
-				if value, ok := cookie["value"].(string); ok {
-					return utils.GetStringPointer(value)
-				}
-			}
-		}
-	}
-	if ctx.Ctx != nil {
-		if ginCtx, ok := ctx.Ctx.(*gin.Context); ok {
-			if value, err := ginCtx.Cookie(name); err == nil {
-				return utils.GetStringPointer(value)
-			}
-		}
-	}
-	return nil
-}
-
-func computePKCECodeChallenge(codeVerifier string) string {
-	hash := sha256.Sum256([]byte(codeVerifier))
-	encoded := base64.StdEncoding.EncodeToString(hash[:])
-	encoded = strings.TrimRight(encoded, "=")
-	encoded = strings.ReplaceAll(encoded, "+", "-")
-	encoded = strings.ReplaceAll(encoded, "/", "_")
-	return encoded
-}
 
 func KeyExchange(ctx *interfaces.ApplicationContext[dto.KeyExchangeDTO]) {
 	serverPublicKey, _, _ := auth_usecases.InitiateKeyExchange(ctx.Ctx, ctx.DeviceID, ctx.Body.ClientPublicKey)
@@ -97,7 +40,7 @@ func KeyExchange(ctx *interfaces.ApplicationContext[dto.KeyExchangeDTO]) {
 		return
 	}
 	server_response.Responder.UnEncryptedRespond(ctx.Ctx, http.StatusCreated, "key exchanged", hex.EncodeToString(serverPublicKey), nil, nil)
-    server_response.Responder.UnEncryptedRespond(ctx.Ctx, http.StatusCreated, "key exchanged", hex.EncodeToString(serverPublicKey), nil, nil)
+	server_response.Responder.UnEncryptedRespond(ctx.Ctx, http.StatusCreated, "key exchanged", hex.EncodeToString(serverPublicKey), nil, nil)
 	if serverPublicKey == nil {
 		return
 	}
@@ -345,6 +288,119 @@ func VerifyWorkspaceAccount(ctx *interfaces.ApplicationContext[any]) {
 		"workspaceAccessToken":  accessToken,
 		"workspaceRefreshToken": refreshToken,
 		"profile":               superAdmin,
+	}, nil, nil, &ctx.DeviceID)
+}
+
+func GenerateSignedInAccessToken(ctx *interfaces.ApplicationContext[any]) {
+	userRepo := repository.UserRepo()
+	filter := map[string]interface{}{}
+	if ctx.GetStringContextData("OTPEmail") != "" {
+		filter["email"] = ctx.GetStringContextData("OTPEmail")
+	}
+	if ctx.GetStringContextData("OTPPhone") != "" {
+		filter["phone.localNumber"] = ctx.GetStringContextData("OTPPhone")
+	}
+	user, err := userRepo.FindOneByFilter(filter)
+	if err != nil {
+		logger.Error("an error occured while fetching user for GenerateSignedInAccessToken", logger.LoggerOptions{
+			Key:  "error",
+			Data: err,
+		})
+		return
+	}
+	if user == nil {
+		apperrors.NotFoundError(ctx.Ctx, "Workspace not found", &ctx.DeviceID)
+		return
+	}
+	if !user.VerifiedAccount {
+		userRepo.UpdatePartialByFilter(filter, map[string]any{
+			"verifiedAccount": true,
+		})
+	}
+
+	var savedDevice *entities.Device
+	for i, device := range user.Devices {
+		if device.ID == ctx.DeviceID {
+			savedDevice = &user.Devices[i]
+			user.Devices = append(user.Devices[:i], user.Devices[i+1:]...)
+			break
+		}
+	}
+	if savedDevice == nil {
+		ipLookupRes, _ := ipresolver.IPResolverInstance.LookUp(ctx.Param["ip"].(string))
+		user.Devices = append(user.Devices, entities.Device{
+			ID:                ctx.DeviceID,
+			Name:              ctx.DeviceName,
+			LastLogin:         time.Now(),
+			LastLoginLocation: fmt.Sprintf("%s, %s - (%f, %f)", strings.ToUpper(ipLookupRes.City), strings.ToUpper(ipLookupRes.CountryCode), ipLookupRes.Longitude, ipLookupRes.Latitude),
+			Verified:          true,
+		})
+	} else {
+		ipLookupRes, _ := ipresolver.IPResolverInstance.LookUp(ctx.Param["ip"].(string))
+		user.Devices = append(user.Devices, entities.Device{
+			ID:                savedDevice.ID,
+			Name:              savedDevice.Name,
+			LastLogin:         time.Now(),
+			LastLoginLocation: fmt.Sprintf("%s, %s - (%f, %f)", strings.ToUpper(ipLookupRes.City), strings.ToUpper(ipLookupRes.CountryCode), ipLookupRes.Longitude, ipLookupRes.Latitude),
+			Verified:          true,
+		})
+	}
+	success, err := userRepo.UpdatePartialByFilter(map[string]interface{}{
+		"email": ctx.GetStringContextData("OTPEmail"),
+	}, map[string]any{
+		"verifiedAccount": true,
+		"devices":         user.Devices,
+	})
+	if err != nil {
+		logger.Error("an error occured while verifying workspace member email", logger.LoggerOptions{
+			Key:  "error",
+			Data: err,
+		})
+		return
+	}
+	if !success {
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
+		return
+	}
+
+	accessToken, err := auth.GenerateAuthToken(auth.ClaimsData{
+		UserID:          user.ID,
+		UserAgent:       user.UserAgent,
+		Email:           user.Email,
+		VerifiedAccount: user.VerifiedAccount,
+		DeviceID:        ctx.DeviceID,
+		TokenType:       auth.AccessToken,
+		IssuedAt:        time.Now().Unix(),
+		ExpiresAt:       time.Now().Add(time.Hour * 1).Unix(), //lasts for 1 hr
+	})
+	if err != nil {
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
+		return
+	}
+	refreshToken, err := auth.GenerateAuthToken(auth.ClaimsData{
+		UserID:          user.ID,
+		UserAgent:       user.UserAgent,
+		Email:           user.Email,
+		VerifiedAccount: user.VerifiedAccount,
+		TokenType:       auth.RefreshToken,
+		DeviceID:        ctx.DeviceID,
+		IssuedAt:        time.Now().Unix(),
+		ExpiresAt:       time.Now().Add(time.Hour * 24 * 180).Unix(), //lasts for 180 days
+	})
+
+	if err != nil {
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
+		return
+	}
+	hashedAccessToken, _ := cryptography.CryptoHahser.HashString(*accessToken, nil)
+	hashedRefreshToken, _ := cryptography.CryptoHahser.HashString(*refreshToken, nil)
+	hashedDeviceID, _ := cryptography.CryptoHahser.HashString(ctx.DeviceID, []byte(os.Getenv("HASH_FIXED_SALT")))
+	cache.Cache.CreateEntry(fmt.Sprintf("%s-workspace-access", string(hashedDeviceID)), hashedAccessToken, time.Hour*24)       // token should last for 10 mins
+	cache.Cache.CreateEntry(fmt.Sprintf("%s-workspace-refresh", string(hashedDeviceID)), hashedRefreshToken, time.Hour*24*180) // token should last for 100 days
+	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "email verified", map[string]any{
+		"workspaceAccessToken":  accessToken,
+		"workspaceRefreshToken": refreshToken,
+		"profile":               user,
 	}, nil, nil, &ctx.DeviceID)
 }
 

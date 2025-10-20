@@ -152,10 +152,15 @@ func AppRouter(router *gin.RouterGroup) {
 			})
 		})
 
-		appRouter.GET("/details/:id", func(ctx *gin.Context) {
+		appRouter.GET("/details", func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
-			id, found := ctx.Params.Get("id")
-			if !found {
+			id := ctx.Query("app_id")
+			if id == "" {
+				apperrors.ClientError(ctx, "missing parameter id", nil, nil, *appContext.GetHeader("X-Device-Id"))
+				return
+			}
+			codeChallenge := ctx.Query("code_challenge")
+			if codeChallenge == "" {
 				apperrors.ClientError(ctx, "missing parameter id", nil, nil, *appContext.GetHeader("X-Device-Id"))
 				return
 			}
@@ -168,7 +173,8 @@ func AppRouter(router *gin.RouterGroup) {
 				},
 				Header: appContext.Header,
 				Param: map[string]any{
-					"id": id,
+					"id":            id,
+					"codeChallenge": codeChallenge,
 				},
 				DeviceID: appContext.DeviceID,
 			})

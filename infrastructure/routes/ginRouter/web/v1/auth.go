@@ -51,6 +51,16 @@ func AuthRouter(router *gin.RouterGroup) {
 			})
 		})
 
+		authRouter.PATCH("/user/sign-in", middlewares.OTPTokenMiddleware("verify_account"), func(ctx *gin.Context) {
+			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
+
+			controller.GenerateSignedInAccessToken(&interfaces.ApplicationContext[any]{
+				Ctx:      ctx,
+				DeviceID: appContext.DeviceID,
+				Keys:     appContext.Keys,
+			})
+		})
+
 		authRouter.POST("/verify-device", func(ctx *gin.Context) {
 			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
 			var body dto.VerifyDeviceDTO
