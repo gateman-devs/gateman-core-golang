@@ -6274,54 +6274,54 @@ func (lfs *LocalFaceService) detectPaintingCharacteristics(faceRegion, gray gocv
 
 	// 1. Brush Stroke Pattern Detection
 	// Paintings have directional patterns from brush strokes
-	// LOWERED threshold from 0.6 to 0.5 for more aggressive detection
+	// BALANCED threshold: 0.55 (between original 0.6 and aggressive 0.5)
 	brushStrokeScore := lfs.detectBrushStrokes(gray)
-	if brushStrokeScore > 0.5 {
+	if brushStrokeScore > 0.55 {
 		paintingIndicators += 1.0
 	}
 	totalChecks += 1.0
 
 	// 2. Artificial Smoothness Detection
 	// Paintings lack the micro-texture of real skin
-	// LOWERED threshold from 0.7 to 0.6 for more aggressive detection
+	// BALANCED threshold: 0.65 (between original 0.7 and aggressive 0.6)
 	smoothnessScore := lfs.detectArtificialSmoothness(gray)
-	if smoothnessScore > 0.6 {
+	if smoothnessScore > 0.65 {
 		paintingIndicators += 1.0
 	}
 	totalChecks += 1.0
 
 	// 3. Skin Pore Absence Detection
 	// Real human skin has visible pores; paintings don't
-	// LOWERED threshold from 0.65 to 0.55 for more aggressive detection
+	// BALANCED threshold: 0.60 (between original 0.65 and aggressive 0.55)
 	poreAbsenceScore := lfs.detectSkinPoreAbsence(gray)
-	if poreAbsenceScore > 0.55 {
+	if poreAbsenceScore > 0.60 {
 		paintingIndicators += 1.0
 	}
 	totalChecks += 1.0
 
 	// 4. Color Blending Artificiality
 	// Painted colors blend differently than photographed ones
-	// LOWERED threshold from 0.7 to 0.6 for more aggressive detection
+	// BALANCED threshold: 0.65 (between original 0.7 and aggressive 0.6)
 	colorBlendingScore := lfs.detectArtificialColorBlending(faceRegion)
-	if colorBlendingScore > 0.6 {
+	if colorBlendingScore > 0.65 {
 		paintingIndicators += 1.0
 	}
 	totalChecks += 1.0
 
 	// 5. Canvas Texture Detection
 	// Many paintings show canvas texture patterns
-	// LOWERED threshold from 0.6 to 0.5 for more aggressive detection
+	// BALANCED threshold: 0.55 (between original 0.6 and aggressive 0.5)
 	canvasScore := lfs.detectCanvasTexture(gray)
-	if canvasScore > 0.5 {
+	if canvasScore > 0.55 {
 		paintingIndicators += 1.0
 	}
 	totalChecks += 1.0
 
 	// 6. Unnatural Edge Characteristics
 	// Painted edges differ from photographic edges
-	// LOWERED threshold from 0.65 to 0.55 for more aggressive detection
+	// BALANCED threshold: 0.60 (between original 0.65 and aggressive 0.55)
 	edgeScore := lfs.detectPaintedEdges(gray)
-	if edgeScore > 0.55 {
+	if edgeScore > 0.60 {
 		paintingIndicators += 1.0
 	}
 	totalChecks += 1.0
