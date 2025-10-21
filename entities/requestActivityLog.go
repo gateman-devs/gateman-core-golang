@@ -19,6 +19,7 @@ type RequestActivityLog struct {
 	UserAgent    *string   `bson:"userAgent" json:"userAgent"`
 	Timestamp    time.Time `bson:"timestamp" json:"timestamp"`
 	Duration     int64     `bson:"duration" json:"duration"` // Duration in milliseconds
+	TransactionID *string  `bson:"transactionID" json:"transactionID"` // Link to billing transaction
 	CreatedAt    time.Time `bson:"createdAt" json:"createdAt"`
 	UpdatedAt    time.Time `bson:"updatedAt" json:"updatedAt"`
 }

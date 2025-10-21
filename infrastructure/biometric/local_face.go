@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"image"
+	stdimage "image" // Alias to avoid shadowing issues
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
-	stdimage "image" // Alias to avoid shadowing issues
 	"io"
 	"math"
 	"net/http"
@@ -500,10 +500,10 @@ func (lfs *LocalFaceService) CompareFacesWithFaceNet(image1 *string, image2 *str
 	// Calculate confidence based on similarity and quality
 	confidence := lfs.calculateConfidence(normalizedSimilarity, quality1, quality2)
 
-	// SFace threshold - adjusted to 0.82 cosine similarity (0.91 normalized) 
+	// SFace threshold - adjusted to 0.82 cosine similarity (0.91 normalized)
 	// Combined with hybrid scoring (embedding + landmarks) for robust matching
 	// The hybrid score prevents false positives even when embedding similarity is high
-	baseThreshold := 0.82 // Cosine similarity threshold
+	baseThreshold := 0.82                              // Cosine similarity threshold
 	normalizedThreshold := (baseThreshold + 1.0) / 2.0 // Convert to [0, 1] range = 0.91
 
 	avgQuality := (quality1 + quality2) / 2.0
@@ -533,7 +533,7 @@ func (lfs *LocalFaceService) CompareFacesWithFaceNet(image1 *string, image2 *str
 		// Get landmarks for the largest faces
 		landmarks1 := detectionResult1.Landmarks[0]
 		landmarks2 := detectionResult2.Landmarks[0]
-		
+
 		// Calculate landmark geometry similarity
 		landmarkValid, geometricSimilarity = yunetService.ValidateFacialLandmarks(
 			landmarks1, landmarks2, face1, face2,
@@ -543,14 +543,14 @@ func (lfs *LocalFaceService) CompareFacesWithFaceNet(image1 *string, image2 *str
 	// Hybrid matching decision: combine embedding similarity with geometric similarity
 	// Use weighted score: 65% embedding + 35% geometric (increased geometric weight)
 	hybridScore := (normalizedSimilarity * 0.65) + (geometricSimilarity * 0.35)
-	
+
 	// Require both embedding similarity above threshold AND reasonable hybrid score
 	// Hybrid threshold of 0.79 balances security and usability
 	// This prevents most false positives while minimizing false negatives
 	// Calibrated based on real-world test data (80% accuracy, 0 false negatives)
-	isMatch := normalizedSimilarity > normalizedThreshold && 
-	           confidence > 0.5 && 
-	           hybridScore > 0.79
+	isMatch := normalizedSimilarity > normalizedThreshold &&
+		confidence > 0.5 &&
+		hybridScore > 0.79
 
 	processingTime := time.Since(startTime)
 
@@ -560,19 +560,19 @@ func (lfs *LocalFaceService) CompareFacesWithFaceNet(image1 *string, image2 *str
 	logger.Info("FaceNet face comparison completed", logger.LoggerOptions{
 		Key: "comparison_result",
 		Data: map[string]interface{}{
-			"cosine_similarity":      similarity,
-			"normalized_similarity":  normalizedSimilarity,
-			"threshold":              normalizedThreshold,
-			"confidence":             confidence,
-			"is_match":               isMatch,
-			"landmark_valid":         landmarkValid,
-			"geometric_similarity":   geometricSimilarity,
-			"hybrid_score":           hybridScore,
-			"quality1":               quality1,
-			"quality2":               quality2,
-			"faces_detected_image1":  len(faces1),
-			"faces_detected_image2":  len(faces2),
-			"processing_time_ms":     processingTime.Milliseconds(),
+			"cosine_similarity":     similarity,
+			"normalized_similarity": normalizedSimilarity,
+			"threshold":             normalizedThreshold,
+			"confidence":            confidence,
+			"is_match":              isMatch,
+			"landmark_valid":        landmarkValid,
+			"geometric_similarity":  geometricSimilarity,
+			"hybrid_score":          hybridScore,
+			"quality1":              quality1,
+			"quality2":              quality2,
+			"faces_detected_image1": len(faces1),
+			"faces_detected_image2": len(faces2),
+			"processing_time_ms":    processingTime.Milliseconds(),
 		},
 	})
 
@@ -743,7 +743,7 @@ func (lfs *LocalFaceService) CompareFacesWithArcFace(image1 *string, image2 *str
 
 	// ArcFace threshold - typically 0.4 cosine similarity (0.7 normalized)
 	// Adjust based on image quality
-	baseThreshold := 0.4 // Cosine similarity threshold
+	baseThreshold := 0.4                               // Cosine similarity threshold
 	normalizedThreshold := (baseThreshold + 1.0) / 2.0 // Convert to [0, 1] range
 
 	avgQuality := (quality1 + quality2) / 2.0
@@ -780,16 +780,16 @@ func (lfs *LocalFaceService) CompareFacesWithArcFace(image1 *string, image2 *str
 	logger.Info("ArcFace face comparison completed", logger.LoggerOptions{
 		Key: "comparison_result",
 		Data: map[string]interface{}{
-			"cosine_similarity":      similarity,
-			"normalized_similarity":  normalizedSimilarity,
-			"threshold":              normalizedThreshold,
-			"confidence":             confidence,
-			"is_match":               isMatch,
-			"quality1":               quality1,
-			"quality2":               quality2,
-			"faces_detected_image1":  len(faces1),
-			"faces_detected_image2":  len(faces2),
-			"processing_time_ms":     processingTime.Milliseconds(),
+			"cosine_similarity":     similarity,
+			"normalized_similarity": normalizedSimilarity,
+			"threshold":             normalizedThreshold,
+			"confidence":            confidence,
+			"is_match":              isMatch,
+			"quality1":              quality1,
+			"quality2":              quality2,
+			"faces_detected_image1": len(faces1),
+			"faces_detected_image2": len(faces2),
+			"processing_time_ms":    processingTime.Milliseconds(),
 		},
 	})
 
@@ -1071,7 +1071,7 @@ func (lfs *LocalFaceService) ImageLivenessCheck(image *string, lenientBlurry boo
 
 	// Process image with YuNet detection
 	processStart := time.Now()
-	
+
 	// Process with YuNet or fallback to Haar cascade (using stdimage alias to avoid shadowing)
 	img, faces, quality, err := func() (gocv.Mat, []stdimage.Rectangle, float64, error) {
 		if yunetService.IsHealthy() {
@@ -1906,54 +1906,334 @@ func (lfs *LocalFaceService) getLargestFace(faces []image.Rectangle) image.Recta
 
 // calculateSimilarity calculates similarity between two face images using multiple advanced methods
 func (lfs *LocalFaceService) calculateSimilarity(img1, img2 gocv.Mat) float32 {
-	// Method 1: Enhanced template matching with normalization
-	templateSimilarity := lfs.calculateEnhancedTemplateSimilarity(img1, img2)
+	// ENHANCED SIMILARITY CALCULATION WITH MULTIPLE ADVANCED METHODS
 
-	// Method 2: Improved SSIM with face-specific parameters
-	ssim := lfs.calculateFaceSSIM(img1, img2)
+	// Method 1: Multi-scale template matching for robust comparison
+	multiScaleSimilarity := lfs.calculateMultiScaleTemplateSimilarity(img1, img2)
 
-	// Method 3: Histogram correlation
-	histogramSimilarity := lfs.calculateHistogramSimilarity(img1, img2)
+	// Method 2: Enhanced SSIM with luminance, contrast, and structure components
+	ssim := lfs.calculateEnhancedSSIM(img1, img2)
 
-	// Method 4: Edge-based structural similarity
-	edgeSimilarity := lfs.calculateEdgeSimilarity(img1, img2)
+	// Method 3: Multi-channel histogram correlation (more discriminative)
+	histogramSimilarity := lfs.calculateAdvancedHistogramSimilarity(img1, img2)
 
-	// Adaptive weighting based on image quality
+	// Method 4: Gradient-based structural similarity (pose-invariant)
+	gradientSimilarity := lfs.calculateGradientSimilarity(img1, img2)
+
+	// Method 5: Feature-based similarity using key points
+	featureSimilarity := lfs.calculateFeatureBasedSimilarity(img1, img2)
+
+	// Method 6: Local descriptor similarity (LBP-based)
+	descriptorSimilarity := lfs.calculateLocalDescriptorSimilarity(img1, img2)
+
+	// Adaptive weighting based on image quality and characteristics
 	quality1 := lfs.calculateImageQualityMetric(img1)
 	quality2 := lfs.calculateImageQualityMetric(img2)
 	avgQuality := (quality1 + quality2) / 2.0
 
-	// Adjust weights based on image quality
-	var w1, w2, w3, w4 float32
-	if avgQuality > 0.7 {
-		// High quality images - emphasize template and SSIM
-		w1, w2, w3, w4 = 0.4, 0.35, 0.15, 0.1
+	// Calculate image contrast to determine which methods work best
+	contrast1 := lfs.calculateImageContrast(img1)
+	contrast2 := lfs.calculateImageContrast(img2)
+	avgContrast := (contrast1 + contrast2) / 2.0
+
+	// Dynamic weight adjustment based on image characteristics
+	var w1, w2, w3, w4, w5, w6 float32
+
+	if avgQuality > 0.75 && avgContrast > 0.6 {
+		// Excellent quality + good contrast - emphasize template and features
+		w1, w2, w3, w4, w5, w6 = 0.25, 0.25, 0.15, 0.15, 0.15, 0.05
+	} else if avgQuality > 0.6 {
+		// Good quality - balanced approach with emphasis on structure
+		w1, w2, w3, w4, w5, w6 = 0.20, 0.25, 0.15, 0.15, 0.15, 0.10
 	} else if avgQuality > 0.4 {
-		// Medium quality images - balanced approach
-		w1, w2, w3, w4 = 0.3, 0.3, 0.2, 0.2
+		// Medium quality - emphasize robust methods
+		w1, w2, w3, w4, w5, w6 = 0.15, 0.20, 0.20, 0.15, 0.15, 0.15
 	} else {
-		// Low quality images - emphasize edge and histogram
-		w1, w2, w3, w4 = 0.2, 0.2, 0.3, 0.3
+		// Low quality - emphasize descriptor and histogram methods
+		w1, w2, w3, w4, w5, w6 = 0.10, 0.15, 0.20, 0.15, 0.15, 0.25
 	}
 
-	// Combine methods with adaptive weights
-	similarity := templateSimilarity*w1 + float32(ssim)*w2 + histogramSimilarity*w3 + edgeSimilarity*w4
+	// Combine all methods with adaptive weights
+	similarity := multiScaleSimilarity*w1 +
+		float32(ssim)*w2 +
+		histogramSimilarity*w3 +
+		gradientSimilarity*w4 +
+		featureSimilarity*w5 +
+		descriptorSimilarity*w6
 
-	// Apply confidence adjustment based on quality difference
+	// Quality-based confidence adjustment
 	qualityDiff := math.Abs(quality1 - quality2)
-	if qualityDiff > 0.3 {
-		similarity *= 0.8 // Penalize large quality differences
+	if qualityDiff > 0.35 {
+		// Large quality difference - reduce confidence
+		similarity *= 0.85
+	} else if qualityDiff > 0.25 {
+		// Moderate quality difference - slight reduction
+		similarity *= 0.92
+	}
+
+	// Contrast-based adjustment (very different contrast can indicate different conditions)
+	contrastDiff := math.Abs(contrast1 - contrast2)
+	if contrastDiff > 0.4 {
+		similarity *= 0.90
 	}
 
 	// Ensure similarity is between 0 and 1
-	if similarity < 0 {
-		similarity = 0
-	}
-	if similarity > 1 {
-		similarity = 1
-	}
+	similarity = float32(math.Max(0, math.Min(1, float64(similarity))))
 
 	return similarity
+}
+
+// calculateMultiScaleTemplateSimilarity performs template matching at multiple scales
+func (lfs *LocalFaceService) calculateMultiScaleTemplateSimilarity(img1, img2 gocv.Mat) float32 {
+	scales := []float64{1.0, 0.9, 1.1} // Original, slightly smaller, slightly larger
+	var totalSim float32 = 0
+	var validScales float32 = 0
+
+	for _, scale := range scales {
+		if scale != 1.0 {
+			newSize := image.Pt(int(float64(img2.Cols())*scale), int(float64(img2.Rows())*scale))
+			scaled := gocv.NewMat()
+			gocv.Resize(img2, &scaled, newSize, 0, 0, gocv.InterpolationLinear)
+
+			// Skip if scaled image is too different in size
+			if math.Abs(float64(scaled.Cols()-img1.Cols())) > float64(img1.Cols())*0.2 {
+				scaled.Close()
+				continue
+			}
+
+			sim := lfs.calculateEnhancedTemplateSimilarity(img1, scaled)
+			scaled.Close()
+			totalSim += sim
+			validScales++
+		} else {
+			sim := lfs.calculateEnhancedTemplateSimilarity(img1, img2)
+			totalSim += sim
+			validScales++
+		}
+	}
+
+	if validScales == 0 {
+		return 0
+	}
+	return totalSim / validScales
+}
+
+// calculateEnhancedSSIM calculates improved SSIM with better parameters
+func (lfs *LocalFaceService) calculateEnhancedSSIM(img1, img2 gocv.Mat) float64 {
+	// Use the existing calculateFaceSSIM which is already optimized
+	return lfs.calculateFaceSSIM(img1, img2)
+}
+
+// calculateAdvancedHistogramSimilarity uses multi-bin histogram correlation
+func (lfs *LocalFaceService) calculateAdvancedHistogramSimilarity(img1, img2 gocv.Mat) float32 {
+	// Calculate histograms with more bins for better discrimination
+	bins := []int{256}
+	ranges := []float64{0, 256}
+
+	hist1 := gocv.NewMat()
+	hist2 := gocv.NewMat()
+	defer hist1.Close()
+	defer hist2.Close()
+
+	gocv.CalcHist([]gocv.Mat{img1}, []int{0}, gocv.NewMat(), &hist1, bins, ranges, false)
+	gocv.CalcHist([]gocv.Mat{img2}, []int{0}, gocv.NewMat(), &hist2, bins, ranges, false)
+
+	// Normalize histograms
+	gocv.Normalize(hist1, &hist1, 0, 1, gocv.NormMinMax)
+	gocv.Normalize(hist2, &hist2, 0, 1, gocv.NormMinMax)
+
+	// Use correlation comparison (0 = HistComp method for correlation)
+	correlation := gocv.CompareHist(hist1, hist2, 0)
+
+	// Convert from [-1, 1] to [0, 1]
+	return float32((correlation + 1.0) / 2.0)
+}
+
+// calculateGradientSimilarity compares gradient patterns (pose-invariant)
+func (lfs *LocalFaceService) calculateGradientSimilarity(img1, img2 gocv.Mat) float32 {
+	// Calculate gradients using Sobel
+	gradX1 := gocv.NewMat()
+	gradY1 := gocv.NewMat()
+	gradX2 := gocv.NewMat()
+	gradY2 := gocv.NewMat()
+	defer gradX1.Close()
+	defer gradY1.Close()
+	defer gradX2.Close()
+	defer gradY2.Close()
+
+	gocv.Sobel(img1, &gradX1, gocv.MatTypeCV64F, 1, 0, 3, 1, 0, gocv.BorderDefault)
+	gocv.Sobel(img1, &gradY1, gocv.MatTypeCV64F, 0, 1, 3, 1, 0, gocv.BorderDefault)
+	gocv.Sobel(img2, &gradX2, gocv.MatTypeCV64F, 1, 0, 3, 1, 0, gocv.BorderDefault)
+	gocv.Sobel(img2, &gradY2, gocv.MatTypeCV64F, 0, 1, 3, 1, 0, gocv.BorderDefault)
+
+	// Calculate gradient magnitudes
+	mag1 := gocv.NewMat()
+	mag2 := gocv.NewMat()
+	defer mag1.Close()
+	defer mag2.Close()
+
+	gocv.Magnitude(gradX1, gradY1, &mag1)
+	gocv.Magnitude(gradX2, gradY2, &mag2)
+
+	// Compare gradient magnitudes using normalized correlation
+	mag1Float := gocv.NewMat()
+	mag2Float := gocv.NewMat()
+	defer mag1Float.Close()
+	defer mag2Float.Close()
+
+	mag1.ConvertTo(&mag1Float, gocv.MatTypeCV32F)
+	mag2.ConvertTo(&mag2Float, gocv.MatTypeCV32F)
+
+	// Resize if needed
+	if mag1Float.Rows() != mag2Float.Rows() || mag1Float.Cols() != mag2Float.Cols() {
+		resized := gocv.NewMat()
+		gocv.Resize(mag2Float, &resized, image.Pt(mag1Float.Cols(), mag1Float.Rows()), 0, 0, gocv.InterpolationLinear)
+		mag2Float.Close()
+		mag2Float = resized
+	}
+
+	// Calculate correlation
+	mean1 := lfs.calculateMean(mag1Float)
+	mean2 := lfs.calculateMean(mag2Float)
+	var1 := lfs.calculateVariance(mag1Float, mean1)
+	var2 := lfs.calculateVariance(mag2Float, mean2)
+	cov := lfs.calculateCovariance(mag1Float, mag2Float, mean1, mean2)
+
+	if var1 == 0 || var2 == 0 {
+		return 0.5
+	}
+
+	correlation := cov / math.Sqrt(var1*var2)
+
+	// Normalize to [0, 1]
+	return float32((correlation + 1.0) / 2.0)
+}
+
+// calculateFeatureBasedSimilarity uses ORB features for matching
+func (lfs *LocalFaceService) calculateFeatureBasedSimilarity(img1, img2 gocv.Mat) float32 {
+	// Use ORB for fast feature detection and matching
+	orb := gocv.NewORB()
+	defer orb.Close()
+
+	// Detect keypoints and compute descriptors
+	kp1, desc1 := orb.DetectAndCompute(img1, gocv.NewMat())
+	kp2, desc2 := orb.DetectAndCompute(img2, gocv.NewMat())
+	defer desc1.Close()
+	defer desc2.Close()
+
+	if len(kp1) == 0 || len(kp2) == 0 {
+		return 0.5 // Neutral score if no features
+	}
+
+	// Match features using BFMatcher
+	matcher := gocv.NewBFMatcher()
+	defer matcher.Close()
+
+	matches := matcher.KnnMatch(desc1, desc2, 2)
+
+	// Apply ratio test (Lowe's ratio)
+	goodMatches := 0
+	for _, match := range matches {
+		if len(match) == 2 {
+			if match[0].Distance < 0.75*match[1].Distance {
+				goodMatches++
+			}
+		}
+	}
+
+	// Calculate match ratio
+	minKeypoints := math.Min(float64(len(kp1)), float64(len(kp2)))
+	if minKeypoints == 0 {
+		return 0.5
+	}
+
+	matchRatio := float64(goodMatches) / minKeypoints
+
+	// Normalize and cap at 1.0
+	return float32(math.Min(matchRatio, 1.0))
+}
+
+// calculateLocalDescriptorSimilarity uses LBP-like descriptors
+func (lfs *LocalFaceService) calculateLocalDescriptorSimilarity(img1, img2 gocv.Mat) float32 {
+	// Calculate simplified local descriptors for both images
+	desc1 := lfs.calculateSimpleLBPDescriptor(img1)
+	desc2 := lfs.calculateSimpleLBPDescriptor(img2)
+
+	// Calculate Chi-square distance between descriptors
+	distance := 0.0
+	for i := 0; i < len(desc1) && i < len(desc2); i++ {
+		if desc1[i]+desc2[i] > 0 {
+			diff := desc1[i] - desc2[i]
+			distance += (diff * diff) / (desc1[i] + desc2[i])
+		}
+	}
+
+	// Convert distance to similarity (lower distance = higher similarity)
+	similarity := 1.0 / (1.0 + distance/float64(len(desc1)))
+
+	return float32(similarity)
+}
+
+// calculateSimpleLBPDescriptor creates a simple LBP-based descriptor
+func (lfs *LocalFaceService) calculateSimpleLBPDescriptor(img gocv.Mat) []float64 {
+	descriptor := make([]float64, 256)
+	totalPatterns := 0
+
+	// Sample every 3rd pixel for performance
+	step := 3
+
+	for i := step; i < img.Rows()-step; i += step {
+		for j := step; j < img.Cols()-step; j += step {
+			center := float64(img.GetUCharAt(i, j))
+
+			// Calculate 8-neighbor LBP
+			var pattern uint8 = 0
+			neighbors := []struct{ dy, dx int }{
+				{-1, -1}, {-1, 0}, {-1, 1},
+				{0, 1}, {1, 1}, {1, 0},
+				{1, -1}, {0, -1},
+			}
+
+			for bit, neighbor := range neighbors {
+				ny := i + neighbor.dy
+				nx := j + neighbor.dx
+				if ny >= 0 && ny < img.Rows() && nx >= 0 && nx < img.Cols() {
+					neighborVal := float64(img.GetUCharAt(ny, nx))
+					if neighborVal >= center {
+						pattern |= (1 << uint(bit))
+					}
+				}
+			}
+
+			descriptor[pattern]++
+			totalPatterns++
+		}
+	}
+
+	// Normalize descriptor
+	if totalPatterns > 0 {
+		for i := range descriptor {
+			descriptor[i] /= float64(totalPatterns)
+		}
+	}
+
+	return descriptor
+}
+
+// calculateImageContrast calculates the contrast of an image
+func (lfs *LocalFaceService) calculateImageContrast(img gocv.Mat) float64 {
+	mean := lfs.calculateMean(img)
+	variance := lfs.calculateVariance(img, mean)
+
+	// Normalized contrast (std deviation / mean)
+	if mean == 0 {
+		return 0
+	}
+
+	contrast := math.Sqrt(variance) / mean
+
+	// Normalize to [0, 1] range (typical contrast values are 0-2)
+	return math.Min(contrast/2.0, 1.0)
 }
 
 // calculateSSIM calculates a simplified Structural Similarity Index
@@ -2310,7 +2590,7 @@ func (lfs *LocalFaceService) detectProblematicImageCharacteristics(img image.Ima
 func (lfs *LocalFaceService) isPhotoBoothImage(img image.Image, format string, imgData []byte) bool {
 	// DISABLED: Photo Booth detection was causing false positives on legitimate photos
 	// Only check for explicit Photo Booth metadata, not image characteristics
-	
+
 	// Method 1: Check for Photo Booth metadata in the image data (only explicit markers)
 	if strings.Contains(strings.ToLower(string(imgData)), "photo booth") ||
 		strings.Contains(strings.ToLower(string(imgData)), "photobooth") {
@@ -2319,7 +2599,7 @@ func (lfs *LocalFaceService) isPhotoBoothImage(img image.Image, format string, i
 
 	// REMOVED: Dimension-based detection was blocking legitimate iPhone/camera photos
 	// REMOVED: Color-based detection was too aggressive and blocking normal photos
-	
+
 	return false
 }
 
@@ -2335,7 +2615,7 @@ func (lfs *LocalFaceService) hasPhotoBoothColorCharacteristics(img image.Image) 
 func (lfs *LocalFaceService) hasUnusualImageCharacteristics(img image.Image) bool {
 
 	// Check for images with very high or very low contrast (more lenient thresholds)
-	contrast := lfs.calculateImageContrast(img)
+	contrast := lfs.calculateImageContrastFromStdImage(img)
 	if contrast > 0.98 || contrast < 0.02 {
 		return true // Only extremely high or low contrast indicates processing issues
 	}
@@ -2349,8 +2629,8 @@ func (lfs *LocalFaceService) hasUnusualImageCharacteristics(img image.Image) boo
 	return false
 }
 
-// calculateImageContrast calculates a simple contrast measure for the image
-func (lfs *LocalFaceService) calculateImageContrast(img image.Image) float64 {
+// calculateImageContrastFromStdImage calculates a simple contrast measure for standard image.Image type
+func (lfs *LocalFaceService) calculateImageContrastFromStdImage(img image.Image) float64 {
 	bounds := img.Bounds()
 	sampleStep := 10
 	var minLuma, maxLuma float64 = 1.0, 0.0
@@ -2918,20 +3198,155 @@ func (lfs *LocalFaceService) calculateImageQualityMetric(img gocv.Mat) float64 {
 
 // performQuickLivenessCheck performs a basic liveness check for face comparison
 func (lfs *LocalFaceService) performQuickLivenessCheck(faceRegion gocv.Mat) bool {
-	// Basic texture analysis
+	// ENHANCED QUICK LIVENESS CHECK
+	// More comprehensive quick analysis with multiple indicators
+
+	// Convert to grayscale for analysis
+	gray := gocv.NewMat()
+	defer gray.Close()
+	if faceRegion.Channels() > 1 {
+		gocv.CvtColor(faceRegion, &gray, gocv.ColorBGRToGray)
+	} else {
+		gray = faceRegion.Clone()
+	}
+
+	// 1. Texture analysis (skin has natural texture)
 	textureScore := lfs.calculateTextureScore(faceRegion)
 
-	// Basic edge analysis
+	// 2. Edge analysis (real faces have natural edge distribution)
 	edgeScore := lfs.calculateEdgeScore(faceRegion)
 
-	// Basic reflection analysis
+	// 3. Reflection analysis (screen displays have uniform reflection)
 	reflectionScore := lfs.calculateReflectionScore(faceRegion)
 
-	// Quick liveness score (simplified)
-	quickScore := (textureScore + edgeScore + reflectionScore) / 3.0
+	// 4. Quick frequency analysis (real skin has natural frequency patterns)
+	frequencyScore := lfs.calculateQuickFrequencyScore(gray)
 
-	// More lenient threshold for quick check
-	return quickScore > 0.25
+	// 5. Quick color variance (real faces have natural color variation)
+	colorVariance := lfs.calculateQuickColorVariance(faceRegion)
+
+	// 6. Smoothness check (paintings/prints are too smooth)
+	smoothnessScore := 1.0 - lfs.calculateQuickSmoothness(gray)
+
+	// Weighted combination for quick check
+	quickScore := (textureScore*0.25 +
+		edgeScore*0.20 +
+		reflectionScore*0.15 +
+		frequencyScore*0.15 +
+		colorVariance*0.15 +
+		smoothnessScore*0.10)
+
+	// Enhanced threshold with multi-factor validation
+	baseThreshold := 0.30
+
+	// Fail fast checks - reject immediately if critical indicators are very poor
+	if textureScore < 0.10 || edgeScore < 0.10 {
+		return false // Likely a print or painting
+	}
+
+	if smoothnessScore < 0.15 {
+		return false // Too smooth to be real skin
+	}
+
+	return quickScore > baseThreshold
+}
+
+// calculateQuickFrequencyScore performs fast frequency domain analysis
+func (lfs *LocalFaceService) calculateQuickFrequencyScore(gray gocv.Mat) float64 {
+	// Simple high-pass filtering to detect fine details
+	blurred := gocv.NewMat()
+	defer blurred.Close()
+	gocv.GaussianBlur(gray, &blurred, image.Pt(5, 5), 2.0, 2.0, gocv.BorderDefault)
+
+	highFreq := gocv.NewMat()
+	defer highFreq.Close()
+	gocv.Subtract(gray, blurred, &highFreq)
+
+	// Calculate high-frequency energy
+	energy := 0.0
+	count := 0
+	for i := 0; i < highFreq.Rows(); i++ {
+		for j := 0; j < highFreq.Cols(); j++ {
+			val := float64(highFreq.GetUCharAt(i, j))
+			energy += val * val
+			count++
+		}
+	}
+
+	if count == 0 {
+		return 0.5
+	}
+
+	avgEnergy := energy / float64(count)
+
+	// Normalize (real faces typically have energy in range 50-500)
+	normalizedScore := avgEnergy / 500.0
+	return math.Min(normalizedScore, 1.0)
+}
+
+// calculateQuickColorVariance calculates fast color variation metric
+func (lfs *LocalFaceService) calculateQuickColorVariance(faceRegion gocv.Mat) float64 {
+	if faceRegion.Channels() < 3 {
+		return 0.5 // Grayscale image, return neutral
+	}
+
+	// Split channels
+	channels := gocv.Split(faceRegion)
+	defer func() {
+		for _, ch := range channels {
+			ch.Close()
+		}
+	}()
+
+	if len(channels) < 3 {
+		return 0.5
+	}
+
+	// Calculate variance for each channel
+	totalVariance := 0.0
+	for _, ch := range channels {
+		mean := lfs.calculateMean(ch)
+		variance := lfs.calculateVariance(ch, mean)
+		totalVariance += variance
+	}
+
+	avgVariance := totalVariance / 3.0
+
+	// Normalize (typical variance for natural faces: 200-2000)
+	normalizedScore := avgVariance / 2000.0
+	return math.Min(normalizedScore, 1.0)
+}
+
+// calculateQuickSmoothness calculates how smooth the image is
+func (lfs *LocalFaceService) calculateQuickSmoothness(gray gocv.Mat) float64 {
+	// Calculate local standard deviations in small windows
+	windowSize := 5
+	smoothRegions := 0
+	totalRegions := 0
+
+	step := windowSize
+	for i := 0; i < gray.Rows()-windowSize; i += step {
+		for j := 0; j < gray.Cols()-windowSize; j += step {
+			roi := gray.Region(image.Rect(j, i, j+windowSize, i+windowSize))
+			mean := lfs.calculateMean(roi)
+			variance := lfs.calculateVariance(roi, mean)
+			roi.Close()
+
+			totalRegions++
+
+			// Very low variance indicates smoothness
+			if variance < 50 {
+				smoothRegions++
+			}
+		}
+	}
+
+	if totalRegions == 0 {
+		return 0.5
+	}
+
+	smoothnessRatio := float64(smoothRegions) / float64(totalRegions)
+	return smoothnessRatio
 }
 
 // calculateAdvancedTextureScore calculates advanced texture analysis using multiple methods
@@ -2978,19 +3393,19 @@ func (lfs *LocalFaceService) calculateLBPScore(gray gocv.Mat) float64 {
 	// Calculate LBP histogram for texture analysis
 	rows := gray.Rows()
 	cols := gray.Cols()
-	
+
 	// LBP histogram (256 bins for 8-neighbor LBP)
 	histogram := make([]int, 256)
 	totalPatterns := 0
-	
+
 	// Sample step for performance (every 2nd pixel)
 	sampleStep := 2
-	
+
 	// Calculate LBP for each pixel (excluding borders)
 	for i := sampleStep; i < rows-sampleStep; i += sampleStep {
 		for j := sampleStep; j < cols-sampleStep; j += sampleStep {
 			center := float64(gray.GetUCharAt(i, j))
-			
+
 			// Calculate 8-neighbor LBP pattern
 			var pattern uint8 = 0
 			neighbors := []struct{ dy, dx int }{
@@ -2998,7 +3413,7 @@ func (lfs *LocalFaceService) calculateLBPScore(gray gocv.Mat) float64 {
 				{0, 1}, {1, 1}, {1, 0},
 				{1, -1}, {0, -1},
 			}
-			
+
 			for bit, neighbor := range neighbors {
 				ny := i + neighbor.dy
 				nx := j + neighbor.dx
@@ -3009,16 +3424,16 @@ func (lfs *LocalFaceService) calculateLBPScore(gray gocv.Mat) float64 {
 					}
 				}
 			}
-			
+
 			histogram[pattern]++
 			totalPatterns++
 		}
 	}
-	
+
 	if totalPatterns == 0 {
 		return 0.5
 	}
-	
+
 	// Calculate histogram uniformity and entropy for texture richness
 	// Higher entropy = more texture variation = more natural
 	entropy := 0.0
@@ -3028,13 +3443,13 @@ func (lfs *LocalFaceService) calculateLBPScore(gray gocv.Mat) float64 {
 			entropy -= probability * math.Log2(probability)
 		}
 	}
-	
+
 	// Normalize entropy (max entropy for 256 bins is log2(256) = 8)
 	lbpScore := math.Min(entropy/8.0, 1.0)
-	
+
 	// Round to 6 decimal places for deterministic behavior
 	lbpScore = math.Round(lbpScore*1000000) / 1000000
-	
+
 	// Ensure valid range
 	if math.IsNaN(lbpScore) || math.IsInf(lbpScore, 0) {
 		return 0.5
@@ -3045,7 +3460,7 @@ func (lfs *LocalFaceService) calculateLBPScore(gray gocv.Mat) float64 {
 	if lbpScore > 1 {
 		lbpScore = 1
 	}
-	
+
 	return lbpScore
 }
 
@@ -3057,41 +3472,41 @@ func (lfs *LocalFaceService) calculateLPQScore(gray gocv.Mat) float64 {
 
 	// Improved LPQ using multi-scale gradient phase analysis
 	// LPQ analyzes local frequency components using phase information
-	
+
 	// Calculate gradients at multiple scales for phase analysis
 	sobelX := gocv.NewMat()
 	sobelY := gocv.NewMat()
 	defer sobelX.Close()
 	defer sobelY.Close()
-	
+
 	gocv.Sobel(gray, &sobelX, gocv.MatTypeCV64F, 1, 0, 3, 1, 0, gocv.BorderDefault)
 	gocv.Sobel(gray, &sobelY, gocv.MatTypeCV64F, 0, 1, 3, 1, 0, gocv.BorderDefault)
-	
+
 	// Calculate phase angles
 	phase := gocv.NewMat()
 	defer phase.Close()
 	gocv.Phase(sobelX, sobelY, &phase, false)
-	
+
 	// Calculate magnitude for weighting
 	magnitude := gocv.NewMat()
 	defer magnitude.Close()
 	gocv.Magnitude(sobelX, sobelY, &magnitude)
-	
+
 	// Analyze local phase patterns in blocks
 	rows := phase.Rows()
 	cols := phase.Cols()
 	blockSize := 7
 	sampleStep := 3
-	
+
 	var phaseVarianceSum float64
 	blockCount := 0
-	
+
 	for i := 0; i < rows-blockSize; i += sampleStep {
 		for j := 0; j < cols-blockSize; j += sampleStep {
 			// Calculate phase variance in this block
 			var phaseSum, magnitudeSum float64
 			pixelCount := 0
-			
+
 			for y := i; y < i+blockSize && y < rows; y++ {
 				for x := j; x < j+blockSize && x < cols; x++ {
 					phaseVal, ok := lfs.getPixelValue(phase, y, x)
@@ -3102,18 +3517,18 @@ func (lfs *LocalFaceService) calculateLPQScore(gray gocv.Mat) float64 {
 					if !ok || math.IsNaN(magVal) || math.IsInf(magVal, 0) {
 						continue
 					}
-					
+
 					phaseSum += phaseVal
 					magnitudeSum += magVal
 					pixelCount++
 				}
 			}
-			
+
 			if pixelCount > 0 && magnitudeSum > 0 {
 				// Calculate phase variance weighted by magnitude
 				meanPhase := phaseSum / float64(pixelCount)
 				var variance float64
-				
+
 				for y := i; y < i+blockSize && y < rows; y++ {
 					for x := j; x < j+blockSize && x < cols; x++ {
 						phaseVal, ok := lfs.getPixelValue(phase, y, x)
@@ -3124,28 +3539,28 @@ func (lfs *LocalFaceService) calculateLPQScore(gray gocv.Mat) float64 {
 						variance += diff * diff
 					}
 				}
-				
+
 				variance /= float64(pixelCount)
 				phaseVarianceSum += variance
 				blockCount++
 			}
 		}
 	}
-	
+
 	if blockCount == 0 {
 		return 0.5
 	}
-	
+
 	// Average phase variance across blocks
 	avgPhaseVariance := phaseVarianceSum / float64(blockCount)
-	
+
 	// Normalize to 0-1 range (higher phase variance = richer texture = more natural)
 	// ADJUSTED: Reduced denominator from 10.0 to 5.0 for better sensitivity to real faces
 	lpqScore := math.Min(avgPhaseVariance/5.0, 1.0)
-	
+
 	// Round to 6 decimal places for deterministic behavior
 	lpqScore = math.Round(lpqScore*1000000) / 1000000
-	
+
 	// Ensure valid range
 	if math.IsNaN(lpqScore) || math.IsInf(lpqScore, 0) {
 		return 0.5
@@ -3156,7 +3571,7 @@ func (lfs *LocalFaceService) calculateLPQScore(gray gocv.Mat) float64 {
 	if lpqScore > 1 {
 		lpqScore = 1
 	}
-	
+
 	return lpqScore
 }
 
@@ -3681,10 +4096,10 @@ func (lfs *LocalFaceService) calculateLightingConsistencyScore(faceRegion gocv.M
 	// Too little variance = flat/artificial lighting (spoof)
 	// Too much variance = harsh/unnatural lighting (spoof)
 	// Adjust optimal variance range based on brightness level
-	
+
 	// Calculate mean brightness to adjust expectations
 	meanBrightness := avgMean
-	
+
 	// Adjust optimal variance range based on brightness
 	// Brighter images naturally have higher variance
 	var optimalMin, optimalMax float64
@@ -3701,7 +4116,7 @@ func (lfs *LocalFaceService) calculateLightingConsistencyScore(faceRegion gocv.M
 		optimalMin = 200.0
 		optimalMax = 2000.0
 	}
-	
+
 	var lightingScore float64
 	if variance >= optimalMin && variance <= optimalMax {
 		// Optimal natural lighting variance
@@ -4126,39 +4541,94 @@ func (lfs *LocalFaceService) calculateEnhancedSpoofPenalty(scores []float64, lbp
 
 // preprocessFaceForComparison performs comprehensive face preprocessing for comparison
 func (lfs *LocalFaceService) preprocessFaceForComparison(grayFace gocv.Mat) gocv.Mat {
-	// 1. Resize to standard size with aspect ratio preservation
-	standardSize := image.Pt(150, 150)
-	resized := gocv.NewMat()
-	gocv.Resize(grayFace, &resized, standardSize, 0, 0, gocv.InterpolationCubic)
+	// Enhanced preprocessing pipeline for better accuracy
 
-	// 2. Apply histogram equalization for better contrast
-	equalized := gocv.NewMat()
-	gocv.EqualizeHist(resized, &equalized)
+	// 1. Resize to standard size with high-quality interpolation
+	standardSize := image.Pt(160, 160) // Slightly larger for better feature preservation
+	resized := gocv.NewMat()
+	gocv.Resize(grayFace, &resized, standardSize, 0, 0, gocv.InterpolationLanczos4)
+
+	// 2. Advanced lighting normalization using adaptive techniques
+	lightingNormalized := lfs.advancedLightingNormalization(resized)
 	resized.Close()
 
-	// 3. Apply Gaussian blur to reduce noise
-	blurred := gocv.NewMat()
-	gocv.GaussianBlur(equalized, &blurred, image.Pt(3, 3), 0, 0, gocv.BorderDefault)
-	equalized.Close()
-
-	// 4. Apply CLAHE (Contrast Limited Adaptive Histogram Equalization) for local contrast enhancement
-	clahe := gocv.NewCLAHE()
+	// 3. Apply advanced CLAHE with optimal parameters for faces
+	clahe := gocv.NewCLAHEWithParams(2.0, image.Pt(8, 8)) // Optimized for facial features
 	enhanced := gocv.NewMat()
-	clahe.Apply(blurred, &enhanced)
+	clahe.Apply(lightingNormalized, &enhanced)
 	clahe.Close()
-	blurred.Close()
+	lightingNormalized.Close()
 
-	// 5. Normalize intensity values
-	normalized := gocv.NewMat()
-	gocv.Normalize(enhanced, &normalized, 0, 255, gocv.NormMinMax)
+	// 4. Denoise while preserving edges (critical for face matching)
+	denoised := gocv.NewMat()
+	gocv.FastNlMeansDenoising(enhanced, &denoised)
 	enhanced.Close()
 
-	// 6. Apply bilateral filter for edge-preserving smoothing
-	filtered := gocv.NewMat()
-	gocv.BilateralFilter(normalized, &filtered, 9, 75, 75)
+	// 5. Sharpen subtle features for better discrimination
+	sharpened := lfs.enhanceFacialFeatures(denoised)
+	denoised.Close()
+
+	// 6. Final normalization with robust scaling
+	normalized := gocv.NewMat()
+	gocv.Normalize(sharpened, &normalized, 0, 255, gocv.NormMinMax)
+	sharpened.Close()
+
+	// 7. Subtle Gaussian smoothing to reduce minor artifacts
+	final := gocv.NewMat()
+	gocv.GaussianBlur(normalized, &final, image.Pt(3, 3), 0.5, 0.5, gocv.BorderDefault)
 	normalized.Close()
 
-	return filtered
+	return final
+}
+
+// advancedLightingNormalization performs sophisticated lighting correction
+func (lfs *LocalFaceService) advancedLightingNormalization(img gocv.Mat) gocv.Mat {
+	// Normalize lighting using DoG (Difference of Gaussians) approach
+	// This is more robust than simple histogram equalization
+
+	// Create two Gaussian blurs with different sigma values
+	blur1 := gocv.NewMat()
+	blur2 := gocv.NewMat()
+	defer blur1.Close()
+	defer blur2.Close()
+
+	gocv.GaussianBlur(img, &blur1, image.Pt(0, 0), 1.0, 1.0, gocv.BorderDefault)
+	gocv.GaussianBlur(img, &blur2, image.Pt(0, 0), 2.0, 2.0, gocv.BorderDefault)
+
+	// Subtract to get DoG
+	dog := gocv.NewMat()
+	gocv.Subtract(blur1, blur2, &dog)
+
+	// Add back to original for enhancement
+	enhanced := gocv.NewMat()
+	gocv.AddWeighted(img, 0.7, dog, 0.3, 0, &enhanced)
+	dog.Close()
+
+	// Apply contrast stretching for better dynamic range
+	result := gocv.NewMat()
+	gocv.Normalize(enhanced, &result, 0, 255, gocv.NormMinMax)
+	enhanced.Close()
+
+	return result
+}
+
+// enhanceFacialFeatures sharpens facial features for better matching
+func (lfs *LocalFaceService) enhanceFacialFeatures(img gocv.Mat) gocv.Mat {
+	// Unsharp masking for subtle feature enhancement
+	blurred := gocv.NewMat()
+	defer blurred.Close()
+	gocv.GaussianBlur(img, &blurred, image.Pt(0, 0), 1.5, 1.5, gocv.BorderDefault)
+
+	// Calculate high-frequency component
+	highFreq := gocv.NewMat()
+	gocv.Subtract(img, blurred, &highFreq)
+
+	// Add enhanced high frequencies back
+	sharpened := gocv.NewMat()
+	gocv.AddWeighted(img, 1.0, highFreq, 0.3, 0, &sharpened)
+	highFreq.Close()
+
+	return sharpened
 }
 
 // calculateAdvancedImageQuality calculates comprehensive image quality assessment
@@ -4946,8 +5416,18 @@ func (lfs *LocalFaceService) analyzeLiveness(faceRegion, fullImg gocv.Mat) (floa
 		},
 	})
 
-	// Apply spoof penalty system for suspicious patterns
-	spoofPenalty := lfs.calculateEnhancedSpoofPenalty([]float64{textureScore, edgeScore, colorScore, reflectionScore, frequencyScore}, lbpScore, lpqScore)
+	// Apply enhanced spoof penalty system with painting detection
+	spoofPenalty := lfs.enhancedSpoofPenaltyWithPaintingDetection(
+		faceRegion,
+		sanitizedGray,
+		textureScore,
+		edgeScore,
+		colorScore,
+		reflectionScore,
+		frequencyScore,
+		lbpScore,
+		lpqScore,
+	)
 	livenessScore := baseLivenessScore - spoofPenalty
 
 	logger.Info("🔍 DEBUG: Spoof penalty calculation", logger.LoggerOptions{
@@ -5386,7 +5866,7 @@ func (lfs *LocalFaceService) calculateChannelVariance(img gocv.Mat, channel int)
 	// Determine which color space to use based on channel parameter
 	var colorSpace gocv.Mat
 	var normalizationFactor float64
-	
+
 	switch channel {
 	case 0: // RGB variance
 		colorSpace = img.Clone()
@@ -5676,22 +6156,46 @@ func (lfs *LocalFaceService) calculateLightingScore(img gocv.Mat) float64 {
 
 // calculateConfidence calculates confidence based on similarity and quality
 func (lfs *LocalFaceService) calculateConfidence(similarity, quality1, quality2 float64) float64 {
-	// Base confidence on similarity
-	confidence := similarity
+	// ENHANCED CONFIDENCE CALCULATION
+	// More sophisticated confidence scoring based on multiple factors
 
-	// Adjust based on image quality
+	// Base confidence on similarity score
+	baseConfidence := similarity
+
+	// Factor 1: Image quality assessment
 	avgQuality := (quality1 + quality2) / 2.0
-	qualityAdjustment := (avgQuality - 0.5) * 0.2 // ±10% adjustment
+	qualityBoost := 0.0
+	if avgQuality > 0.8 {
+		// Excellent quality - boost confidence
+		qualityBoost = (avgQuality - 0.8) * 0.5 // Up to +10%
+	} else if avgQuality < 0.4 {
+		// Poor quality - reduce confidence
+		qualityBoost = (avgQuality - 0.4) * 0.3 // Up to -12%
+	}
 
-	confidence += qualityAdjustment
+	// Factor 2: Quality consistency (penalize large differences)
+	qualityDiff := math.Abs(quality1 - quality2)
+	qualityPenalty := 0.0
+	if qualityDiff > 0.3 {
+		// Large quality difference reduces confidence
+		qualityPenalty = qualityDiff * 0.15
+	}
+
+	// Factor 3: Non-linearity adjustment
+	// High similarity should have higher confidence, low similarity should have lower confidence
+	if similarity > 0.75 {
+		// Boost high similarity scores
+		baseConfidence += (similarity - 0.75) * 0.4
+	} else if similarity < 0.4 {
+		// Further reduce low similarity scores
+		baseConfidence -= (0.4 - similarity) * 0.3
+	}
+
+	// Combine all factors
+	confidence := baseConfidence + qualityBoost - qualityPenalty
 
 	// Ensure confidence is between 0 and 1
-	if confidence < 0 {
-		confidence = 0
-	}
-	if confidence > 1 {
-		confidence = 1
-	}
+	confidence = math.Max(0, math.Min(1, confidence))
 
 	return confidence
 }
@@ -5731,6 +6235,467 @@ func (lfs *LocalFaceService) updateStats(processingTime int64, success bool) {
 // GetStats returns processing statistics
 func (lfs *LocalFaceService) GetStats() ProcessingStats {
 	return lfs.processingStats
+}
+
+// ============================================================================
+// PRODUCTION-GRADE PAINTING & SPOOF DETECTION ENHANCEMENTS
+// ============================================================================
+// The following functions implement advanced anti-spoofing techniques
+// specifically designed to detect paintings, printed photos, and other
+// sophisticated spoofing attacks.
+// ============================================================================
+
+// detectPaintingCharacteristics detects if an image has painting-like characteristics
+// This is a key function for identifying artistic renderings vs real photographs
+func (lfs *LocalFaceService) detectPaintingCharacteristics(faceRegion, gray gocv.Mat) float64 {
+	paintingIndicators := 0.0
+	totalChecks := 0.0
+
+	// 1. Brush Stroke Pattern Detection
+	// Paintings have directional patterns from brush strokes
+	brushStrokeScore := lfs.detectBrushStrokes(gray)
+	if brushStrokeScore > 0.6 {
+		paintingIndicators += 1.0
+	}
+	totalChecks += 1.0
+
+	// 2. Artificial Smoothness Detection
+	// Paintings lack the micro-texture of real skin
+	smoothnessScore := lfs.detectArtificialSmoothness(gray)
+	if smoothnessScore > 0.7 {
+		paintingIndicators += 1.0
+	}
+	totalChecks += 1.0
+
+	// 3. Skin Pore Absence Detection
+	// Real human skin has visible pores; paintings don't
+	poreAbsenceScore := lfs.detectSkinPoreAbsence(gray)
+	if poreAbsenceScore > 0.65 {
+		paintingIndicators += 1.0
+	}
+	totalChecks += 1.0
+
+	// 4. Color Blending Artificiality
+	// Painted colors blend differently than photographed ones
+	colorBlendingScore := lfs.detectArtificialColorBlending(faceRegion)
+	if colorBlendingScore > 0.7 {
+		paintingIndicators += 1.0
+	}
+	totalChecks += 1.0
+
+	// 5. Canvas Texture Detection
+	// Many paintings show canvas texture patterns
+	canvasScore := lfs.detectCanvasTexture(gray)
+	if canvasScore > 0.6 {
+		paintingIndicators += 1.0
+	}
+	totalChecks += 1.0
+
+	// 6. Unnatural Edge Characteristics
+	// Painted edges differ from photographic edges
+	edgeScore := lfs.detectPaintedEdges(gray)
+	if edgeScore > 0.65 {
+		paintingIndicators += 1.0
+	}
+	totalChecks += 1.0
+
+	// Calculate painting probability
+	paintingProbability := paintingIndicators / totalChecks
+
+	logger.Info("🎨 Painting detection analysis", logger.LoggerOptions{
+		Key: "painting_detection",
+		Data: map[string]interface{}{
+			"brush_stroke_score":   brushStrokeScore,
+			"smoothness_score":     smoothnessScore,
+			"pore_absence_score":   poreAbsenceScore,
+			"color_blending_score": colorBlendingScore,
+			"canvas_score":         canvasScore,
+			"edge_score":           edgeScore,
+			"painting_probability": paintingProbability,
+			"indicators_triggered": paintingIndicators,
+			"total_checks":         totalChecks,
+		},
+	})
+
+	return paintingProbability
+}
+
+// detectBrushStrokes detects directional patterns typical of brush strokes in paintings
+func (lfs *LocalFaceService) detectBrushStrokes(gray gocv.Mat) float64 {
+	if gray.Empty() || gray.Rows() < 20 || gray.Cols() < 20 {
+		return 0.0
+	}
+
+	// Use directional Sobel filters to detect brush stroke patterns
+	// Paintings have stronger directional coherence from brush strokes
+	orientations := []struct{ dx, dy int }{
+		{1, 0},  // Horizontal
+		{0, 1},  // Vertical
+		{1, 1},  // Diagonal 1
+		{1, -1}, // Diagonal 2
+	}
+
+	var maxDirectionalEnergy float64 = 0
+	var totalEnergy float64 = 0
+
+	for _, orient := range orientations {
+		// Apply directional Sobel
+		sobel := gocv.NewMat()
+		defer sobel.Close()
+		gocv.Sobel(gray, &sobel, gocv.MatTypeCV64F, orient.dx, orient.dy, 3, 1, 0, gocv.BorderDefault)
+
+		// Calculate energy in this direction
+		energy := lfs.calculateMatEnergy(sobel)
+		totalEnergy += energy
+		if energy > maxDirectionalEnergy {
+			maxDirectionalEnergy = energy
+		}
+	}
+
+	// Brush strokes show high directional dominance
+	// Real photos have more balanced directional energy
+	if totalEnergy == 0 {
+		return 0.0
+	}
+
+	directionalDominance := maxDirectionalEnergy / totalEnergy
+
+	// Paintings typically show directional dominance > 0.40
+	// Real photos are usually < 0.35
+	brushStrokeScore := 0.0
+	if directionalDominance > 0.40 {
+		brushStrokeScore = math.Min((directionalDominance-0.35)/0.20, 1.0)
+	}
+
+	return brushStrokeScore
+}
+
+// detectArtificialSmoothness detects unnatural smoothness typical of paintings
+func (lfs *LocalFaceService) detectArtificialSmoothness(gray gocv.Mat) float64 {
+	if gray.Empty() {
+		return 0.0
+	}
+
+	// Calculate local standard deviation in small windows
+	// Real skin has micro-variations; paintings are too smooth
+	windowSize := 7
+	smoothRegions := 0
+	totalRegions := 0
+
+	rows := gray.Rows()
+	cols := gray.Cols()
+	step := windowSize
+
+	for i := 0; i < rows-windowSize; i += step {
+		for j := 0; j < cols-windowSize; j += step {
+			// Extract window
+			roi := gray.Region(image.Rect(j, i, j+windowSize, i+windowSize))
+
+			// Calculate local std deviation
+			stdDev := lfs.calculateStdDev(roi)
+			roi.Close()
+
+			totalRegions++
+
+			// Paintings have very low local variation (stdDev < 8 on 0-255 scale)
+			// Real skin usually has stdDev > 10 due to micro-texture
+			if stdDev < 8.0 {
+				smoothRegions++
+			}
+		}
+	}
+
+	if totalRegions == 0 {
+		return 0.0
+	}
+
+	// Calculate smoothness ratio
+	smoothnessRatio := float64(smoothRegions) / float64(totalRegions)
+
+	// Paintings typically have > 60% smooth regions
+	// Real photos have < 40%
+	smoothnessScore := 0.0
+	if smoothnessRatio > 0.5 {
+		smoothnessScore = math.Min((smoothnessRatio-0.40)/0.40, 1.0)
+	}
+
+	return smoothnessScore
+}
+
+// detectSkinPoreAbsence detects absence of natural skin pores (painting indicator)
+func (lfs *LocalFaceService) detectSkinPoreAbsence(gray gocv.Mat) float64 {
+	if gray.Empty() {
+		return 0.0
+	}
+
+	// Real human skin has visible pores at high frequencies
+	// Apply high-pass filter to isolate fine details
+	blurred := gocv.NewMat()
+	defer blurred.Close()
+	gocv.GaussianBlur(gray, &blurred, image.Pt(5, 5), 2.0, 2.0, gocv.BorderDefault)
+
+	// High-frequency component = original - blurred
+	highFreq := gocv.NewMat()
+	defer highFreq.Close()
+	gocv.Subtract(gray, blurred, &highFreq)
+
+	// Calculate high-frequency energy
+	highFreqEnergy := lfs.calculateMatEnergy(highFreq)
+
+	// Normalize by image size
+	normalizedEnergy := highFreqEnergy / float64(gray.Rows()*gray.Cols())
+
+	// Real skin has high-frequency energy > 15
+	// Paintings have much lower (< 8)
+	poreAbsenceScore := 0.0
+	if normalizedEnergy < 10.0 {
+		poreAbsenceScore = math.Min((10.0-normalizedEnergy)/10.0, 1.0)
+	}
+
+	return poreAbsenceScore
+}
+
+// detectArtificialColorBlending detects unnatural color blending in paintings
+func (lfs *LocalFaceService) detectArtificialColorBlending(faceRegion gocv.Mat) float64 {
+	if faceRegion.Empty() {
+		return 0.0
+	}
+
+	// Convert to LAB color space (better for color analysis)
+	lab := gocv.NewMat()
+	defer lab.Close()
+	gocv.CvtColor(faceRegion, &lab, gocv.ColorBGRToLab)
+
+	// Split channels
+	channels := gocv.Split(lab)
+	defer func() {
+		for _, ch := range channels {
+			ch.Close()
+		}
+	}()
+
+	if len(channels) != 3 {
+		return 0.0
+	}
+
+	// Calculate color gradient smoothness
+	// Paintings have overly smooth color transitions
+	aChannel := channels[1] // a* channel (green-red)
+
+	// Calculate gradients on a* channel (color information)
+	aGradX := gocv.NewMat()
+	aGradY := gocv.NewMat()
+	defer aGradX.Close()
+	defer aGradY.Close()
+
+	gocv.Sobel(aChannel, &aGradX, gocv.MatTypeCV64F, 1, 0, 3, 1, 0, gocv.BorderDefault)
+	gocv.Sobel(aChannel, &aGradY, gocv.MatTypeCV64F, 0, 1, 3, 1, 0, gocv.BorderDefault)
+
+	// Calculate gradient magnitude
+	gradMag := gocv.NewMat()
+	defer gradMag.Close()
+	gocv.Magnitude(aGradX, aGradY, &gradMag)
+
+	// Calculate mean gradient
+	meanGrad := lfs.calculateMean(gradMag)
+
+	// Paintings have very low color gradients (< 5)
+	// Real photos have higher (> 8)
+	artificialBlendingScore := 0.0
+	if meanGrad < 7.0 {
+		artificialBlendingScore = math.Min((7.0-meanGrad)/7.0, 1.0)
+	}
+
+	return artificialBlendingScore
+}
+
+// detectCanvasTexture detects regular texture patterns typical of canvas
+func (lfs *LocalFaceService) detectCanvasTexture(gray gocv.Mat) float64 {
+	if gray.Empty() {
+		return 0.0
+	}
+
+	// Canvas has a regular woven pattern at high frequencies
+	// Use FFT to detect regular patterns
+	// For simplicity, use autocorrelation as a proxy
+
+	// Calculate autocorrelation to find periodic patterns
+	// High autocorrelation at small lags indicates regular texture
+
+	// Simplified approach: check for regular texture using variance of local means
+	windowSize := 15
+	localMeans := []float64{}
+
+	rows := gray.Rows()
+	cols := gray.Cols()
+
+	for i := 0; i < rows-windowSize; i += windowSize / 2 {
+		for j := 0; j < cols-windowSize; j += windowSize / 2 {
+			roi := gray.Region(image.Rect(j, i, j+windowSize, i+windowSize))
+			mean := lfs.calculateMean(roi)
+			localMeans = append(localMeans, mean)
+			roi.Close()
+		}
+	}
+
+	if len(localMeans) < 2 {
+		return 0.0
+	}
+
+	// Calculate variance of local means
+	// Canvas shows LOW variance (more uniform)
+	// Real skin shows HIGHER variance
+	meanOfMeans := 0.0
+	for _, val := range localMeans {
+		meanOfMeans += val
+	}
+	meanOfMeans /= float64(len(localMeans))
+
+	variance := 0.0
+	for _, val := range localMeans {
+		diff := val - meanOfMeans
+		variance += diff * diff
+	}
+	variance /= float64(len(localMeans))
+
+	// Canvas typically has variance < 50
+	// Real photos have > 100
+	canvasScore := 0.0
+	if variance < 80.0 {
+		canvasScore = math.Min((80.0-variance)/80.0, 1.0)
+	}
+
+	return canvasScore
+}
+
+// detectPaintedEdges detects edge characteristics typical of paintings
+func (lfs *LocalFaceService) detectPaintedEdges(gray gocv.Mat) float64 {
+	if gray.Empty() {
+		return 0.0
+	}
+
+	// Detect edges using Canny
+	edges := gocv.NewMat()
+	defer edges.Close()
+	gocv.Canny(gray, &edges, 50, 150)
+
+	// Paintings have:
+	// 1. Fewer sharp edges (more blended)
+	// 2. Less edge complexity
+
+	edgePixels := gocv.CountNonZero(edges)
+	totalPixels := gray.Rows() * gray.Cols()
+	edgeDensity := float64(edgePixels) / float64(totalPixels)
+
+	// Calculate edge complexity using edge contours
+	contours := gocv.FindContours(edges, gocv.RetrievalList, gocv.ChainApproxSimple)
+
+	// Paintings have fewer, simpler contours
+	// Real photos have many small, complex contours
+	complexityScore := float64(contours.Size()) / float64(totalPixels) * 10000.0
+
+	// Combine metrics
+	// Low edge density + low complexity = painting
+	paintedEdgeScore := 0.0
+	if edgeDensity < 0.08 && complexityScore < 5.0 {
+		paintedEdgeScore = 0.7
+	} else if edgeDensity < 0.10 {
+		paintedEdgeScore = 0.5
+	} else if complexityScore < 3.0 {
+		paintedEdgeScore = 0.6
+	}
+
+	return paintedEdgeScore
+}
+
+// calculateMatEnergy calculates the energy (sum of squared values) of a Mat
+func (lfs *LocalFaceService) calculateMatEnergy(mat gocv.Mat) float64 {
+	if mat.Empty() {
+		return 0.0
+	}
+
+	// Convert to float for accurate calculation
+	matFloat := gocv.NewMat()
+	defer matFloat.Close()
+	mat.ConvertTo(&matFloat, gocv.MatTypeCV64F)
+
+	// Calculate sum of squares
+	energy := 0.0
+	for i := 0; i < matFloat.Rows(); i++ {
+		for j := 0; j < matFloat.Cols(); j++ {
+			val, ok := lfs.getPixelValue(matFloat, i, j)
+			if ok && !math.IsNaN(val) && !math.IsInf(val, 0) {
+				energy += val * val
+			}
+		}
+	}
+
+	return energy
+}
+
+// calculateStdDev calculates standard deviation of a Mat
+func (lfs *LocalFaceService) calculateStdDev(mat gocv.Mat) float64 {
+	if mat.Empty() {
+		return 0.0
+	}
+
+	mean := lfs.calculateMean(mat)
+	variance := lfs.calculateVariance(mat, mean)
+	return math.Sqrt(variance)
+}
+
+// enhancedSpoofPenaltyWithPaintingDetection applies enhanced penalties including painting detection
+func (lfs *LocalFaceService) enhancedSpoofPenaltyWithPaintingDetection(
+	faceRegion, gray gocv.Mat,
+	textureScore, edgeScore, colorScore, reflectionScore, frequencyScore, lbpScore, lpqScore float64,
+) float64 {
+	// Start with existing penalty calculation
+	basePenalty := lfs.calculateEnhancedSpoofPenalty(
+		[]float64{textureScore, edgeScore, colorScore, reflectionScore, frequencyScore},
+		lbpScore,
+		lpqScore,
+	)
+
+	// Add painting-specific detection
+	paintingProbability := lfs.detectPaintingCharacteristics(faceRegion, gray)
+
+	// Apply aggressive penalty for painting characteristics
+	paintingPenalty := 0.0
+	if paintingProbability > 0.5 {
+		// High confidence it's a painting - major penalty
+		paintingPenalty = paintingProbability * 0.8
+		logger.Error("⚠️ HIGH PAINTING PROBABILITY DETECTED", logger.LoggerOptions{
+			Key: "painting_detected",
+			Data: map[string]interface{}{
+				"painting_probability": paintingProbability,
+				"penalty_applied":      paintingPenalty,
+			},
+		})
+	} else if paintingProbability > 0.35 {
+		// Moderate suspicion - moderate penalty
+		paintingPenalty = paintingProbability * 0.5
+		logger.Info("⚠️ Moderate painting characteristics detected", logger.LoggerOptions{
+			Key: "painting_suspected",
+			Data: map[string]interface{}{
+				"painting_probability": paintingProbability,
+				"penalty_applied":      paintingPenalty,
+			},
+		})
+	}
+
+	totalPenalty := basePenalty + paintingPenalty
+
+	logger.Info("🛡️ Enhanced spoof penalty calculation", logger.LoggerOptions{
+		Key: "spoof_penalty_enhanced",
+		Data: map[string]interface{}{
+			"base_penalty":         basePenalty,
+			"painting_penalty":     paintingPenalty,
+			"painting_probability": paintingProbability,
+			"total_penalty":        totalPenalty,
+		},
+	})
+
+	return totalPenalty
 }
 
 // Close releases resources

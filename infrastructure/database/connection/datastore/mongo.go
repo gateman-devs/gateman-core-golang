@@ -28,6 +28,7 @@ var (
 	KYCIdentityDataModel    *mongo.Collection
 	HelpCenterModel         *mongo.Collection
 	RequestActivityLogModel *mongo.Collection
+	BillingLogModel         *mongo.Collection
 )
 
 type MongoClient struct {
@@ -236,6 +237,21 @@ func setUpIndexes(ctx context.Context, db *mongo.Database) {
 		Options: options.Index(),
 	}, {
 		Keys:    bson.D{{Key: "ipAddress", Value: 1}},
+		Options: options.Index(),
+	}})
+
+	BillingLogModel = db.Collection("BillingLogs")
+	BillingLogModel.Indexes().CreateMany(ctx, []mongo.IndexModel{{
+		Keys:    bson.D{{Key: "workspaceID", Value: 1}},
+		Options: options.Index(),
+	}, {
+		Keys:    bson.D{{Key: "requestID", Value: 1}},
+		Options: options.Index(),
+	}, {
+		Keys:    bson.D{{Key: "activityLogID", Value: 1}},
+		Options: options.Index(),
+	}, {
+		Keys:    bson.D{{Key: "createdAt", Value: -1}},
 		Options: options.Index(),
 	}})
 

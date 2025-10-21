@@ -91,7 +91,6 @@ func (s *ginServer) Start() {
 		webRoutev1.UserRouter(routerV1)
 		webRoutev1.WorkspaceRouter(routerV1)
 		webRoutev1.MiscRouter(routerV1)
-		webRoutev1.BiometricRouter(routerV1)
 	}
 
 	publicAPI := api.Group("/public")
@@ -122,11 +121,40 @@ func (s *ginServer) Start() {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read API documentation"})
 			return
 		}
-		var jsonData interface{}
+		var jsonData map[string]interface{}
 		if err := json.Unmarshal(fileData, &jsonData); err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse API documentation"})
 			return
 		}
+
+		// Load markdown content from files if pages exist
+		if pages, ok := jsonData["pages"].(map[string]interface{}); ok {
+			for pageKey, pageValue := range pages {
+				if pageData, ok := pageValue.(map[string]interface{}); ok {
+					// Check if there's a contentPath field
+					if contentPath, ok := pageData["contentPath"].(string); ok {
+						// Read the markdown file
+						markdownContent, err := os.ReadFile(contentPath)
+						if err != nil {
+							logger.Error("Failed to load markdown file", logger.LoggerOptions{
+								Key: "docs_markdown_load_error",
+								Data: map[string]interface{}{
+									"page":         pageKey,
+									"content_path": contentPath,
+									"error":        err.Error(),
+								},
+							})
+							// Keep contentPath in response if file not found
+							continue
+						}
+						// Replace contentPath with content
+						delete(pageData, "contentPath")
+						pageData["content"] = string(markdownContent)
+					}
+				}
+			}
+		}
+
 		ctx.JSON(http.StatusOK, jsonData)
 	})
 

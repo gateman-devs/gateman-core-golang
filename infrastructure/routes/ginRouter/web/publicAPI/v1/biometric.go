@@ -89,41 +89,5 @@ func BiometricRouter(router *gin.RouterGroup) {
 				},
 			})
 		})
-
-		biometricRouter.GET("/generate-challenge", func(ctx *gin.Context) {
-			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
-			controller.GenerateChallenge(&interfaces.ApplicationContext[any]{
-				Ctx:      ctx,
-				DeviceID: appContext.DeviceID,
-			})
-		})
-
-		// // Verify video liveness endpoint
-		biometricRouter.POST("/verify-video-liveness", func(ctx *gin.Context) {
-			appContext := ctx.MustGet("AppContext").(*interfaces.ApplicationContext[any])
-			var body dto.VideoLivenessVerificationRequest
-			if os.Getenv("APP_ENV") != "dev" {
-				// decryptedPayload, exists := ctx.Get("DecryptedBody")
-				// if !exists {
-				// 	apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
-				// 	return
-				// }
-				// json.Unmarshal([]byte(decryptedPayload.(string)), &body)
-				if err := ctx.ShouldBindJSON(&body); err != nil {
-					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
-					return
-				}
-			} else {
-				if err := ctx.ShouldBindJSON(&body); err != nil {
-					apperrors.ErrorProcessingPayload(ctx, appContext.GetHeader("X-Device-Id"))
-					return
-				}
-			}
-			controller.VideoLivenessCheck(&interfaces.ApplicationContext[dto.VideoLivenessVerificationRequest]{
-				Ctx:      ctx,
-				Body:     &body,
-				DeviceID: appContext.DeviceID,
-			})
-		})
 	}
 }

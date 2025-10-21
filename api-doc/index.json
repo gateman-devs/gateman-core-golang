@@ -93,9 +93,7 @@
                 "processing_time_ms": 3748,
                 "reference_liveness": null,
                 "test_liveness": null,
-                "liveness_process_time_ms": 0,
-                "request_id": "",
-                "timestamp": "2025-10-08T23:13:59.802387+01:00"
+                "liveness_process_time_ms": 0
               },
               "message": "Enhanced face comparison completed"
             }
@@ -113,9 +111,7 @@
                 "processing_time_ms": 2625,
                 "reference_liveness": null,
                 "test_liveness": null,
-                "liveness_process_time_ms": 0,
-                "request_id": "",
-                "timestamp": "2025-10-08T23:13:33.394071+01:00"
+                "liveness_process_time_ms": 0
               },
               "message": "Enhanced face comparison completed"
             }
@@ -147,26 +143,9 @@
             "comparison_metadata": {
               "similarity_method": "yunet_facenet",
               "threshold_used": 0.1,
-              "quality_adjustment": 0,
               "confidence_level": "high",
-              "feature_strength": 0.5738323359758971,
-              "processing_steps": [
-                {
-                  "step": "face_detection",
-                  "duration_ms": 1609,
-                  "success": true,
-                  "details": "Faces detected successfully"
-                },
-                {
-                  "step": "face_comparison",
-                  "duration_ms": 1609,
-                  "success": true,
-                  "details": "Face comparison completed (threshold: 0.10, match: true)"
-                }
-              ]
-            },
-            "request_id": "",
-            "timestamp": "2025-10-08T23:02:50.031014+01:00"
+              "feature_strength": 0.5738323359758971
+            }
           },
           "message": "Enhanced face comparison completed"
         }
@@ -214,9 +193,7 @@
               "threshold_used": 0.6,
               "spoof_score": 0,
               "confidence": 0.7059458932353999,
-              "processing_time_ms": 2960,
-              "request_id": "",
-              "timestamp": "2025-10-08T22:45:23.428105+01:00"
+              "processing_time_ms": 2960
             },
             "message": "Enhanced liveness check completed"
           }
@@ -230,9 +207,7 @@
               "threshold_used": 0.7,
               "spoof_score": 0,
               "confidence": 0.7059458932353999,
-              "processing_time_ms": 4032,
-              "request_id": "",
-              "timestamp": "2025-10-08T22:42:10.54574+01:00"
+              "processing_time_ms": 4032
             },
             "message": "Enhanced liveness check completed"
           }
@@ -274,25 +249,12 @@
                 }
               },
               "quality_metrics": {
-                "resolution": "unknown",
                 "sharpness": 0.499149049,
                 "brightness": 0.7400932876399999,
                 "contrast": 0.7400932876399999,
                 "face_size_percent": 90.0601268115975,
-                "face_position": {
-                  "x": 0.5,
-                  "y": 0.5
-                },
-                "compression_level": 0,
                 "quality_score": 0.900601268115975
-              },
-              "recommendations": [
-                "Ensure good lighting conditions",
-                "Keep face centered in frame",
-                "Avoid reflections and shadows"
-              ],
-              "request_id": "",
-              "timestamp": "2025-10-20T12:17:34.438178547Z"
+              }
             },
             "message": "Enhanced liveness check completed"
           }
@@ -339,25 +301,12 @@
               }
             },
             "quality_metrics": {
-              "resolution": "unknown",
               "sharpness": 1,
               "brightness": 0.66415773604,
               "contrast": 0.66415773604,
               "face_size_percent": 75.10104018912529,
-              "face_position": {
-                "x": 0.5,
-                "y": 0.5
-              },
-              "compression_level": 0,
               "quality_score": 0.7510104018912529
-            },
-            "recommendations": [
-              "Ensure good lighting conditions",
-              "Keep face centered in frame",
-              "Avoid reflections and shadows"
-            ],
-            "request_id": "",
-            "timestamp": "2025-10-08T22:44:51.27309+01:00"
+            }
           },
           "message": "Enhanced liveness check completed"
         }
@@ -366,10 +315,10 @@
   ],
   "pages": {
     "getting-started": {
-      "content": "---\ntitle: 'Getting Started'\ndescription: 'Quick guide to start using Gateman API'\n---\n\nTo use the Gateman API, you'll need a Gateman account. If you don't have one yet, you can create an account [here](https://gateman.io).\n\nOnce your account is set up, you can access the API using the following base URLs:\n\n- **Production Environment**: `https://api.gateman.io`  \n- **Sandbox Environment**: `https://sandbox.gateman.io`  \n\nThe Sandbox environment is recommended for testing and development, while the Production environment is for live applications.\n\n## Authentication\n\nAll Gateman API endpoints require authentication using an **API Key** and **API ID**. These credentials must be included in the headers of every request.\n\nYou can retrieve your API Key and API ID from the **Settings** page on your [Gateman Dashboard](https://gateman.io).\n\n### Example Request Headers\n\n```json\n{\n  \"x-api-key\": \"your-sandbox-api-key\",\n  \"x-app-id\": \"your-sandbox-app-id\"\n}\n```"
+      "contentPath": "api-doc/getting-started.md"
     },
     "biometric-verification": {
-      "content": "---\ntitle: 'Biometric Verification'\ndescription: 'Verify identities using face recognition and liveness detection'\n---\n\nVerify user identities securely with advanced face recognition. Confirm if two faces match or detect liveness to prevent spoofing.\n\n## Endpoints\n\n### Face Comparison\nCompare two face images to verify if they belong to the same person.\n\n- **Endpoint:** `POST /api/public/v1/biometric/face-comparison`\n- **Use Cases:** Login verification, account security, identity checks\n\n### Liveness Check\nDetect if a face image is from a real person or a fake (photo, video, or mask).\n\n- **Endpoint:** `POST /api/public/v1/biometric/liveness-check`\n- **Use Cases:** Prevent fake accounts, secure transactions, age verification\n\n## Quick Start\n\nExample: Compare two faces\n\n```javascript\nconst response = await fetch('https://api.gateman.io/api/public/v1/biometric/face-comparison', {\n  method: 'POST',\n  headers: {\n    'x-api-key': 'your-api-key',\n    'x-app-id': 'your-app-id',\n    'Content-Type': 'application/json'\n  },\n  body: JSON.stringify({\n    image1: 'https://example.com/face1.jpg',\n    image2: 'https://example.com/face2.jpg',\n    threshold: 0.8\n  })\n});\n\nconst result = await response.json();\nconsole.log(result.body.is_match); // true or false\n```\n\n## Features\n\n- High accuracy with AI models\n- Fast processing\n- Supports URLs and base64 images\n- Enterprise security\n- Scalable for high volume\n\n## Best Practices\n\n- Use HTTPS\n- Ensure good image quality\n- Handle errors properly\n- Set appropriate thresholds\n- Monitor usage"
+      "contentPath": "api-doc/biometric-verification.md"
     }
   }
 }

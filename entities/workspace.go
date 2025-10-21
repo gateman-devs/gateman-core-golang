@@ -15,6 +15,8 @@ type Workspace struct {
 	Sector             string     `bson:"sector" json:"sector"`
 	DefaultPaymentCard string     `bson:"defaultPaymentCard" json:"defaultPaymentCard"`
 	PaymentDetails     []CardInfo `bson:"paymentDetails" json:"paymentDetails"`
+	Balance            int64      `bson:"balance" json:"balance"`            // Balance in kobo
+	LockedBalance      int64      `bson:"lockedBalance" json:"lockedBalance"` // Locked funds in kobo
 
 	ID            string     `bson:"_id" json:"id"`
 	CreatedAt     time.Time  `bson:"createdAt" json:"createdAt"`

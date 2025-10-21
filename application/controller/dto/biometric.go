@@ -8,9 +8,10 @@ import (
 
 // LivenessDetectionDTO represents the request for liveness detection
 type LivenessDetectionDTO struct {
-	Image     string  `json:"image" validate:"required"`    // Base64 encoded image or URL
-	Threshold float64 `json:"threshold,omitempty"`         // Liveness threshold (0.0-1.0, default: 0.6)
-	Verbose   bool    `json:"verbose,omitempty"`           // Enable verbose analysis reporting
+	Image     string  `json:"image" validate:"required"` // Base64 encoded image or URL
+	Threshold float64 `json:"threshold,omitempty"`       // Liveness threshold (0.0-1.0, default: 0.6)
+	Verbose   bool    `json:"verbose,omitempty"`         // Enable verbose analysis reporting
+	RequestID string  `json:"request_id,omitempty"`      // Optional request ID for tracking
 }
 
 // FaceComparisonDTO represents the request for face comparison
@@ -35,13 +36,13 @@ type LivenessDetectionResponse struct {
 	SpoofScore        float64               `json:"spoof_score"`
 	Confidence        float64               `json:"confidence"`
 	ProcessingTime    int64                 `json:"processing_time_ms"`
-	AnalysisBreakdown *AnalysisBreakdownDTO `json:"analysis_breakdown,omitempty"`
-	QualityMetrics    *QualityMetricsDTO    `json:"quality_metrics,omitempty"`
-	SpoofReasons      []string              `json:"spoof_reasons,omitempty"`
-	Recommendations   []string              `json:"recommendations,omitempty"`
-	RequestID         string                `json:"request_id"`
-	Timestamp         time.Time             `json:"timestamp"`
+	AnalysisBreakdown *AnalysisBreakdownDTO `json:"analysis_breakdown,omitempty"` // Verbose only
+	QualityMetrics    *QualityMetricsDTO    `json:"quality_metrics,omitempty"`    // Verbose only
+	SpoofReasons      []string              `json:"spoof_reasons,omitempty"`      // When not live
 	Error             string                `json:"error,omitempty"`
+	// REMOVED: RequestID (redundant - client tracks their own)
+	// REMOVED: Timestamp (redundant - client adds their own)
+	// REMOVED: Recommendations (often inaccurate/generic)
 }
 
 // FaceComparisonResponse represents the response for face comparison
@@ -50,27 +51,27 @@ type FaceComparisonResponse struct {
 	Similarity       float64            `json:"similarity"`
 	Confidence       float64            `json:"confidence"`
 	ProcessingTime   int64              `json:"processing_time_ms"`
-	ReferenceQuality *QualityMetricsDTO `json:"reference_quality,omitempty"`
-	TestQuality      *QualityMetricsDTO `json:"test_quality,omitempty"`
-	MatchMetadata    *MatchMetadataDTO  `json:"match_metadata,omitempty"`
-	RequestID        string             `json:"request_id"`
-	Timestamp        time.Time          `json:"timestamp"`
+	ReferenceQuality *QualityMetricsDTO `json:"reference_quality,omitempty"` // Verbose only
+	TestQuality      *QualityMetricsDTO `json:"test_quality,omitempty"`      // Verbose only
+	MatchMetadata    *MatchMetadataDTO  `json:"match_metadata,omitempty"`    // Verbose only
 	Error            string             `json:"error,omitempty"`
+	// REMOVED: RequestID (redundant - client tracks their own)
+	// REMOVED: Timestamp (redundant - client adds their own)
 }
 
 // ImageQualityResponse represents the response for image quality verification
 type ImageQualityResponse struct {
-	IsGoodQuality   bool      `json:"is_good_quality"`
-	HasFace         bool      `json:"has_face"`
-	FaceCount       int       `json:"face_count"`
-	FaceSize        float64   `json:"face_size_percent"`
-	ImageResolution string    `json:"image_resolution"`
-	QualityScore    float64   `json:"quality_score"`
-	Issues          []string  `json:"issues,omitempty"`
-	Recommendations []string  `json:"recommendations,omitempty"`
-	RequestID       string    `json:"request_id"`
-	Timestamp       time.Time `json:"timestamp"`
-	Error           string    `json:"error,omitempty"`
+	IsGoodQuality bool     `json:"is_good_quality"`
+	HasFace       bool     `json:"has_face"`
+	FaceCount     int      `json:"face_count"`
+	FaceSize      float64  `json:"face_size_percent"`
+	QualityScore  float64  `json:"quality_score"`
+	Issues        []string `json:"issues,omitempty"`
+	Error         string   `json:"error,omitempty"`
+	// REMOVED: ImageResolution (often unknown/inaccurate)
+	// REMOVED: Recommendations (often inaccurate/generic)
+	// REMOVED: RequestID (redundant - client tracks their own)
+	// REMOVED: Timestamp (redundant - client adds their own)
 }
 
 // AnalysisBreakdownDTO represents detailed analysis breakdown
@@ -86,25 +87,25 @@ type AnalysisBreakdownDTO struct {
 
 // QualityMetricsDTO represents image quality metrics
 type QualityMetricsDTO struct {
-	Resolution       string   `json:"resolution"`
-	Sharpness        float64  `json:"sharpness"`
-	Brightness       float64  `json:"brightness"`
-	Contrast         float64  `json:"contrast"`
-	FaceSize         float64  `json:"face_size_percent"`
-	FacePosition     Point2D  `json:"face_position"`
-	CompressionLevel float64  `json:"compression_level"`
-	QualityScore     float64  `json:"quality_score"`
-	Issues           []string `json:"issues,omitempty"`
-	Recommendations  []string `json:"recommendations,omitempty"`
+	Sharpness    float64 `json:"sharpness"`
+	Brightness   float64 `json:"brightness"`
+	Contrast     float64 `json:"contrast"`
+	FaceSize     float64 `json:"face_size_percent"`
+	QualityScore float64 `json:"quality_score"`
+	// REMOVED: Resolution (often "unknown", not useful)
+	// REMOVED: FacePosition (defaulted to center, not accurate)
+	// REMOVED: CompressionLevel (not always accurate)
+	// REMOVED: Issues (redundant with SpoofReasons)
+	// REMOVED: Recommendations (often inaccurate/generic)
 }
 
 // MatchMetadataDTO represents face comparison metadata
 type MatchMetadataDTO struct {
-	FeatureVector1Length int     `json:"feature_vector1_length"`
-	FeatureVector2Length int     `json:"feature_vector2_length"`
-	SimilarityMethod     string  `json:"similarity_method"`
-	ThresholdUsed        float64 `json:"threshold_used"`
-	ConfidenceLevel      string  `json:"confidence_level"`
+	SimilarityMethod string  `json:"similarity_method"`
+	ThresholdUsed    float64 `json:"threshold_used"`
+	ConfidenceLevel  string  `json:"confidence_level"`
+	// REMOVED: FeatureVector1Length (internal detail, not useful to users)
+	// REMOVED: FeatureVector2Length (internal detail, not useful to users)
 }
 
 // ColorSpaceScoresDTO represents color space analysis scores
@@ -173,11 +174,11 @@ type ModelInfoDTO struct {
 
 // EnhancedFaceComparisonRequest represents the enhanced request for face comparison with liveness detection
 type EnhancedFaceComparisonRequest struct {
-	Image1    string  `json:"image1" validate:"required"`   // Base64 encoded image or URL
-	Image2    string  `json:"image2" validate:"required"`   // Base64 encoded image or URL
-	Threshold float64 `json:"threshold,omitempty"`         // Custom similarity threshold (0.0-1.0)
-	Verbose   bool    `json:"verbose,omitempty"`           // Enable verbose analysis reporting
-	RequestID string  `json:"request_id,omitempty"`        // Optional request ID for tracking
+	Image1    string  `json:"image1" validate:"required"` // Base64 encoded image or URL
+	Image2    string  `json:"image2" validate:"required"` // Base64 encoded image or URL
+	Threshold float64 `json:"threshold,omitempty"`        // Custom similarity threshold (0.0-1.0)
+	Verbose   bool    `json:"verbose,omitempty"`          // Enable verbose analysis reporting
+	RequestID string  `json:"request_id,omitempty"`       // Optional request ID for tracking
 }
 
 // EnhancedFaceComparisonResponse represents the enhanced response for face comparison with liveness results
@@ -213,12 +214,12 @@ type FeatureQualityMetricsDTO struct {
 
 // EnhancedComparisonMetadataDTO represents enhanced comparison processing metadata
 type EnhancedComparisonMetadataDTO struct {
-	SimilarityMethod  string              `json:"similarity_method"`
-	ThresholdUsed     float64             `json:"threshold_used"`
-	QualityAdjustment float64             `json:"quality_adjustment"`
-	ConfidenceLevel   string              `json:"confidence_level"`
-	FeatureStrength   float64             `json:"feature_strength"`
-	ProcessingSteps   []ProcessingStepDTO `json:"processing_steps"`
+	SimilarityMethod string  `json:"similarity_method"`
+	ThresholdUsed    float64 `json:"threshold_used"`
+	ConfidenceLevel  string  `json:"confidence_level"`
+	FeatureStrength  float64 `json:"feature_strength"`
+	// REMOVED: QualityAdjustment (internal calculation detail)
+	// REMOVED: ProcessingSteps (too granular for verbose, more for debugging)
 }
 
 // ProcessingStepDTO represents a single processing step with timing
@@ -333,20 +334,10 @@ func (r *EnhancedFaceComparisonResponse) SetComparisonMetadata(metadata *Enhance
 	r.ComparisonMetadata = metadata
 }
 
-// AddProcessingStep adds a processing step to the comparison metadata
+// AddProcessingStep is deprecated - processing steps removed from verbose output
+// Kept for backwards compatibility but does nothing
 func (r *EnhancedFaceComparisonResponse) AddProcessingStep(step string, duration int64, success bool, details string) {
-	if r.ComparisonMetadata == nil {
-		r.ComparisonMetadata = &EnhancedComparisonMetadataDTO{
-			ProcessingSteps: make([]ProcessingStepDTO, 0),
-		}
-	}
-
-	r.ComparisonMetadata.ProcessingSteps = append(r.ComparisonMetadata.ProcessingSteps, ProcessingStepDTO{
-		Step:     step,
-		Duration: duration,
-		Success:  success,
-		Details:  details,
-	})
+	// No-op: processing steps removed from verbose output as too granular
 }
 
 // IsSuccessful returns true if the response represents a successful operation (no error)
@@ -381,14 +372,12 @@ func NewFeatureQualityMetricsDTO(faceSize float64, facePosition string, imageSha
 }
 
 // NewEnhancedComparisonMetadataDTO creates a new enhanced comparison metadata DTO
-func NewEnhancedComparisonMetadataDTO(similarityMethod string, thresholdUsed, qualityAdjustment, featureStrength float64, confidenceLevel string) *EnhancedComparisonMetadataDTO {
+func NewEnhancedComparisonMetadataDTO(similarityMethod string, thresholdUsed, featureStrength float64, confidenceLevel string) *EnhancedComparisonMetadataDTO {
 	return &EnhancedComparisonMetadataDTO{
-		SimilarityMethod:  similarityMethod,
-		ThresholdUsed:     thresholdUsed,
-		QualityAdjustment: qualityAdjustment,
-		ConfidenceLevel:   confidenceLevel,
-		FeatureStrength:   featureStrength,
-		ProcessingSteps:   make([]ProcessingStepDTO, 0),
+		SimilarityMethod: similarityMethod,
+		ThresholdUsed:    thresholdUsed,
+		ConfidenceLevel:  confidenceLevel,
+		FeatureStrength:  featureStrength,
 	}
 }
 

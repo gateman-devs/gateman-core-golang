@@ -1,157 +1,22 @@
 package controller
 
 import (
-	"fmt"
 	"math"
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	apperrors "gateman.io/application/appErrors"
 	"gateman.io/application/controller/dto"
 	"gateman.io/application/interfaces"
+	"gateman.io/application/repository"
+	"gateman.io/application/usecases/wallet"
 	"gateman.io/application/utils"
 	"gateman.io/infrastructure/biometric"
-	"gateman.io/infrastructure/biometric/types"
-	fileupload "gateman.io/infrastructure/file_upload"
-	file_upload_types "gateman.io/infrastructure/file_upload/types"
 	server_response "gateman.io/infrastructure/serverResponse"
 	"gateman.io/infrastructure/validator"
+	"github.com/gin-gonic/gin"
 )
-
-// CompareFaces compares two face images and returns similarity score
-func CompareFaces(ctx *interfaces.ApplicationContext[dto.FaceComparisonRequest]) {
-	validationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
-	if validationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, validationErr, ctx.DeviceID)
-		return
-	}
-
-	_, err := utils.DecodeBase64Image(ctx.Body.Image1)
-	if err != nil {
-		_, err := url.ParseRequestURI(ctx.Body.Image1)
-		if err != nil {
-			apperrors.ClientError(ctx.Ctx, "invalid image format", nil, nil, ctx.DeviceID)
-			return
-		}
-	}
-
-	_, err = utils.DecodeBase64Image(ctx.Body.Image2)
-	if err != nil {
-		_, err := url.ParseRequestURI(ctx.Body.Image2)
-		if err != nil {
-			apperrors.ClientError(ctx.Ctx, "invalid image format", nil, nil, ctx.DeviceID)
-			return
-		}
-	}
-
-	result, err := biometric.BiometricService.CompareFaces(&ctx.Body.Image1, &ctx.Body.Image2)
-	if err != nil {
-		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
-		return
-	}
-
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "face comparison completed", result, nil, nil, nil)
-
-}
-
-// ImageLivenessCheck performs liveness detection on a single image
-func ImageLivenessCheck(ctx *interfaces.ApplicationContext[dto.LivenessCheckRequest]) {
-	validationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
-	if validationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, validationErr, ctx.DeviceID)
-		return
-	}
-
-	_, err := utils.DecodeBase64Image(ctx.Body.Image)
-	if err != nil {
-		_, err := url.ParseRequestURI(ctx.Body.Image)
-		if err != nil {
-			apperrors.ClientError(ctx.Ctx, "invalid image format", nil, nil, ctx.DeviceID)
-			return
-		}
-	}
-	// Use local face service for liveness detection
-	localService := biometric.NewLocalFaceService()
-	defer localService.Close()
-
-	result, err := localService.ImageLivenessCheck(&ctx.Body.Image, ctx.Body.LenientBlurry)
-	if err != nil {
-		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
-		return
-	}
-
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Liveness check completed", result, nil, nil, nil)
-}
-
-// VideoLivenessCheck performs liveness detection on a video
-func VideoLivenessCheck(ctx *interfaces.ApplicationContext[dto.VideoLivenessVerificationRequest]) {
-	validationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
-	if validationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, validationErr, ctx.DeviceID)
-		return
-	}
-	urls := []string{}
-	for index := 0; index < 4; index++ {
-		url, _ := fileupload.FileUploader.GeneratedSignedURL(
-			ctx.Body.ChallengeID+"_"+fmt.Sprintf("%d", index),
-			file_upload_types.SignedURLPermission{
-				Read: true,
-			},
-			time.Minute*50,
-		)
-		urls = append(urls, *url)
-	}
-
-	result, err := biometric.BiometricService.VideoLivenessCheck(types.VideoLivenessRequest{
-		ChallengeID: ctx.Body.ChallengeID,
-		VideoURLs:   urls,
-	})
-	if err != nil {
-		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
-		return
-	}
-
-	server_response.Responder.UnEncryptedRespond(ctx.Ctx, http.StatusOK, "Video liveness check completed", result, nil, nil)
-}
-
-// GenerateChallenge generates a new liveness challenge with random directions
-func GenerateChallenge(ctx *interfaces.ApplicationContext[any]) {
-	result, err := biometric.BiometricService.GenerateChallenge()
-	if err != nil {
-		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
-		return
-	}
-
-	directions := [4]map[string]string{}
-	if result.ChallengeID != nil {
-		for index := 0; index < 4; index++ {
-			url, _ := fileupload.FileUploader.GeneratedSignedURL(
-				*result.ChallengeID+"_"+fmt.Sprintf("%d", index),
-				file_upload_types.SignedURLPermission{
-					Write: true,
-				},
-				time.Minute*5,
-			)
-			directions[index] = map[string]string{
-				"direction": result.Directions[index],
-				"url":       *url,
-			}
-		}
-	}
-
-	// Prepare the response payload
-	responsePayload := map[string]interface{}{
-		"success":      result.Success,
-		"challenge_id": result.ChallengeID,
-		"directions":   directions,
-		"ttl_seconds":  result.TTLSeconds,
-		"error":        result.Error,
-	}
-
-	server_response.Responder.UnEncryptedRespond(ctx.Ctx, http.StatusOK, "challenge generated successfully", responsePayload, nil, nil)
-}
 
 // EnhancedFaceComparison performs enhanced face comparison with detailed analysis
 func EnhancedFaceComparison(ctx *interfaces.ApplicationContext[dto.EnhancedFaceComparisonRequest]) {
@@ -159,6 +24,27 @@ func EnhancedFaceComparison(ctx *interfaces.ApplicationContext[dto.EnhancedFaceC
 	if validationErr != nil {
 		apperrors.ValidationFailedError(ctx.Ctx, validationErr, ctx.DeviceID)
 		return
+	}
+
+	// Get workspace ID
+	workspaceID := ctx.GetStringContextData("WorkspaceID")
+	if workspaceID == "" {
+		apperrors.ClientError(ctx.Ctx, "workspace ID not found", nil, nil, ctx.DeviceID)
+		return
+	}
+
+	// Check and deduct balance
+	walletService := wallet.NewWalletService()
+	billingLog, err := walletService.CheckAndDeductBalance(workspaceID, wallet.COMPARISON_PRICE, "comparison", ctx.Body.RequestID)
+	if err != nil {
+		apperrors.ClientError(ctx.Ctx, "insufficient balance", nil, nil, ctx.DeviceID)
+		return
+	}
+
+	// Store billing log ID in context for potential reversion and activity log
+	ctx.SetContextData("billingLogID", billingLog.ID)
+	if ginCtx, ok := ctx.Ctx.(*gin.Context); ok {
+		ginCtx.Set("transactionID", billingLog.ID)
 	}
 
 	// Validate threshold
@@ -237,6 +123,26 @@ func EnhancedFaceComparison(ctx *interfaces.ApplicationContext[dto.EnhancedFaceC
 	// Perform face comparison using service's default thresholds first, then apply custom threshold if needed
 	result, err := localService.CompareFaces(&ctx.Body.Image1, &ctx.Body.Image2)
 	if err != nil {
+		// Revert balance deduction on failure
+		billingLogID := ctx.GetStringContextData("billingLogID")
+		if billingLogID != "" {
+			billingRepo := repository.BillingLogRepository()
+			updateFilter := map[string]interface{}{"_id": billingLogID}
+			updateData := map[string]interface{}{
+				"status":       "failed",
+				"errorMessage": err.Error(),
+			}
+			billingRepo.UpdateOrCreateByField(updateFilter, updateData)
+
+			// Revert balance
+			revertFilter := map[string]interface{}{"_id": workspaceID}
+			revertUpdate := map[string]interface{}{
+				"$inc": map[string]interface{}{
+					"balance": wallet.COMPARISON_PRICE,
+				},
+			}
+			repository.WorkspaceRepository().UpdateWithOperator(revertFilter, revertUpdate)
+		}
 		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
@@ -255,7 +161,7 @@ func EnhancedFaceComparison(ctx *interfaces.ApplicationContext[dto.EnhancedFaceC
 	// Liveness detection removed from enhanced compare - only basic comparison now
 
 	// Create enhanced response
-	response := dto.NewEnhancedFaceComparisonResponse(ctx.Body.RequestID)
+	response := dto.NewEnhancedFaceComparisonResponse("")
 	response.SetComparisonResult(
 		finalMatch,
 		result.Confidence,
@@ -288,13 +194,10 @@ func EnhancedFaceComparison(ctx *interfaces.ApplicationContext[dto.EnhancedFaceC
 		metadata := dto.NewEnhancedComparisonMetadataDTO(
 			"yunet_facenet", // Updated to reflect YuNet + FaceNet
 			threshold,
-			0.0, // No quality adjustment for now
 			result.Confidence,
 			"high", // Confidence level
 		)
 		response.SetComparisonMetadata(metadata)
-
-		// Processing steps removed from payload as requested
 	}
 
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Enhanced face comparison completed", response, nil, nil, nil)
@@ -306,6 +209,27 @@ func EnhancedLivenessCheck(ctx *interfaces.ApplicationContext[dto.LivenessDetect
 	if validationErr != nil {
 		apperrors.ValidationFailedError(ctx.Ctx, validationErr, ctx.DeviceID)
 		return
+	}
+
+	// Get workspace ID
+	workspaceID := ctx.GetStringContextData("WorkspaceID")
+	if workspaceID == "" {
+		apperrors.ClientError(ctx.Ctx, "workspace ID not found", nil, nil, ctx.DeviceID)
+		return
+	}
+
+	// Check and deduct balance
+	walletService := wallet.NewWalletService()
+	billingLog, err := walletService.CheckAndDeductBalance(workspaceID, wallet.LIVENESS_PRICE, "liveness", ctx.Body.RequestID)
+	if err != nil {
+		apperrors.ClientError(ctx.Ctx, "insufficient balance", nil, nil, ctx.DeviceID)
+		return
+	}
+
+	// Store billing log ID in context for potential reversion and activity log
+	ctx.SetContextData("billingLogID", billingLog.ID)
+	if ginCtx, ok := ctx.Ctx.(*gin.Context); ok {
+		ginCtx.Set("transactionID", billingLog.ID)
 	}
 
 	// Validate threshold
@@ -372,11 +296,37 @@ func EnhancedLivenessCheck(ctx *interfaces.ApplicationContext[dto.LivenessDetect
 	// Perform liveness detection
 	result, err := localService.ImageLivenessCheck(&ctx.Body.Image, false)
 	if err != nil {
+		// Revert balance deduction on failure
+		billingLogID := ctx.GetStringContextData("billingLogID")
+		if billingLogID != "" {
+			billingRepo := repository.BillingLogRepository()
+			updateFilter := map[string]interface{}{"_id": billingLogID}
+			updateData := map[string]interface{}{
+				"status":       "failed",
+				"errorMessage": err.Error(),
+			}
+			billingRepo.UpdateOrCreateByField(updateFilter, updateData)
+
+			// Revert balance
+			revertFilter := map[string]interface{}{"_id": workspaceID}
+			revertUpdate := map[string]interface{}{
+				"$inc": map[string]interface{}{
+					"balance": wallet.LIVENESS_PRICE,
+				},
+			}
+			repository.WorkspaceRepository().UpdateWithOperator(revertFilter, revertUpdate)
+		}
 		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
 		return
 	}
 
-	// Apply custom threshold to override liveness decision if necessary
+	// ============================================================================
+	// PRODUCTION-GRADE MULTI-LAYER VALIDATION SYSTEM
+	// ============================================================================
+	// Apply comprehensive validation with multiple security layers
+	// This ensures paintings, printed photos, and sophisticated spoofs are rejected
+
+	// Layer 1: Base threshold check
 	customIsLive := result.IsLive
 	if result.LivenessScore >= threshold {
 		customIsLive = true
@@ -384,11 +334,72 @@ func EnhancedLivenessCheck(ctx *interfaces.ApplicationContext[dto.LivenessDetect
 		customIsLive = false
 	}
 
-	// Use custom liveness decision
+	// Layer 2: Production minimum threshold (security baseline)
+	// Regardless of user threshold, enforce a production minimum for safety
+	productionMinThreshold := 0.55 // Production safety baseline
+	if result.LivenessScore < productionMinThreshold {
+		customIsLive = false
+	}
+
+	// Layer 3: Confidence validation
+	// Low confidence indicates uncertain results - reject for safety
+	if result.Confidence < 0.4 {
+		customIsLive = false
+	}
+
+	// Layer 4: Quality check
+	// Very poor quality images are more likely to be spoofs
+	if result.QualityScore < 0.3 {
+		customIsLive = false
+	}
+
+	// Layer 5: Spoof score check
+	// High spoof detection score indicates likely attack
+	spoofScore := result.AnalysisDetails.SpoofDetectionScore
+	if !math.IsNaN(spoofScore) && !math.IsInf(spoofScore, 0) && spoofScore > 0.6 {
+		customIsLive = false
+	}
+
+	// Layer 6: Critical metrics validation
+	// Check for painting/spoof indicators in detailed analysis
+	textureScore := result.AnalysisDetails.TextureScore
+	edgeSharpness := result.AnalysisDetails.EdgeSharpness
+
+	// Extremely low texture + low edges = likely painting/print
+	if textureScore < 0.15 && edgeSharpness < 0.15 {
+		customIsLive = false
+	}
+
+	// Layer 7: Combined risk assessment
+	// Multiple weak indicators together = reject
+	riskFactors := 0
+	if result.LivenessScore < 0.65 {
+		riskFactors++
+	}
+	if result.Confidence < 0.6 {
+		riskFactors++
+	}
+	if result.QualityScore < 0.5 {
+		riskFactors++
+	}
+	if textureScore < 0.3 {
+		riskFactors++
+	}
+	if edgeSharpness < 0.3 {
+		riskFactors++
+	}
+
+	// If 3+ risk factors present, reject
+	if riskFactors >= 3 {
+		customIsLive = false
+	}
+
+	// Final decision
 	finalIsLive := customIsLive
 
 	// Create enhanced response with NaN checks
-	spoofScore := result.AnalysisDetails.SpoofDetectionScore
+	// Re-assign spoofScore for response (already declared above)
+	spoofScore = result.AnalysisDetails.SpoofDetectionScore
 	confidence := result.Confidence
 
 	// Fix NaN values to prevent JSON serialization errors
@@ -447,142 +458,27 @@ func EnhancedLivenessCheck(ctx *interfaces.ApplicationContext[dto.LivenessDetect
 
 		qualityScore := safeValue(result.QualityScore)
 		response.QualityMetrics = &dto.QualityMetricsDTO{
-			Resolution:       "unknown", // Would need to extract from image
-			Sharpness:        safeValue(result.AnalysisDetails.SharpnessScore),
-			Brightness:       safeValue(result.AnalysisDetails.LightingScore),
-			Contrast:         safeValue(result.AnalysisDetails.LightingScore),
-			FaceSize:         qualityScore * 100,
-			FacePosition:     dto.Point2D{X: 0.5, Y: 0.5}, // Default center position
-			CompressionLevel: 0.0,                         // Would need to analyze
-			QualityScore:     qualityScore,
-			Issues:           []string{},
+			Sharpness:    safeValue(result.AnalysisDetails.SharpnessScore),
+			Brightness:   safeValue(result.AnalysisDetails.LightingScore),
+			Contrast:     safeValue(result.AnalysisDetails.LightingScore),
+			FaceSize:     qualityScore * 100,
+			QualityScore: qualityScore,
 		}
 
-		// Add spoof reasons if detected
+		// Add specific spoof reasons if detected (not generic)
 		if !finalIsLive {
-			response.SpoofReasons = []string{
-				"Low texture variance detected",
-				"Inconsistent lighting patterns",
-				"Unnatural edge patterns",
+			// Only add spoof reasons if we have specific indicators
+			if result.AnalysisDetails.TextureScore < 0.2 {
+				response.SpoofReasons = append(response.SpoofReasons, "Low natural skin texture detected")
+			}
+			if result.AnalysisDetails.EdgeSharpness < 0.2 {
+				response.SpoofReasons = append(response.SpoofReasons, "Unnatural edge patterns detected")
+			}
+			if result.AnalysisDetails.SpoofDetectionScore > 0.7 {
+				response.SpoofReasons = append(response.SpoofReasons, "High spoof probability indicators")
 			}
 		}
-
-		// Remove recommendations from verbose payload as requested
 	}
 
 	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Enhanced liveness check completed", response, nil, nil, nil)
-}
-
-// ImageQualityCheck performs image quality assessment
-func ImageQualityCheck(ctx *interfaces.ApplicationContext[dto.ImageQualityDTO]) {
-	validationErr := validator.ValidatorInstance.ValidateStruct(ctx.Body)
-	if validationErr != nil {
-		apperrors.ValidationFailedError(ctx.Ctx, validationErr, ctx.DeviceID)
-		return
-	}
-
-	// Validate image input - check if it's a URL or base64
-	if strings.HasPrefix(ctx.Body.Image, "http://") || strings.HasPrefix(ctx.Body.Image, "https://") {
-		// Validate URL format
-		_, err := url.ParseRequestURI(ctx.Body.Image)
-		if err != nil {
-			apperrors.ClientError(ctx.Ctx, "invalid image URL format", nil, nil, ctx.DeviceID)
-			return
-		}
-	} else {
-		// Validate base64 format
-		_, err := utils.DecodeBase64Image(ctx.Body.Image)
-		if err != nil {
-			apperrors.ClientError(ctx.Ctx, "invalid image format - must be valid URL or base64", nil, nil, ctx.DeviceID)
-			return
-		}
-	}
-
-	// Use local face service for quality assessment
-	localService := biometric.NewLocalFaceService()
-	defer localService.Close()
-
-	// Process image to get quality metrics
-	img, faces, quality, err := localService.ProcessImage(ctx.Body.Image)
-	if err != nil {
-		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
-		return
-	}
-	defer img.Close()
-
-	// Create quality response
-	response := &dto.ImageQualityResponse{
-		IsGoodQuality:   quality > 0.6,
-		HasFace:         len(faces) > 0,
-		FaceCount:       len(faces),
-		FaceSize:        quality * 100, // Convert to percentage
-		ImageResolution: "unknown",     // Would need to extract from image
-		QualityScore:    quality,
-		RequestID:       ctx.Body.RequestID,
-		Timestamp:       time.Now(),
-	}
-
-	// Add issues and recommendations
-	if quality < 0.6 {
-		response.Issues = append(response.Issues, "Low image quality detected")
-	}
-	if len(faces) == 0 {
-		response.Issues = append(response.Issues, "No face detected in image")
-	}
-	if len(faces) > 1 {
-		response.Issues = append(response.Issues, "Multiple faces detected")
-	}
-
-	// Add recommendations
-	response.Recommendations = []string{
-		"Ensure good lighting conditions",
-		"Keep face centered and clearly visible",
-		"Avoid blurry or low-resolution images",
-	}
-
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "Image quality check completed", response, nil, nil, nil)
-}
-
-// SystemHealthCheck returns the health status of the biometric system
-func SystemHealthCheck(ctx *interfaces.ApplicationContext[any]) {
-	// Use local face service to check system health
-	localService := biometric.NewLocalFaceService()
-	defer localService.Close()
-
-	stats := localService.GetStats()
-
-	response := &dto.SystemHealthResponse{
-		Status:                "healthy",
-		ModelsLoaded:          true,                   // Assuming models are loaded if service was created
-		SystemUptime:          time.Since(time.Now()), // Would need to track actual uptime
-		ProcessedRequests:     stats.TotalRequests,
-		AverageProcessingTime: stats.AverageTime,
-		ErrorRate:             float64(stats.TotalRequests-stats.SuccessfulRequests) / float64(stats.TotalRequests) * 100,
-		Timestamp:             time.Now(),
-	}
-
-	// Add memory usage if available
-	response.MemoryUsage = &dto.MemoryUsageDTO{
-		AllocatedMB: 0.0, // Would need to implement memory tracking
-		SystemMB:    0.0,
-		GCCycles:    0,
-	}
-
-	// Add model information
-	response.ModelInfo = []dto.ModelInfoDTO{
-		{
-			Name:    "Haar Cascade Face Detector",
-			Path:    "haarcascade_frontalface_alt.xml",
-			Loaded:  true,
-			Version: "1.0",
-		},
-		{
-			Name:    "Haar Cascade Eye Detector",
-			Path:    "haarcascade_eye.xml",
-			Loaded:  true,
-			Version: "1.0",
-		},
-	}
-
-	server_response.Responder.Respond(ctx.Ctx, http.StatusOK, "System health check completed", response, nil, nil, nil)
 }

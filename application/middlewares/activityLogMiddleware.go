@@ -70,6 +70,14 @@ func ActivityLogMiddleware() gin.HandlerFunc {
 			userAgent = &ua
 		}
 
+		// Get transaction ID from context
+		var transactionID *string
+		if txID, exists := c.Get("transactionID"); exists {
+			if txIDStr, ok := txID.(string); ok {
+				transactionID = &txIDStr
+			}
+		}
+
 		// Get query parameters
 		var queryParams *string
 		if c.Request.URL.RawQuery != "" {
@@ -107,6 +115,7 @@ func ActivityLogMiddleware() gin.HandlerFunc {
 			UserAgent:    userAgent,
 			Timestamp:    startTime,
 			Duration:     duration,
+			TransactionID: transactionID,
 		}
 
 		// Save to MongoDB asynchronously to avoid blocking the response
