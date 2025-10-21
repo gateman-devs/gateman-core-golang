@@ -516,16 +516,52 @@ func EnhancedLivenessCheck(ctx *interfaces.ApplicationContext[dto.LivenessDetect
 	maskProbability := result.AnalysisDetails.MaskProbability
 	skinToneRealism := result.AnalysisDetails.SkinToneRealism
 
-	// Painting detection
-	if !math.IsNaN(paintingProbability) && !math.IsInf(paintingProbability, 0) && paintingProbability >= 0.5 {
+	// Painting detection - AGGRESSIVE THRESHOLD (lowered from 0.5 to 0.4)
+	// Paintings are a critical security risk, so we fail early
+	if !math.IsNaN(paintingProbability) && !math.IsInf(paintingProbability, 0) && paintingProbability >= 0.4 {
 		customIsLive = false
 		logger.Error("🎨 PAINTING DETECTED - Hard fail", logger.LoggerOptions{
 			Key: "painting_hard_fail",
 			Data: map[string]interface{}{
 				"painting_probability": paintingProbability,
-				"threshold":            0.5,
+				"threshold":            0.4,
 			},
 		})
+	}
+
+	// Combined painting indicators check - if multiple painting signals present, fail
+	// This catches paintings that might have moderate (0.3-0.4) painting probability
+	// but show clear painting characteristics in texture/edges
+	if !math.IsNaN(paintingProbability) && paintingProbability >= 0.3 {
+		textureScore := result.AnalysisDetails.TextureScore
+		edgeSharpness := result.AnalysisDetails.EdgeSharpness
+
+		// Moderate painting probability + low texture + low edges = definitely painting
+		if textureScore < 0.3 && edgeSharpness < 0.3 {
+			customIsLive = false
+			logger.Error("🎨 PAINTING DETECTED via combined indicators - Hard fail", logger.LoggerOptions{
+				Key: "painting_combined_fail",
+				Data: map[string]interface{}{
+					"painting_probability": paintingProbability,
+					"texture_score":        textureScore,
+					"edge_sharpness":       edgeSharpness,
+				},
+			})
+		}
+
+		// High liveness score but suspicious painting characteristics
+		// This catches paintings with artificially high scores
+		if result.LivenessScore > 0.6 && textureScore < 0.25 {
+			customIsLive = false
+			logger.Error("🎨 HIGH-SCORING PAINTING DETECTED - Hard fail", logger.LoggerOptions{
+				Key: "high_score_painting_fail",
+				Data: map[string]interface{}{
+					"liveness_score":       result.LivenessScore,
+					"painting_probability": paintingProbability,
+					"texture_score":        textureScore,
+				},
+			})
+		}
 	}
 
 	// Screen detection
@@ -582,8 +618,16 @@ func EnhancedLivenessCheck(ctx *interfaces.ApplicationContext[dto.LivenessDetect
 	edgeSharpness := result.AnalysisDetails.EdgeSharpness
 
 	// Extremely low texture + low edges = likely painting/print
-	if textureScore < 0.15 && edgeSharpness < 0.15 {
+	// LOWERED threshold from 0.15 to 0.2 to catch more cases
+	if textureScore < 0.2 && edgeSharpness < 0.2 {
 		customIsLive = false
+		logger.Error("📊 CRITICAL TEXTURE/EDGE METRICS - Hard fail", logger.LoggerOptions{
+			Key: "critical_metrics_fail",
+			Data: map[string]interface{}{
+				"texture_score":  textureScore,
+				"edge_sharpness": edgeSharpness,
+			},
+		})
 	}
 
 	// Layer 8: Combined risk assessment
@@ -605,8 +649,11 @@ func EnhancedLivenessCheck(ctx *interfaces.ApplicationContext[dto.LivenessDetect
 		riskFactors++
 	}
 	// Add all spoof type probabilities to risk factors
+	// Painting gets DOUBLE weight due to critical security risk
 	if paintingProbability > 0.35 {
-		riskFactors++
+		riskFactors += 2 // Double weight for paintings
+	} else if paintingProbability > 0.25 {
+		riskFactors++ // Single weight for moderate suspicion
 	}
 	if screenProbability > 0.35 {
 		riskFactors++
@@ -622,8 +669,16 @@ func EnhancedLivenessCheck(ctx *interfaces.ApplicationContext[dto.LivenessDetect
 	}
 
 	// If 3+ risk factors present, reject
-	if riskFactors >= 3 {
+	// LOWERED from 3 to 2 for more aggressive rejection
+	if riskFactors >= 2 {
 		customIsLive = false
+		logger.Error("⚠️ MULTIPLE RISK FACTORS DETECTED - Hard fail", logger.LoggerOptions{
+			Key: "risk_factors_fail",
+			Data: map[string]interface{}{
+				"risk_factors": riskFactors,
+				"threshold":    2,
+			},
+		})
 	}
 
 	// Final decision

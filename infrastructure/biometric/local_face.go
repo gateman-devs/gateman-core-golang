@@ -6274,48 +6274,54 @@ func (lfs *LocalFaceService) detectPaintingCharacteristics(faceRegion, gray gocv
 
 	// 1. Brush Stroke Pattern Detection
 	// Paintings have directional patterns from brush strokes
+	// LOWERED threshold from 0.6 to 0.5 for more aggressive detection
 	brushStrokeScore := lfs.detectBrushStrokes(gray)
-	if brushStrokeScore > 0.6 {
+	if brushStrokeScore > 0.5 {
 		paintingIndicators += 1.0
 	}
 	totalChecks += 1.0
 
 	// 2. Artificial Smoothness Detection
 	// Paintings lack the micro-texture of real skin
+	// LOWERED threshold from 0.7 to 0.6 for more aggressive detection
 	smoothnessScore := lfs.detectArtificialSmoothness(gray)
-	if smoothnessScore > 0.7 {
+	if smoothnessScore > 0.6 {
 		paintingIndicators += 1.0
 	}
 	totalChecks += 1.0
 
 	// 3. Skin Pore Absence Detection
 	// Real human skin has visible pores; paintings don't
+	// LOWERED threshold from 0.65 to 0.55 for more aggressive detection
 	poreAbsenceScore := lfs.detectSkinPoreAbsence(gray)
-	if poreAbsenceScore > 0.65 {
+	if poreAbsenceScore > 0.55 {
 		paintingIndicators += 1.0
 	}
 	totalChecks += 1.0
 
 	// 4. Color Blending Artificiality
 	// Painted colors blend differently than photographed ones
+	// LOWERED threshold from 0.7 to 0.6 for more aggressive detection
 	colorBlendingScore := lfs.detectArtificialColorBlending(faceRegion)
-	if colorBlendingScore > 0.7 {
+	if colorBlendingScore > 0.6 {
 		paintingIndicators += 1.0
 	}
 	totalChecks += 1.0
 
 	// 5. Canvas Texture Detection
 	// Many paintings show canvas texture patterns
+	// LOWERED threshold from 0.6 to 0.5 for more aggressive detection
 	canvasScore := lfs.detectCanvasTexture(gray)
-	if canvasScore > 0.6 {
+	if canvasScore > 0.5 {
 		paintingIndicators += 1.0
 	}
 	totalChecks += 1.0
 
 	// 6. Unnatural Edge Characteristics
 	// Painted edges differ from photographic edges
+	// LOWERED threshold from 0.65 to 0.55 for more aggressive detection
 	edgeScore := lfs.detectPaintedEdges(gray)
-	if edgeScore > 0.65 {
+	if edgeScore > 0.55 {
 		paintingIndicators += 1.0
 	}
 	totalChecks += 1.0
@@ -7480,10 +7486,11 @@ func (lfs *LocalFaceService) enhancedSpoofPenaltyWithAllDetections(
 	// CALCULATE PENALTIES FROM EACH DETECTION TYPE
 	// ========================================================================
 
-	// Painting detection penalty
+	// Painting detection penalty - INCREASED penalties for more aggressive rejection
 	paintingPenalty := 0.0
 	if paintingProbability > 0.5 {
-		paintingPenalty = paintingProbability * 0.8
+		// High confidence - MASSIVE penalty (increased from 0.8 to 1.2)
+		paintingPenalty = paintingProbability * 1.2
 		logger.Error("⚠️ HIGH PAINTING PROBABILITY DETECTED", logger.LoggerOptions{
 			Key: "painting_detected",
 			Data: map[string]interface{}{
@@ -7491,8 +7498,29 @@ func (lfs *LocalFaceService) enhancedSpoofPenaltyWithAllDetections(
 				"penalty_applied":      paintingPenalty,
 			},
 		})
-	} else if paintingProbability > 0.35 {
-		paintingPenalty = paintingProbability * 0.5
+	} else if paintingProbability > 0.4 {
+		// Medium-high confidence - MAJOR penalty (new tier)
+		paintingPenalty = paintingProbability * 0.9
+		logger.Error("⚠️ MEDIUM-HIGH PAINTING PROBABILITY DETECTED", logger.LoggerOptions{
+			Key: "painting_detected_medium_high",
+			Data: map[string]interface{}{
+				"painting_probability": paintingProbability,
+				"penalty_applied":      paintingPenalty,
+			},
+		})
+	} else if paintingProbability > 0.3 {
+		// Medium confidence - SIGNIFICANT penalty (increased from 0.5 to 0.7)
+		paintingPenalty = paintingProbability * 0.7
+		logger.Info("⚠️ MEDIUM PAINTING PROBABILITY DETECTED", logger.LoggerOptions{
+			Key: "painting_detected_medium",
+			Data: map[string]interface{}{
+				"painting_probability": paintingProbability,
+				"penalty_applied":      paintingPenalty,
+			},
+		})
+	} else if paintingProbability > 0.2 {
+		// Low-medium confidence - moderate penalty
+		paintingPenalty = paintingProbability * 0.4
 	}
 
 	// Screen detection penalty
