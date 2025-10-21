@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image"
 	stdimage "image" // Alias to avoid shadowing issues
+	"image/color"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
@@ -1128,9 +1129,9 @@ func (lfs *LocalFaceService) ImageLivenessCheck(image *string, lenientBlurry boo
 		},
 	})
 
-	// Perform liveness analysis - this could be slow
+	// Perform liveness analysis - runs comprehensive spoof detection in parallel
 	livenessStart := time.Now()
-	livenessScore, spoofPenalty, detailedResult := lfs.analyzeLiveness(faceRegion, img)
+	livenessScore, spoofPenalty, paintingProbability, screenProbability, printProbability, maskProbability, skinToneRealism, detailedResult := lfs.analyzeLiveness(faceRegion, img)
 	livenessTime := time.Since(livenessStart).Milliseconds()
 	logger.Info("🧠 Liveness analysis completed", logger.LoggerOptions{
 		Key:  "liveness_time_ms",
@@ -1276,6 +1277,13 @@ func (lfs *LocalFaceService) ImageLivenessCheck(image *string, lenientBlurry boo
 			SharpnessScore:      sharpnessScore,
 			SpoofDetectionScore: spoofPenalty,
 			TextureScore:        textureScore,
+
+			// Spoof type probabilities (from parallel detection)
+			PaintingProbability: paintingProbability,
+			ScreenProbability:   screenProbability,
+			PrintProbability:    printProbability,
+			MaskProbability:     maskProbability,
+			SkinToneRealism:     skinToneRealism,
 
 			// Populate detailed breakdown scores from analyzeLiveness
 			LBPScore:              detailedResult.LBPScore,
@@ -5210,7 +5218,8 @@ func (lfs *LocalFaceService) downloadImageSecurely(url string) ([]byte, error) {
 }
 
 // analyzeLiveness analyzes the image for liveness indicators using enhanced texture analysis
-func (lfs *LocalFaceService) analyzeLiveness(faceRegion, fullImg gocv.Mat) (float64, float64, types.DetailedAnalysisResult) {
+// Returns: livenessScore, spoofPenalty, painting, screen, print, mask probabilities, skinToneRealism, detailedResult
+func (lfs *LocalFaceService) analyzeLiveness(faceRegion, fullImg gocv.Mat) (float64, float64, float64, float64, float64, float64, float64, types.DetailedAnalysisResult) {
 	// Enhanced liveness detection with uniformity and entropy thresholds
 
 	// DEBUG: Log input parameters
@@ -5416,8 +5425,8 @@ func (lfs *LocalFaceService) analyzeLiveness(faceRegion, fullImg gocv.Mat) (floa
 		},
 	})
 
-	// Apply enhanced spoof penalty system with painting detection
-	spoofPenalty := lfs.enhancedSpoofPenaltyWithPaintingDetection(
+	// Apply comprehensive spoof detection system with parallel goroutines
+	spoofResult := lfs.enhancedSpoofPenaltyWithAllDetections(
 		faceRegion,
 		sanitizedGray,
 		textureScore,
@@ -5428,6 +5437,13 @@ func (lfs *LocalFaceService) analyzeLiveness(faceRegion, fullImg gocv.Mat) (floa
 		lbpScore,
 		lpqScore,
 	)
+
+	spoofPenalty := spoofResult.TotalPenalty
+	paintingProbability := spoofResult.PaintingProbability
+	screenProbability := spoofResult.ScreenProbability
+	printProbability := spoofResult.PrintProbability
+	maskProbability := spoofResult.MaskProbability
+	skinToneRealism := spoofResult.SkinToneRealism
 	livenessScore := baseLivenessScore - spoofPenalty
 
 	logger.Info("🔍 DEBUG: Spoof penalty calculation", logger.LoggerOptions{
@@ -5482,8 +5498,13 @@ func (lfs *LocalFaceService) analyzeLiveness(faceRegion, fullImg gocv.Mat) (floa
 	logger.Info("🔍 DEBUG: analyzeLiveness final results", logger.LoggerOptions{
 		Key: "final_results",
 		Data: map[string]interface{}{
-			"liveness_score": livenessScore,
-			"spoof_penalty":  spoofPenalty,
+			"liveness_score":       livenessScore,
+			"spoof_penalty":        spoofPenalty,
+			"painting_probability": paintingProbability,
+			"screen_probability":   screenProbability,
+			"print_probability":    printProbability,
+			"mask_probability":     maskProbability,
+			"skin_tone_realism":    skinToneRealism,
 			"detailed_result": map[string]interface{}{
 				"lbp_score":              detailedResult.LBPScore,
 				"lpq_score":              detailedResult.LPQScore,
@@ -5494,7 +5515,7 @@ func (lfs *LocalFaceService) analyzeLiveness(faceRegion, fullImg gocv.Mat) (floa
 		},
 	})
 
-	return livenessScore, spoofPenalty, detailedResult
+	return livenessScore, spoofPenalty, paintingProbability, screenProbability, printProbability, maskProbability, skinToneRealism, detailedResult
 }
 
 // calculateSimpleVariance calculates variance of a Mat using simple pixel iteration
@@ -6644,11 +6665,764 @@ func (lfs *LocalFaceService) calculateStdDev(mat gocv.Mat) float64 {
 	return math.Sqrt(variance)
 }
 
-// enhancedSpoofPenaltyWithPaintingDetection applies enhanced penalties including painting detection
-func (lfs *LocalFaceService) enhancedSpoofPenaltyWithPaintingDetection(
+// ============================================================================
+// SCREEN/DISPLAY DETECTION
+// ============================================================================
+
+// detectScreenDisplay detects if the image is from a screen/display
+// Screens have moiré patterns, pixel grids, and refresh rate artifacts
+func (lfs *LocalFaceService) detectScreenDisplay(faceRegion, gray gocv.Mat) float64 {
+	if faceRegion.Empty() || gray.Empty() {
+		return 0.0
+	}
+
+	screenIndicators := 0.0
+	totalChecks := 0.0
+
+	// 1. Moiré Pattern Detection
+	// Screens photographed create interference patterns
+	moireScore := lfs.detectMoirePatterns(gray)
+	if moireScore > 0.6 {
+		screenIndicators += 1.0
+	}
+	totalChecks += 1.0
+
+	// 2. Pixel Grid Detection
+	// Screens have visible RGB pixel grids when photographed
+	pixelGridScore := lfs.detectPixelGrid(gray)
+	if pixelGridScore > 0.65 {
+		screenIndicators += 1.0
+	}
+	totalChecks += 1.0
+
+	// 3. Refresh Rate Artifacts
+	// Screens may show banding from refresh rates
+	refreshArtifactsScore := lfs.detectRefreshArtifacts(gray)
+	if refreshArtifactsScore > 0.6 {
+		screenIndicators += 1.0
+	}
+	totalChecks += 1.0
+
+	// 4. Unnatural Luminance Uniformity
+	// Screens emit light uniformly; faces reflect light variably
+	luminanceScore := lfs.detectUniformLuminance(gray)
+	if luminanceScore > 0.7 {
+		screenIndicators += 1.0
+	}
+	totalChecks += 1.0
+
+	screenProbability := screenIndicators / totalChecks
+
+	logger.Info("🖥️ Screen detection analysis", logger.LoggerOptions{
+		Key: "screen_detection",
+		Data: map[string]interface{}{
+			"moire_score":          moireScore,
+			"pixel_grid_score":     pixelGridScore,
+			"refresh_artifacts":    refreshArtifactsScore,
+			"luminance_score":      luminanceScore,
+			"screen_probability":   screenProbability,
+			"indicators_triggered": screenIndicators,
+			"total_checks":         totalChecks,
+		},
+	})
+
+	return screenProbability
+}
+
+// detectMoirePatterns detects interference patterns from photographing screens
+func (lfs *LocalFaceService) detectMoirePatterns(gray gocv.Mat) float64 {
+	if gray.Empty() || gray.Rows() < 30 || gray.Cols() < 30 {
+		return 0.0
+	}
+
+	// Apply FFT to detect periodic patterns
+	// Moiré patterns show up as specific frequency components
+	padded := gocv.NewMat()
+	defer padded.Close()
+
+	optimalRows := gocv.GetOptimalDFTSize(gray.Rows())
+	optimalCols := gocv.GetOptimalDFTSize(gray.Cols())
+	gocv.CopyMakeBorder(gray, &padded, 0, optimalRows-gray.Rows(), 0, optimalCols-gray.Cols(),
+		gocv.BorderConstant, color.RGBA{0, 0, 0, 0})
+
+	// Convert to float
+	padded32F := gocv.NewMat()
+	defer padded32F.Close()
+	padded.ConvertTo(&padded32F, gocv.MatTypeCV32F)
+
+	// Perform DFT
+	dft := gocv.NewMat()
+	defer dft.Close()
+	gocv.DFT(padded32F, &dft, gocv.DftComplexOutput)
+
+	// Calculate magnitude
+	planes := gocv.Split(dft)
+	defer planes[0].Close()
+	defer planes[1].Close()
+
+	magnitude := gocv.NewMat()
+	defer magnitude.Close()
+	gocv.Magnitude(planes[0], planes[1], &magnitude)
+
+	// Look for periodic peaks (moiré indicators)
+	mean := gocv.NewMat()
+	stdDev := gocv.NewMat()
+	defer mean.Close()
+	defer stdDev.Close()
+	gocv.MeanStdDev(magnitude, &mean, &stdDev)
+
+	stdDevVal := float64(stdDev.GetFloatAt(0, 0))
+
+	// High std dev in frequency domain indicates periodic patterns
+	moireScore := math.Min(stdDevVal/100.0, 1.0)
+
+	return moireScore
+}
+
+// detectPixelGrid detects RGB pixel grid patterns from screens
+func (lfs *LocalFaceService) detectPixelGrid(gray gocv.Mat) float64 {
+	if gray.Empty() || gray.Rows() < 20 || gray.Cols() < 20 {
+		return 0.0
+	}
+
+	// Analyze high-frequency components in small patches
+	// Pixel grids create regular high-frequency patterns
+	patchSize := 10
+	if gray.Rows() < patchSize*2 || gray.Cols() < patchSize*2 {
+		return 0.0
+	}
+
+	highFreqScore := 0.0
+	patches := 0
+
+	for i := 0; i < gray.Rows()-patchSize; i += patchSize {
+		for j := 0; j < gray.Cols()-patchSize; j += patchSize {
+			rect := image.Rect(j, i, j+patchSize, i+patchSize)
+			patch := gray.Region(rect)
+
+			// Calculate local variance
+			variance := lfs.calculateSimpleVariance(patch)
+			patch.Close()
+
+			// High variance in small patches indicates pixel grid
+			if variance > 800 {
+				highFreqScore += 1.0
+			}
+			patches++
+		}
+	}
+
+	if patches == 0 {
+		return 0.0
+	}
+
+	return highFreqScore / float64(patches)
+}
+
+// detectRefreshArtifacts detects horizontal banding from screen refresh rates
+func (lfs *LocalFaceService) detectRefreshArtifacts(gray gocv.Mat) float64 {
+	if gray.Empty() || gray.Rows() < 20 {
+		return 0.0
+	}
+
+	// Calculate row-wise intensity variance
+	// Refresh artifacts create horizontal bands with different intensities
+	rowMeans := make([]float64, gray.Rows())
+
+	for i := 0; i < gray.Rows(); i++ {
+		rowSum := 0.0
+		count := 0
+		for j := 0; j < gray.Cols(); j++ {
+			val := float64(gray.GetUCharAt(i, j))
+			rowSum += val
+			count++
+		}
+		if count > 0 {
+			rowMeans[i] = rowSum / float64(count)
+		}
+	}
+
+	// Calculate variance in row means
+	mean := 0.0
+	for _, val := range rowMeans {
+		mean += val
+	}
+	mean /= float64(len(rowMeans))
+
+	variance := 0.0
+	for _, val := range rowMeans {
+		diff := val - mean
+		variance += diff * diff
+	}
+	variance /= float64(len(rowMeans))
+
+	// High variance indicates banding
+	bandingScore := math.Min(variance/500.0, 1.0)
+
+	return bandingScore
+}
+
+// detectUniformLuminance detects unnatural luminance uniformity from displays
+func (lfs *LocalFaceService) detectUniformLuminance(gray gocv.Mat) float64 {
+	if gray.Empty() {
+		return 0.0
+	}
+
+	// Real faces have varied lighting; screens emit uniformly
+	mean := gocv.NewMat()
+	stdDev := gocv.NewMat()
+	defer mean.Close()
+	defer stdDev.Close()
+
+	gocv.MeanStdDev(gray, &mean, &stdDev)
+
+	meanVal := mean.GetDoubleAt(0, 0)
+	stdDevVal := stdDev.GetDoubleAt(0, 0)
+
+	// Low std dev relative to mean indicates uniform luminance
+	if meanVal > 0 {
+		uniformity := 1.0 - math.Min(stdDevVal/meanVal, 1.0)
+		return uniformity
+	}
+
+	return 0.0
+}
+
+// ============================================================================
+// PRINT/PHOTO DETECTION
+// ============================================================================
+
+// detectPrintPhoto detects if image is a printed photograph
+func (lfs *LocalFaceService) detectPrintPhoto(faceRegion, gray gocv.Mat) float64 {
+	if faceRegion.Empty() || gray.Empty() {
+		return 0.0
+	}
+
+	printIndicators := 0.0
+	totalChecks := 0.0
+
+	// 1. Halftone Dot Detection
+	// Printed images have halftone dot patterns
+	halftoneScore := lfs.detectHalftoneDots(gray)
+	if halftoneScore > 0.6 {
+		printIndicators += 1.0
+	}
+	totalChecks += 1.0
+
+	// 2. Paper Texture Detection
+	// Paper has specific texture patterns
+	paperScore := lfs.detectPaperTexture(gray)
+	if paperScore > 0.65 {
+		printIndicators += 1.0
+	}
+	totalChecks += 1.0
+
+	// 3. Ink Absorption Patterns
+	// Ink on paper creates specific edge characteristics
+	inkScore := lfs.detectInkAbsorption(gray)
+	if inkScore > 0.6 {
+		printIndicators += 1.0
+	}
+	totalChecks += 1.0
+
+	printProbability := printIndicators / totalChecks
+
+	logger.Info("🖨️ Print detection analysis", logger.LoggerOptions{
+		Key: "print_detection",
+		Data: map[string]interface{}{
+			"halftone_score":       halftoneScore,
+			"paper_texture_score":  paperScore,
+			"ink_absorption_score": inkScore,
+			"print_probability":    printProbability,
+			"indicators_triggered": printIndicators,
+			"total_checks":         totalChecks,
+		},
+	})
+
+	return printProbability
+}
+
+// detectHalftoneDots detects halftone printing patterns
+func (lfs *LocalFaceService) detectHalftoneDots(gray gocv.Mat) float64 {
+	if gray.Empty() || gray.Rows() < 20 || gray.Cols() < 20 {
+		return 0.0
+	}
+
+	// Halftone patterns are periodic dots
+	// Use morphological operations to detect regular dot patterns
+	kernel := gocv.GetStructuringElement(gocv.MorphEllipse, image.Pt(3, 3))
+	defer kernel.Close()
+
+	tophat := gocv.NewMat()
+	defer tophat.Close()
+	gocv.MorphologyEx(gray, &tophat, gocv.MorphTophat, kernel)
+
+	// Count bright spots (dots)
+	threshold := gocv.NewMat()
+	defer threshold.Close()
+	gocv.Threshold(tophat, &threshold, 30, 255, gocv.ThresholdBinary)
+
+	nonZero := gocv.CountNonZero(threshold)
+	totalPixels := gray.Rows() * gray.Cols()
+
+	dotDensity := float64(nonZero) / float64(totalPixels)
+
+	// Halftone has moderate dot density (5-15%)
+	if dotDensity > 0.05 && dotDensity < 0.15 {
+		return math.Min(dotDensity*10, 1.0)
+	}
+
+	return 0.0
+}
+
+// detectPaperTexture detects paper texture patterns
+func (lfs *LocalFaceService) detectPaperTexture(gray gocv.Mat) float64 {
+	if gray.Empty() {
+		return 0.0
+	}
+
+	// Paper has fine, uniform texture
+	// Similar to canvas but finer grain
+	// Calculate local variance using filter
+	blurred := gocv.NewMat()
+	defer blurred.Close()
+	gocv.GaussianBlur(gray, &blurred, image.Pt(5, 5), 0, 0, gocv.BorderDefault)
+
+	variance := gocv.NewMat()
+	defer variance.Close()
+	gocv.Subtract(gray, blurred, &variance)
+
+	mean := gocv.NewMat()
+	stdDev := gocv.NewMat()
+	defer mean.Close()
+	defer stdDev.Close()
+
+	gocv.MeanStdDev(variance, &mean, &stdDev)
+
+	meanVar := mean.GetDoubleAt(0, 0)
+
+	// Moderate, uniform variance indicates paper texture
+	paperScore := math.Min(meanVar/100.0, 1.0)
+
+	return paperScore
+}
+
+// detectInkAbsorption detects ink bleeding patterns on paper
+func (lfs *LocalFaceService) detectInkAbsorption(gray gocv.Mat) float64 {
+	if gray.Empty() {
+		return 0.0
+	}
+
+	// Ink absorption creates slightly blurred edges
+	edges := gocv.NewMat()
+	defer edges.Close()
+	gocv.Canny(gray, &edges, 50, 150)
+
+	// Dilate edges slightly
+	kernel := gocv.GetStructuringElement(gocv.MorphRect, image.Pt(3, 3))
+	defer kernel.Close()
+
+	dilated := gocv.NewMat()
+	defer dilated.Close()
+	gocv.Dilate(edges, &dilated, kernel)
+
+	// Compare original edges to dilated
+	diff := gocv.NewMat()
+	defer diff.Close()
+	gocv.Subtract(dilated, edges, &diff)
+
+	edgeBlur := gocv.CountNonZero(diff)
+	totalEdges := gocv.CountNonZero(edges)
+
+	if totalEdges > 0 {
+		blurRatio := float64(edgeBlur) / float64(totalEdges)
+		return math.Min(blurRatio*2, 1.0)
+	}
+
+	return 0.0
+}
+
+// ============================================================================
+// MASK DETECTION
+// ============================================================================
+
+// detectMask detects if face is wearing a mask (silicone, paper, etc.)
+func (lfs *LocalFaceService) detectMask(faceRegion, gray gocv.Mat) float64 {
+	if faceRegion.Empty() || gray.Empty() {
+		return 0.0
+	}
+
+	maskIndicators := 0.0
+	totalChecks := 0.0
+
+	// 1. Material Texture Detection
+	// Masks have uniform material texture
+	materialScore := lfs.detectMaskMaterial(gray)
+	if materialScore > 0.65 {
+		maskIndicators += 1.0
+	}
+	totalChecks += 1.0
+
+	// 2. Lack of Natural Facial Depth
+	// Masks are flatter than real faces
+	depthScore := lfs.detectLackOfDepth(gray)
+	if depthScore > 0.7 {
+		maskIndicators += 1.0
+	}
+	totalChecks += 1.0
+
+	// 3. Unnatural Facial Stiffness
+	// Masks don't have micro-movements or skin elasticity
+	stiffnessScore := lfs.detectFacialStiffness(gray)
+	if stiffnessScore > 0.65 {
+		maskIndicators += 1.0
+	}
+	totalChecks += 1.0
+
+	// 4. Edge Artifacts
+	// Mask edges differ from skin edges
+	maskEdgeScore := lfs.detectMaskEdges(gray)
+	if maskEdgeScore > 0.6 {
+		maskIndicators += 1.0
+	}
+	totalChecks += 1.0
+
+	maskProbability := maskIndicators / totalChecks
+
+	logger.Info("🎭 Mask detection analysis", logger.LoggerOptions{
+		Key: "mask_detection",
+		Data: map[string]interface{}{
+			"material_score":       materialScore,
+			"depth_score":          depthScore,
+			"stiffness_score":      stiffnessScore,
+			"mask_edge_score":      maskEdgeScore,
+			"mask_probability":     maskProbability,
+			"indicators_triggered": maskIndicators,
+			"total_checks":         totalChecks,
+		},
+	})
+
+	return maskProbability
+}
+
+// detectMaskMaterial detects uniform material texture of masks
+func (lfs *LocalFaceService) detectMaskMaterial(gray gocv.Mat) float64 {
+	if gray.Empty() {
+		return 0.0
+	}
+
+	// Masks have very uniform texture compared to skin
+	// Calculate texture uniformity
+	mean := gocv.NewMat()
+	stdDev := gocv.NewMat()
+	defer mean.Close()
+	defer stdDev.Close()
+
+	gocv.MeanStdDev(gray, &mean, &stdDev)
+
+	stdDevVal := stdDev.GetDoubleAt(0, 0)
+
+	// Low variation indicates uniform material
+	uniformity := 1.0 - math.Min(stdDevVal/80.0, 1.0)
+
+	return uniformity
+}
+
+// detectLackOfDepth detects flat appearance of masks
+func (lfs *LocalFaceService) detectLackOfDepth(gray gocv.Mat) float64 {
+	if gray.Empty() {
+		return 0.0
+	}
+
+	// Real faces have depth indicated by shading gradients
+	// Masks are flatter with less gradient variation
+
+	// Calculate gradients
+	gradX := gocv.NewMat()
+	gradY := gocv.NewMat()
+	defer gradX.Close()
+	defer gradY.Close()
+
+	gocv.Sobel(gray, &gradX, gocv.MatTypeCV32F, 1, 0, 3, 1, 0, gocv.BorderDefault)
+	gocv.Sobel(gray, &gradY, gocv.MatTypeCV32F, 0, 1, 3, 1, 0, gocv.BorderDefault)
+
+	// Calculate gradient magnitude
+	magnitude := gocv.NewMat()
+	defer magnitude.Close()
+	gocv.Magnitude(gradX, gradY, &magnitude)
+
+	mean := gocv.NewMat()
+	stdDev := gocv.NewMat()
+	defer mean.Close()
+	defer stdDev.Close()
+
+	gocv.MeanStdDev(magnitude, &mean, &stdDev)
+
+	meanGrad := mean.GetDoubleAt(0, 0)
+
+	// Low gradient indicates lack of depth
+	flatness := 1.0 - math.Min(meanGrad/50.0, 1.0)
+
+	return flatness
+}
+
+// detectFacialStiffness detects lack of natural skin micro-texture
+func (lfs *LocalFaceService) detectFacialStiffness(gray gocv.Mat) float64 {
+	if gray.Empty() {
+		return 0.0
+	}
+
+	// Analyze high-frequency components
+	// Real skin has micro-textures; masks are smoother
+	blurred := gocv.NewMat()
+	defer blurred.Close()
+	gocv.GaussianBlur(gray, &blurred, image.Pt(5, 5), 0, 0, gocv.BorderDefault)
+
+	// High-frequency detail
+	detail := gocv.NewMat()
+	defer detail.Close()
+	gocv.Subtract(gray, blurred, &detail)
+
+	mean := gocv.NewMat()
+	stdDev := gocv.NewMat()
+	defer mean.Close()
+	defer stdDev.Close()
+
+	gocv.MeanStdDev(detail, &mean, &stdDev)
+
+	detailVal := stdDev.GetDoubleAt(0, 0)
+
+	// Low high-frequency detail indicates stiffness
+	stiffness := 1.0 - math.Min(detailVal/30.0, 1.0)
+
+	return stiffness
+}
+
+// detectMaskEdges detects unnatural edges around mask boundaries
+func (lfs *LocalFaceService) detectMaskEdges(gray gocv.Mat) float64 {
+	if gray.Empty() {
+		return 0.0
+	}
+
+	// Detect edges
+	edges := gocv.NewMat()
+	defer edges.Close()
+	gocv.Canny(gray, &edges, 50, 150)
+
+	// Masks often have sharp, artificial boundary edges
+	// Analyze edge sharpness distribution
+	kernel := gocv.GetStructuringElement(gocv.MorphRect, image.Pt(3, 3))
+	defer kernel.Close()
+
+	dilated := gocv.NewMat()
+	defer dilated.Close()
+	gocv.Dilate(edges, &dilated, kernel)
+
+	edgePixels := gocv.CountNonZero(edges)
+	totalPixels := gray.Rows() * gray.Cols()
+
+	if totalPixels > 0 {
+		edgeDensity := float64(edgePixels) / float64(totalPixels)
+
+		// Moderate edge density with sharp transitions indicates mask
+		if edgeDensity > 0.05 && edgeDensity < 0.15 {
+			return math.Min(edgeDensity*8, 1.0)
+		}
+	}
+
+	return 0.0
+}
+
+// ============================================================================
+// SKIN TONE REALISM ANALYSIS
+// ============================================================================
+
+// analyzeSkinToneRealism analyzes if skin tones are realistic
+func (lfs *LocalFaceService) analyzeSkinToneRealism(faceRegion gocv.Mat) float64 {
+	if faceRegion.Empty() || faceRegion.Channels() != 3 {
+		return 0.5 // Neutral if can't analyze
+	}
+
+	realisticIndicators := 0.0
+	totalChecks := 0.0
+
+	// 1. Color Range Check
+	// Real skin falls within specific RGB/HSV ranges
+	colorRangeScore := lfs.checkSkinColorRange(faceRegion)
+	if colorRangeScore > 0.7 {
+		realisticIndicators += 1.0
+	}
+	totalChecks += 1.0
+
+	// 2. Color Distribution
+	// Real skin has natural color variation
+	distributionScore := lfs.checkSkinColorDistribution(faceRegion)
+	if distributionScore > 0.65 {
+		realisticIndicators += 1.0
+	}
+	totalChecks += 1.0
+
+	// 3. Color Uniformity Check
+	// Overly uniform color indicates fake
+	uniformityScore := lfs.checkColorUniformity(faceRegion)
+	if uniformityScore < 0.8 { // Less uniform is more realistic
+		realisticIndicators += 1.0
+	}
+	totalChecks += 1.0
+
+	realismScore := realisticIndicators / totalChecks
+
+	logger.Info("🎨 Skin tone realism analysis", logger.LoggerOptions{
+		Key: "skin_tone_analysis",
+		Data: map[string]interface{}{
+			"color_range_score":    colorRangeScore,
+			"distribution_score":   distributionScore,
+			"uniformity_score":     uniformityScore,
+			"realism_score":        realismScore,
+			"realistic_indicators": realisticIndicators,
+			"total_checks":         totalChecks,
+		},
+	})
+
+	return realismScore
+}
+
+// checkSkinColorRange checks if colors fall within realistic skin tone ranges
+func (lfs *LocalFaceService) checkSkinColorRange(faceRegion gocv.Mat) float64 {
+	if faceRegion.Empty() {
+		return 0.0
+	}
+
+	// Convert to HSV for better skin detection
+	hsv := gocv.NewMat()
+	defer hsv.Close()
+	gocv.CvtColor(faceRegion, &hsv, gocv.ColorBGRToHSV)
+
+	// Define skin tone ranges in HSV
+	// Hue: 0-25 (red-orange range for skin)
+	// Saturation: 20-170
+	// Value: 40-255
+	lowerBound := gocv.NewMatFromScalar(gocv.NewScalar(0, 20, 40, 0), gocv.MatTypeCV8U)
+	upperBound := gocv.NewMatFromScalar(gocv.NewScalar(25, 170, 255, 0), gocv.MatTypeCV8U)
+	defer lowerBound.Close()
+	defer upperBound.Close()
+
+	mask := gocv.NewMat()
+	defer mask.Close()
+	gocv.InRange(hsv, lowerBound, upperBound, &mask)
+
+	skinPixels := gocv.CountNonZero(mask)
+	totalPixels := faceRegion.Rows() * faceRegion.Cols()
+
+	if totalPixels > 0 {
+		skinRatio := float64(skinPixels) / float64(totalPixels)
+		return math.Min(skinRatio, 1.0)
+	}
+
+	return 0.0
+}
+
+// checkSkinColorDistribution checks natural variation in skin tones
+func (lfs *LocalFaceService) checkSkinColorDistribution(faceRegion gocv.Mat) float64 {
+	if faceRegion.Empty() {
+		return 0.0
+	}
+
+	// Real skin has natural color variation
+	channels := gocv.Split(faceRegion)
+	defer channels[0].Close()
+	defer channels[1].Close()
+	defer channels[2].Close()
+
+	// Calculate histogram for each channel
+	totalVariation := 0.0
+
+	for i := 0; i < 3; i++ {
+		hist := gocv.NewMat()
+		defer hist.Close()
+
+		gocv.CalcHist(
+			[]gocv.Mat{channels[i]},
+			[]int{0},
+			gocv.NewMat(),
+			&hist,
+			[]int{256},
+			[]float64{0, 256},
+			false,
+		)
+
+		// Normalize histogram
+		gocv.Normalize(hist, &hist, 0, 1, gocv.NormMinMax)
+
+		// Calculate entropy (variation)
+		entropy := 0.0
+		for j := 0; j < 256; j++ {
+			val := float64(hist.GetFloatAt(j, 0))
+			if val > 0 {
+				entropy -= val * math.Log2(val)
+			}
+		}
+
+		totalVariation += entropy
+	}
+
+	// Average entropy across channels
+	avgEntropy := totalVariation / 3.0
+
+	// Normalize (max entropy is log2(256) = 8)
+	normalizedVariation := math.Min(avgEntropy/6.0, 1.0)
+
+	return normalizedVariation
+}
+
+// checkColorUniformity checks if color is too uniform (fake indicator)
+func (lfs *LocalFaceService) checkColorUniformity(faceRegion gocv.Mat) float64 {
+	if faceRegion.Empty() {
+		return 0.0
+	}
+
+	channels := gocv.Split(faceRegion)
+	defer channels[0].Close()
+	defer channels[1].Close()
+	defer channels[2].Close()
+
+	totalStdDev := 0.0
+
+	for i := 0; i < 3; i++ {
+		mean := gocv.NewMat()
+		stdDev := gocv.NewMat()
+		defer mean.Close()
+		defer stdDev.Close()
+
+		gocv.MeanStdDev(channels[i], &mean, &stdDev)
+		totalStdDev += stdDev.GetDoubleAt(0, 0)
+	}
+
+	avgStdDev := totalStdDev / 3.0
+
+	// Normalize (typical skin variation is 10-40)
+	uniformity := 1.0 - math.Min(avgStdDev/50.0, 1.0)
+
+	return uniformity
+}
+
+// SpoofDetectionResult holds all spoof detection probabilities
+type SpoofDetectionResult struct {
+	PaintingProbability float64
+	ScreenProbability   float64
+	PrintProbability    float64
+	MaskProbability     float64
+	SkinToneRealism     float64
+	TotalPenalty        float64
+}
+
+// enhancedSpoofPenaltyWithAllDetections applies comprehensive spoof detection
+// Runs all detection methods in parallel using goroutines for maximum performance
+// Returns: SpoofDetectionResult with all probabilities
+func (lfs *LocalFaceService) enhancedSpoofPenaltyWithAllDetections(
 	faceRegion, gray gocv.Mat,
 	textureScore, edgeScore, colorScore, reflectionScore, frequencyScore, lbpScore, lpqScore float64,
-) float64 {
+) SpoofDetectionResult {
 	// Start with existing penalty calculation
 	basePenalty := lfs.calculateEnhancedSpoofPenalty(
 		[]float64{textureScore, edgeScore, colorScore, reflectionScore, frequencyScore},
@@ -6656,13 +7430,59 @@ func (lfs *LocalFaceService) enhancedSpoofPenaltyWithPaintingDetection(
 		lpqScore,
 	)
 
-	// Add painting-specific detection
-	paintingProbability := lfs.detectPaintingCharacteristics(faceRegion, gray)
+	// ========================================================================
+	// PARALLEL SPOOF DETECTION - Run all detections simultaneously
+	// ========================================================================
+	logger.Info("🚀 Starting parallel spoof detection analysis", logger.LoggerOptions{
+		Key: "parallel_detection_start",
+	})
 
-	// Apply aggressive penalty for painting characteristics
+	// Use channels to collect results from goroutines
+	paintingChan := make(chan float64, 1)
+	screenChan := make(chan float64, 1)
+	printChan := make(chan float64, 1)
+	maskChan := make(chan float64, 1)
+	skinToneChan := make(chan float64, 1)
+
+	// Launch all detections in parallel
+	go func() {
+		paintingChan <- lfs.detectPaintingCharacteristics(faceRegion, gray)
+	}()
+
+	go func() {
+		screenChan <- lfs.detectScreenDisplay(faceRegion, gray)
+	}()
+
+	go func() {
+		printChan <- lfs.detectPrintPhoto(faceRegion, gray)
+	}()
+
+	go func() {
+		maskChan <- lfs.detectMask(faceRegion, gray)
+	}()
+
+	go func() {
+		skinToneChan <- lfs.analyzeSkinToneRealism(faceRegion)
+	}()
+
+	// Collect all results
+	paintingProbability := <-paintingChan
+	screenProbability := <-screenChan
+	printProbability := <-printChan
+	maskProbability := <-maskChan
+	skinToneRealism := <-skinToneChan
+
+	logger.Info("✅ Parallel spoof detection completed", logger.LoggerOptions{
+		Key: "parallel_detection_complete",
+	})
+
+	// ========================================================================
+	// CALCULATE PENALTIES FROM EACH DETECTION TYPE
+	// ========================================================================
+
+	// Painting detection penalty
 	paintingPenalty := 0.0
 	if paintingProbability > 0.5 {
-		// High confidence it's a painting - major penalty
 		paintingPenalty = paintingProbability * 0.8
 		logger.Error("⚠️ HIGH PAINTING PROBABILITY DETECTED", logger.LoggerOptions{
 			Key: "painting_detected",
@@ -6672,30 +7492,96 @@ func (lfs *LocalFaceService) enhancedSpoofPenaltyWithPaintingDetection(
 			},
 		})
 	} else if paintingProbability > 0.35 {
-		// Moderate suspicion - moderate penalty
 		paintingPenalty = paintingProbability * 0.5
-		logger.Info("⚠️ Moderate painting characteristics detected", logger.LoggerOptions{
-			Key: "painting_suspected",
+	}
+
+	// Screen detection penalty
+	screenPenalty := 0.0
+	if screenProbability > 0.5 {
+		screenPenalty = screenProbability * 0.75
+		logger.Error("⚠️ HIGH SCREEN PROBABILITY DETECTED", logger.LoggerOptions{
+			Key: "screen_detected",
 			Data: map[string]interface{}{
-				"painting_probability": paintingProbability,
-				"penalty_applied":      paintingPenalty,
+				"screen_probability": screenProbability,
+				"penalty_applied":    screenPenalty,
+			},
+		})
+	} else if screenProbability > 0.35 {
+		screenPenalty = screenProbability * 0.4
+	}
+
+	// Print detection penalty
+	printPenalty := 0.0
+	if printProbability > 0.5 {
+		printPenalty = printProbability * 0.7
+		logger.Error("⚠️ HIGH PRINT PROBABILITY DETECTED", logger.LoggerOptions{
+			Key: "print_detected",
+			Data: map[string]interface{}{
+				"print_probability": printProbability,
+				"penalty_applied":   printPenalty,
+			},
+		})
+	} else if printProbability > 0.35 {
+		printPenalty = printProbability * 0.4
+	}
+
+	// Mask detection penalty
+	maskPenalty := 0.0
+	if maskProbability > 0.5 {
+		maskPenalty = maskProbability * 0.8
+		logger.Error("⚠️ HIGH MASK PROBABILITY DETECTED", logger.LoggerOptions{
+			Key: "mask_detected",
+			Data: map[string]interface{}{
+				"mask_probability": maskProbability,
+				"penalty_applied":  maskPenalty,
+			},
+		})
+	} else if maskProbability > 0.35 {
+		maskPenalty = maskProbability * 0.5
+	}
+
+	// Skin tone realism penalty (inverse - low realism = penalty)
+	skinTonePenalty := 0.0
+	if skinToneRealism < 0.5 {
+		skinTonePenalty = (1.0 - skinToneRealism) * 0.4
+		logger.Info("⚠️ LOW SKIN TONE REALISM DETECTED", logger.LoggerOptions{
+			Key: "skin_tone_low",
+			Data: map[string]interface{}{
+				"skin_tone_realism": skinToneRealism,
+				"penalty_applied":   skinTonePenalty,
 			},
 		})
 	}
 
-	totalPenalty := basePenalty + paintingPenalty
+	// Calculate total penalty
+	totalPenalty := basePenalty + paintingPenalty + screenPenalty + printPenalty + maskPenalty + skinTonePenalty
 
-	logger.Info("🛡️ Enhanced spoof penalty calculation", logger.LoggerOptions{
-		Key: "spoof_penalty_enhanced",
+	logger.Info("🛡️ Comprehensive spoof penalty calculation", logger.LoggerOptions{
+		Key: "spoof_penalty_complete",
 		Data: map[string]interface{}{
 			"base_penalty":         basePenalty,
 			"painting_penalty":     paintingPenalty,
-			"painting_probability": paintingProbability,
+			"screen_penalty":       screenPenalty,
+			"print_penalty":        printPenalty,
+			"mask_penalty":         maskPenalty,
+			"skin_tone_penalty":    skinTonePenalty,
 			"total_penalty":        totalPenalty,
+			"painting_probability": paintingProbability,
+			"screen_probability":   screenProbability,
+			"print_probability":    printProbability,
+			"mask_probability":     maskProbability,
+			"skin_tone_realism":    skinToneRealism,
 		},
 	})
 
-	return totalPenalty
+	return SpoofDetectionResult{
+		PaintingProbability: paintingProbability,
+		ScreenProbability:   screenProbability,
+		PrintProbability:    printProbability,
+		MaskProbability:     maskProbability,
+		SkinToneRealism:     skinToneRealism,
+		TotalPenalty:        totalPenalty,
+	}
 }
 
 // Close releases resources

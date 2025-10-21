@@ -13,6 +13,7 @@ import (
 	"gateman.io/application/usecases/wallet"
 	"gateman.io/application/utils"
 	"gateman.io/infrastructure/biometric"
+	"gateman.io/infrastructure/logger"
 	server_response "gateman.io/infrastructure/serverResponse"
 	"gateman.io/infrastructure/validator"
 	"github.com/gin-gonic/gin"
@@ -119,6 +120,153 @@ func EnhancedFaceComparison(ctx *interfaces.ApplicationContext[dto.EnhancedFaceC
 	// Use local face service for enhanced comparison
 	localService := biometric.NewLocalFaceService()
 	defer localService.Close()
+
+	// ========================================================================
+	// LIVENESS PRE-CHECK - Fail fast if either image is not live
+	// ========================================================================
+	logger.Info("🔍 Performing liveness pre-checks before face comparison", logger.LoggerOptions{
+		Key: "liveness_precheck_start",
+	})
+
+	// Check liveness of image1
+	liveness1Result, err := localService.ImageLivenessCheck(&ctx.Body.Image1, false)
+	if err != nil {
+		// Revert balance
+		billingLogID := ctx.GetStringContextData("billingLogID")
+		if billingLogID != "" {
+			billingRepo := repository.BillingLogRepository()
+			updateFilter := map[string]interface{}{"_id": billingLogID}
+			updateData := map[string]interface{}{
+				"status":       "failed",
+				"errorMessage": "Liveness check failed for image1: " + err.Error(),
+			}
+			billingRepo.UpdateOrCreateByField(updateFilter, updateData)
+
+			revertFilter := map[string]interface{}{"_id": workspaceID}
+			revertUpdate := map[string]interface{}{
+				"$inc": map[string]interface{}{
+					"balance": wallet.COMPARISON_PRICE,
+				},
+			}
+			repository.WorkspaceRepository().UpdateWithOperator(revertFilter, revertUpdate)
+		}
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
+		return
+	}
+
+	// Apply strict liveness validation for image1
+	if !liveness1Result.IsLive || liveness1Result.LivenessScore < 0.55 {
+		// Revert balance
+		billingLogID := ctx.GetStringContextData("billingLogID")
+		if billingLogID != "" {
+			billingRepo := repository.BillingLogRepository()
+			updateFilter := map[string]interface{}{"_id": billingLogID}
+			updateData := map[string]interface{}{
+				"status":       "failed",
+				"errorMessage": "Image1 failed liveness check",
+			}
+			billingRepo.UpdateOrCreateByField(updateFilter, updateData)
+
+			revertFilter := map[string]interface{}{"_id": workspaceID}
+			revertUpdate := map[string]interface{}{
+				"$inc": map[string]interface{}{
+					"balance": wallet.COMPARISON_PRICE,
+				},
+			}
+			repository.WorkspaceRepository().UpdateWithOperator(revertFilter, revertUpdate)
+		}
+
+		logger.Error("❌ Image1 failed liveness check - aborting comparison", logger.LoggerOptions{
+			Key: "liveness1_failed",
+			Data: map[string]interface{}{
+				"is_live":        liveness1Result.IsLive,
+				"liveness_score": liveness1Result.LivenessScore,
+				"spoof_score":    liveness1Result.AnalysisDetails.SpoofDetectionScore,
+				"painting_prob":  liveness1Result.AnalysisDetails.PaintingProbability,
+				"screen_prob":    liveness1Result.AnalysisDetails.ScreenProbability,
+				"print_prob":     liveness1Result.AnalysisDetails.PrintProbability,
+				"mask_prob":      liveness1Result.AnalysisDetails.MaskProbability,
+				"skin_tone":      liveness1Result.AnalysisDetails.SkinToneRealism,
+			},
+		})
+
+		apperrors.ClientError(ctx.Ctx, "Image1 failed liveness verification - possible spoof detected", nil, nil, ctx.DeviceID)
+		return
+	}
+
+	// Check liveness of image2
+	liveness2Result, err := localService.ImageLivenessCheck(&ctx.Body.Image2, false)
+	if err != nil {
+		// Revert balance
+		billingLogID := ctx.GetStringContextData("billingLogID")
+		if billingLogID != "" {
+			billingRepo := repository.BillingLogRepository()
+			updateFilter := map[string]interface{}{"_id": billingLogID}
+			updateData := map[string]interface{}{
+				"status":       "failed",
+				"errorMessage": "Liveness check failed for image2: " + err.Error(),
+			}
+			billingRepo.UpdateOrCreateByField(updateFilter, updateData)
+
+			revertFilter := map[string]interface{}{"_id": workspaceID}
+			revertUpdate := map[string]interface{}{
+				"$inc": map[string]interface{}{
+					"balance": wallet.COMPARISON_PRICE,
+				},
+			}
+			repository.WorkspaceRepository().UpdateWithOperator(revertFilter, revertUpdate)
+		}
+		apperrors.UnknownError(ctx.Ctx, err, nil, ctx.DeviceID)
+		return
+	}
+
+	// Apply strict liveness validation for image2
+	if !liveness2Result.IsLive || liveness2Result.LivenessScore < 0.55 {
+		// Revert balance
+		billingLogID := ctx.GetStringContextData("billingLogID")
+		if billingLogID != "" {
+			billingRepo := repository.BillingLogRepository()
+			updateFilter := map[string]interface{}{"_id": billingLogID}
+			updateData := map[string]interface{}{
+				"status":       "failed",
+				"errorMessage": "Image2 failed liveness check",
+			}
+			billingRepo.UpdateOrCreateByField(updateFilter, updateData)
+
+			revertFilter := map[string]interface{}{"_id": workspaceID}
+			revertUpdate := map[string]interface{}{
+				"$inc": map[string]interface{}{
+					"balance": wallet.COMPARISON_PRICE,
+				},
+			}
+			repository.WorkspaceRepository().UpdateWithOperator(revertFilter, revertUpdate)
+		}
+
+		logger.Error("❌ Image2 failed liveness check - aborting comparison", logger.LoggerOptions{
+			Key: "liveness2_failed",
+			Data: map[string]interface{}{
+				"is_live":        liveness2Result.IsLive,
+				"liveness_score": liveness2Result.LivenessScore,
+				"spoof_score":    liveness2Result.AnalysisDetails.SpoofDetectionScore,
+				"painting_prob":  liveness2Result.AnalysisDetails.PaintingProbability,
+				"screen_prob":    liveness2Result.AnalysisDetails.ScreenProbability,
+				"print_prob":     liveness2Result.AnalysisDetails.PrintProbability,
+				"mask_prob":      liveness2Result.AnalysisDetails.MaskProbability,
+				"skin_tone":      liveness2Result.AnalysisDetails.SkinToneRealism,
+			},
+		})
+
+		apperrors.ClientError(ctx.Ctx, "Image2 failed liveness verification - possible spoof detected", nil, nil, ctx.DeviceID)
+		return
+	}
+
+	logger.Info("✅ Both images passed liveness pre-check - proceeding with comparison", logger.LoggerOptions{
+		Key: "liveness_precheck_passed",
+		Data: map[string]interface{}{
+			"image1_liveness_score": liveness1Result.LivenessScore,
+			"image2_liveness_score": liveness2Result.LivenessScore,
+		},
+	})
 
 	// Perform face comparison using service's default thresholds first, then apply custom threshold if needed
 	result, err := localService.CompareFaces(&ctx.Body.Image1, &ctx.Body.Image2)
@@ -360,7 +508,75 @@ func EnhancedLivenessCheck(ctx *interfaces.ApplicationContext[dto.LivenessDetect
 		customIsLive = false
 	}
 
-	// Layer 6: Critical metrics validation
+	// Layer 6: Comprehensive spoof type checks (CRITICAL)
+	// Direct checks for all spoof types - hard fail if detected
+	paintingProbability := result.AnalysisDetails.PaintingProbability
+	screenProbability := result.AnalysisDetails.ScreenProbability
+	printProbability := result.AnalysisDetails.PrintProbability
+	maskProbability := result.AnalysisDetails.MaskProbability
+	skinToneRealism := result.AnalysisDetails.SkinToneRealism
+
+	// Painting detection
+	if !math.IsNaN(paintingProbability) && !math.IsInf(paintingProbability, 0) && paintingProbability >= 0.5 {
+		customIsLive = false
+		logger.Error("🎨 PAINTING DETECTED - Hard fail", logger.LoggerOptions{
+			Key: "painting_hard_fail",
+			Data: map[string]interface{}{
+				"painting_probability": paintingProbability,
+				"threshold":            0.5,
+			},
+		})
+	}
+
+	// Screen detection
+	if !math.IsNaN(screenProbability) && !math.IsInf(screenProbability, 0) && screenProbability >= 0.5 {
+		customIsLive = false
+		logger.Error("🖥️ SCREEN DETECTED - Hard fail", logger.LoggerOptions{
+			Key: "screen_hard_fail",
+			Data: map[string]interface{}{
+				"screen_probability": screenProbability,
+				"threshold":          0.5,
+			},
+		})
+	}
+
+	// Print detection
+	if !math.IsNaN(printProbability) && !math.IsInf(printProbability, 0) && printProbability >= 0.5 {
+		customIsLive = false
+		logger.Error("🖨️ PRINT DETECTED - Hard fail", logger.LoggerOptions{
+			Key: "print_hard_fail",
+			Data: map[string]interface{}{
+				"print_probability": printProbability,
+				"threshold":         0.5,
+			},
+		})
+	}
+
+	// Mask detection
+	if !math.IsNaN(maskProbability) && !math.IsInf(maskProbability, 0) && maskProbability >= 0.5 {
+		customIsLive = false
+		logger.Error("🎭 MASK DETECTED - Hard fail", logger.LoggerOptions{
+			Key: "mask_hard_fail",
+			Data: map[string]interface{}{
+				"mask_probability": maskProbability,
+				"threshold":        0.5,
+			},
+		})
+	}
+
+	// Skin tone realism check
+	if !math.IsNaN(skinToneRealism) && !math.IsInf(skinToneRealism, 0) && skinToneRealism < 0.4 {
+		customIsLive = false
+		logger.Error("🎨 UNREALISTIC SKIN TONE - Hard fail", logger.LoggerOptions{
+			Key: "skin_tone_hard_fail",
+			Data: map[string]interface{}{
+				"skin_tone_realism": skinToneRealism,
+				"threshold":         0.4,
+			},
+		})
+	}
+
+	// Layer 7: Critical metrics validation
 	// Check for painting/spoof indicators in detailed analysis
 	textureScore := result.AnalysisDetails.TextureScore
 	edgeSharpness := result.AnalysisDetails.EdgeSharpness
@@ -370,7 +586,7 @@ func EnhancedLivenessCheck(ctx *interfaces.ApplicationContext[dto.LivenessDetect
 		customIsLive = false
 	}
 
-	// Layer 7: Combined risk assessment
+	// Layer 8: Combined risk assessment
 	// Multiple weak indicators together = reject
 	riskFactors := 0
 	if result.LivenessScore < 0.65 {
@@ -386,6 +602,22 @@ func EnhancedLivenessCheck(ctx *interfaces.ApplicationContext[dto.LivenessDetect
 		riskFactors++
 	}
 	if edgeSharpness < 0.3 {
+		riskFactors++
+	}
+	// Add all spoof type probabilities to risk factors
+	if paintingProbability > 0.35 {
+		riskFactors++
+	}
+	if screenProbability > 0.35 {
+		riskFactors++
+	}
+	if printProbability > 0.35 {
+		riskFactors++
+	}
+	if maskProbability > 0.35 {
+		riskFactors++
+	}
+	if skinToneRealism < 0.5 {
 		riskFactors++
 	}
 
@@ -465,14 +697,45 @@ func EnhancedLivenessCheck(ctx *interfaces.ApplicationContext[dto.LivenessDetect
 			QualityScore: qualityScore,
 		}
 
-		// Add specific spoof reasons if detected (not generic)
+		// Add specific spoof reasons if detected (priority order: most specific first)
 		if !finalIsLive {
-			// Only add spoof reasons if we have specific indicators
+			// Spoof type detections (high confidence)
+			if paintingProbability >= 0.5 {
+				response.SpoofReasons = append(response.SpoofReasons, "Painting or artwork detected")
+			} else if paintingProbability >= 0.35 {
+				response.SpoofReasons = append(response.SpoofReasons, "Painting-like characteristics detected")
+			}
+
+			if screenProbability >= 0.5 {
+				response.SpoofReasons = append(response.SpoofReasons, "Screen or display detected")
+			} else if screenProbability >= 0.35 {
+				response.SpoofReasons = append(response.SpoofReasons, "Screen-like characteristics detected")
+			}
+
+			if printProbability >= 0.5 {
+				response.SpoofReasons = append(response.SpoofReasons, "Printed photograph detected")
+			} else if printProbability >= 0.35 {
+				response.SpoofReasons = append(response.SpoofReasons, "Print-like characteristics detected")
+			}
+
+			if maskProbability >= 0.5 {
+				response.SpoofReasons = append(response.SpoofReasons, "Facial mask detected")
+			} else if maskProbability >= 0.35 {
+				response.SpoofReasons = append(response.SpoofReasons, "Mask-like characteristics detected")
+			}
+
+			if skinToneRealism < 0.4 {
+				response.SpoofReasons = append(response.SpoofReasons, "Unrealistic skin tone detected")
+			} else if skinToneRealism < 0.5 {
+				response.SpoofReasons = append(response.SpoofReasons, "Low skin tone realism")
+			}
+
+			// Texture/edge indicators
 			if result.AnalysisDetails.TextureScore < 0.2 {
-				response.SpoofReasons = append(response.SpoofReasons, "Low natural skin texture detected")
+				response.SpoofReasons = append(response.SpoofReasons, "Low natural skin texture")
 			}
 			if result.AnalysisDetails.EdgeSharpness < 0.2 {
-				response.SpoofReasons = append(response.SpoofReasons, "Unnatural edge patterns detected")
+				response.SpoofReasons = append(response.SpoofReasons, "Unnatural edge patterns")
 			}
 			if result.AnalysisDetails.SpoofDetectionScore > 0.7 {
 				response.SpoofReasons = append(response.SpoofReasons, "High spoof probability indicators")

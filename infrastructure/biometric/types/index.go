@@ -17,6 +17,13 @@ type AnalysisDetails struct {
 	SpoofDetectionScore float64 `json:"spoof_detection_score"`
 	TextureScore        float64 `json:"texture_score"`
 
+	// Spoof Type Probabilities (0-1 each)
+	PaintingProbability float64 `json:"painting_probability"` // Painting/artwork detection
+	ScreenProbability   float64 `json:"screen_probability"`   // Screen/display detection
+	PrintProbability    float64 `json:"print_probability"`    // Printed photo detection
+	MaskProbability     float64 `json:"mask_probability"`     // Mask (silicone/paper) detection
+	SkinToneRealism     float64 `json:"skin_tone_realism"`    // Skin tone realism (0=fake, 1=realistic)
+
 	// Detailed breakdown scores
 	LBPScore              float64 `json:"lbp_score"`
 	LPQScore              float64 `json:"lpq_score"`
